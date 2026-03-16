@@ -62,20 +62,20 @@ jobs:
         with:
           fetch-depth: 1
 
-      # - name: Load docker image from registry
-      #   uses: cyber-dojo/load-image-from-registry@main
-      #   with:
-      #     image_name: "${{ inputs.artifact_name }}"
-      #     aws_rolename: "gh_actions_live_snyk_scans"
+      - name: Load docker image from registry
+        uses: cyber-dojo/load-image-from-registry@main
+        with:
+          image_name: "${{ inputs.artifact_name }}"
+          aws_rolename: "gh_actions_live_snyk_scans"
 
-      # - name: Setup Snyk
-      #   uses: snyk/actions/setup@master
-      #   with:
-      #     snyk-version: v1.1300.2
+      - name: Setup Snyk
+        uses: snyk/actions/setup@master
+        with:
+          snyk-version: v1.1300.2
 
-      # - name: Set empty .snyk policy file
-      #   run:
-      #     echo '' > "${SNYK_POLICY_FILENAME}"
+      - name: Set empty .snyk policy file
+        run:
+          echo '' > "${SNYK_POLICY_FILENAME}"
 
       # - name: Run Snyk container test
       #   env:

@@ -2,6 +2,12 @@ name: Live Snyk Test
 
 on:
   workflow_call:
+    secrets:
+      snyk_token:
+        required: true
+      kosli_api_token:
+        required: true
+
   #workflow_dispatch:
   #push:
   #schedule: # At 08:00 every day

@@ -16,3 +16,6 @@ jobs:
   aws-beta-new-env-snyk:
     needs: []
     uses: ./.github/workflows/new_env_snyk.yml
+    secrets:
+      snyk_token:      ${{ secrets.snyk_token }}
+      kosli_api_token: ${{ secrets.kosli_api_token }}

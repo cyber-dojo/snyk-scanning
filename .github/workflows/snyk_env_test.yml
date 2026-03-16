@@ -40,19 +40,19 @@ jobs:
         with:
           version: ${{ vars.KOSLI_CLI_VERSION }}
 
-      # - name: Generate JSON for each Artifact in kosli_env for following job's strategy:matrix:include
-      #   id: set-artifacts
-      #   env:
-      #     KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
-      #   run: |
-      #     artifacts="$(make artifacts | jq --raw-output --compact-output .)"
-      #     echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}
+      - name: Generate JSON for each Artifact in kosli_env for following job's strategy:matrix:include
+        id: set-artifacts
+        env:
+          KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
+        run: |
+          artifacts="$(make artifacts | jq --raw-output --compact-output .)"
+          echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}
 
       # Fake getting snapshot from kosli_env
-      - id: set-artifacts
-        run: |
-          artifacts="$(jq --compact-output . fake-data/artifacts-${{ inputs.kosli_env }}.json)"
-          echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}
+      # - id: set-artifacts
+      #   run: |
+      #     artifacts="$(jq --compact-output . fake-data/artifacts-${{ inputs.kosli_env }}.json)"
+      #     echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}
 
 
   env-artifact-snyk:

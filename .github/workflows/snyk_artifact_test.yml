@@ -29,12 +29,12 @@ on:
         description: "Artifact commit URL"
         required: true
         type: string
-      kosli_env:
-        description: "Name of Kosli environment the artifact is running in"
+      kosli_flow_name_all_vulns:
+        description: "Name of Kosli Flow to attest all vulns in Environment"
         required: true
         type: string
-      kosli_trail:
-        description: "The name of the new Trail to create holding attestations for all snyk vulns in the given Env"
+      kosli_trail_name_all_vulns:
+        description: "The name of the Kosli Trail to create holding attestations for all snyk vulns in the given Env"
         required: true
         type: string
 
@@ -154,8 +154,8 @@ jobs:
       - name: Attest no-vulns to Kosli
         env:
           KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
-          KOSLI_FLOW:      ${{ inputs.kosli_env }}-all-snyk-vulns-TEST
-          KOSLI_TRAIL:     ${{ inputs.kosli_trail }}
+          KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
+          KOSLI_TRAIL:     ${{ inputs.kosli_trail_name_all_vulns }}
         run:
           kosli attest custom
             --type single-snyk-vuln
@@ -201,8 +201,8 @@ jobs:
       - name: Attest single-snyk-vuln to Kosli
         env:
           KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
-          KOSLI_FLOW:      ${{ inputs.kosli_env }}-all-snyk-vulns-TEST
-          KOSLI_TRAIL:     ${{ inputs.kosli_trail }}
+          KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
+          KOSLI_TRAIL:     ${{ inputs.kosli_trail_name_all_vulns }}
         run:
           kosli attest custom
             --type single-snyk-vuln

@@ -7,11 +7,23 @@ on:
         required: true
       kosli_api_token:
         required: true
-
-  #workflow_dispatch:
-  #push:
-  #schedule: # At 08:00 every day
-  #  - cron: '0 8 * * *'
+    inputs:
+      kosli_env:
+        description: "The Kosli Environment to live snyk test"
+        required: true
+        type: string
+      kosli_flow_name_all_vulns:
+        description: "Name of Kosli Flow to attest all vulns in Environment"
+        required: true
+        type: string
+      kosli_trail_name_all_vulns:
+        description: "Name of Kosli Trail to attest all vulns in Environment"
+        required: true
+        type: string
+      kosli_flow_name_new_vulns:
+        description: "Name of Kosli Flow to attest new vulns in Environment"
+        required: true
+        type: string
 
 env:
   KOSLI_DEBUG:   ${{ vars.KOSLI_DEBUG }}   # true/false
@@ -23,8 +35,6 @@ jobs:
   setup:
     needs: []
     runs-on: ubuntu-latest
-    outputs:
-      kosli_trail: ${{ steps.set-kosli-trail.outputs.kosli_trail }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -43,25 +53,21 @@ jobs:
             --schema=single-snyk-vuln.schema.json
             --jq '.snyk_full_id == ""'
 
-      - name: Output kosli-trail
-        id: set-kosli-trail
-        run:
-          echo "kosli_trail=$(date +%Y-%m-%dT%H.%M.%S)" >> ${GITHUB_OUTPUT}
 
-
-  aws-beta-snyk-scan:
+  env-snyk-scan:
     needs: [setup]
     uses: ./.github/workflows/snyk_env_test.yml
     with:
-      kosli_env:   aws-beta
-      kosli_trail: ${{ needs.setup.outputs.kosli_trail }}
-    secrets:
+      kosli_env:                  ${{ inputs.kosli_env }}
+      kosli_flow_name_all_vulns:  ${{ inputs.kosli_flow_name_all_vulns }}      
+      kosli_trail_name_all_vulns: ${{ inputs.kosli_trail_name_all_vulns }}
+    secrets :
       snyk_token:      ${{ secrets.SNYK_TOKEN }}
       kosli_api_token: ${{ secrets.KOSLI_API_TOKEN }}
 
 
-  aws-beta-trail-names:
-    needs: [aws-beta-snyk-scan]
+  env-trail-names:
+    needs: [env-snyk-scan]
     runs-on: ubuntu-latest
     outputs:
       current_trail_name:  ${{ steps.set-trail-names.outputs.current_trail_name }}
@@ -76,7 +82,7 @@ jobs:
         id: set-trail-names
         env:
           KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
-          KOSLI_FLOW:      aws-beta-all-snyk-vulns-TEST
+          KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
           JSON_FILENAME:   trail.json
         run: |
           # NOTE: On the first run, .data[1].name will be null, which is not
@@ -88,8 +94,8 @@ jobs:
           echo previous_trail_name="${previous_trail_name}" >> ${GITHUB_OUTPUT}
 
 
-  aws-beta-find-new-snyk-vulns:
-    needs: [aws-beta-trail-names]
+  env-find-new-snyk-vulns:
+    needs: [env-trail-names]
     runs-on: ubuntu-latest
     outputs:
       new_vulns: ${{ steps.set-new-vulns.outputs.new_vulns }}
@@ -107,9 +113,9 @@ jobs:
         id: set-new-vulns
         env:
           KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
-          KOSLI_FLOW:      aws-beta-all-snyk-vulns-TEST
-          PREVIOUS_TRAIL_NAME: ${{ needs.aws-beta-trail-names.outputs.previous_trail_name }}
-          CURRENT_TRAIL_NAME:  ${{ needs.aws-beta-trail-names.outputs.current_trail_name }}
+          KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
+          PREVIOUS_TRAIL_NAME: ${{ needs.env-trail-names.outputs.previous_trail_name }}
+          CURRENT_TRAIL_NAME:  ${{ needs.env-trail-names.outputs.current_trail_name }}
           PREVIOUS_VULNS_FILENAME: previous_vulns.json
           CURRENT_VULNS_FILENAME:  current_vulns.json
           NEW_VULNS_FILENAME: new_vulns.json
@@ -127,13 +133,17 @@ jobs:
           echo "new_vulns=${new_vulns}" >> ${GITHUB_OUTPUT}
 
 
-  aws-beta-attest-new-snyk-vulns:
-    needs: [aws-beta-find-new-snyk-vulns]
-    if: ${{ needs.aws-beta-find-new-snyk-vulns.outputs.new_vulns != '[]' }}
+  env-attest-some-new-snyk-vulns:
+    needs: [env-find-new-snyk-vulns]
+    if: ${{ needs.env-find-new-snyk-vulns.outputs.new_vulns != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include: ${{ fromJSON(needs.aws-beta-find-new-snyk-vulns.outputs.new_vulns) }}
+        include: ${{ fromJSON(needs.env-find-new-snyk-vulns.outputs.new_vulns) }}
+    env:
+      KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
+      KOSLI_FLOW:      ${{ inputs.kosli_flow_name_new_vulns }}
+      KOSLI_TRAIL:     ${{ matrix.repo_name }}-${{ matrix.artifact_fingerprint }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -144,27 +154,37 @@ jobs:
         with:
           version: ${{ vars.KOSLI_CLI_VERSION }}
 
-      - name: Print new vuln
-        run: |
-          echo "${{ matrix.snyk_full_id }}"
-          echo "${{ matrix.snyk_short_id }}"
-          echo "${{ matrix.snyk_severity }}"
-          echo "${{ matrix.snyk_vuln_url }}"
-          echo "${{ matrix.artifact_name }}"
-          echo "${{ matrix.artifact_fingerprint }}"
-          echo "${{ matrix.repo_name }}"
-          echo "${{ matrix.git_commit }}"
-          echo "${{ matrix.commit_url}}"
+      # - name: Print new vuln
+      #   run: |
+      #     echo "${{ matrix.snyk_full_id }}"
+      #     echo "${{ matrix.snyk_short_id }}"
+      #     echo "${{ matrix.snyk_severity }}"
+      #     echo "${{ matrix.snyk_vuln_url }}"
+      #     echo "${{ matrix.artifact_name }}"
+      #     echo "${{ matrix.artifact_fingerprint }}"
+      #     echo "${{ matrix.repo_name }}"
+      #     echo "${{ matrix.git_commit }}"
+      #     echo "${{ matrix.commit_url}}"
 
-      - name: Attest new vuln
-        env:
-          KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
-          KOSLI_FLOW: aws-beta-new-snyk-vulns-TEST
-          KOSLI_TRAIL: ${{ matrix.repo_name }}-${{ matrix.artifact_fingerprint }}
+      - name: Attest artifact
         run:
           kosli attest artifact "${{ matrix.artifact_name }}"
             --fingerprint "${{ matrix.artifact_fingerprint }}"
             --name artifact
             --dry-run
 
+      - name: Attest artifact has new vuln
+        run:
+          kosli attest generic "${{ matrix.artifact_name }}"
+            --fingerprint "${{ matrix.artifact_fingerprint }}"
+            --name artifact.${{ matrix.snyk_severity }}-${{ matrix.snyk_short_id }}
+            --compliant=false
+            --dry-run
+
+
 # TODO: make attestation if new_vulns == '[]'
+# Have to create a 2nd output in env-find-new-snyk-vulns
+# which corresponds to all artifacts in current_trail
+# that have no snyk vulns or no new snyk vulns.
+# This ensures each artifact in the scan gets one attestation
+# Or is it simpler to do it in snyk_artifact_test.yml ?

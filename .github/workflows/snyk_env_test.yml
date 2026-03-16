@@ -13,8 +13,12 @@ on:
         description: "Name of Kosli environment to snyk test"
         required: true
         type: string
-      kosli_trail:
-        description: "The name of the new Trail to create holding the new most recent attestation for all snyk vulns in the given Env"
+      kosli_flow_name_all_vulns:
+        description: "Name of Kosli Flow to attest all vulns in Environment"
+        required: true
+        type: string      
+      kosli_trail_name_all_vulns:
+        description: "The name of the Kosli Trail to create holding the most recent attestations for all snyk vulns in the given Env"
         required: true
         type: string
 
@@ -67,8 +71,8 @@ jobs:
       repo_name:            ${{ matrix.repo_name }}
       git_commit:           ${{ matrix.git_commit }}
       commit_url:           ${{ matrix.commit_url }}
-      kosli_env:            ${{ inputs.kosli_env }}
-      kosli_trail:          ${{ inputs.kosli_trail }}
+      kosli_flow_name_all_vulns:  ${{ inputs.kosli_flow_name_all_vulns }}
+      kosli_trail_name_all_vulns: ${{ inputs.kosli_trail_name_all_vulns }}
     secrets:
       snyk_token:      ${{ secrets.snyk_token }}
       kosli_api_token: ${{ secrets.kosli_api_token }}

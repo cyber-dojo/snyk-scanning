@@ -10,5 +10,11 @@
         "snyk_short_id": "14059804",
         "snyk_severity": "medium",
         "snyk_vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804"
+    },
+    {
+        "snyk_full_id": "SNYK-ALPINE321-RUBY-14100871",
+        "snyk_short_id": "14100871",
+        "snyk_severity": "low",
+        "snyk_vuln_url": "https://security.snyk.io/vuln/SNYK-ALPINE321-RUBY-14100871"
     }
 ]

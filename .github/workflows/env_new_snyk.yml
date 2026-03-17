@@ -174,20 +174,22 @@ jobs:
         run:
           kosli attest artifact "${{ matrix.artifact_name }}"
             --fingerprint "${{ matrix.artifact_fingerprint }}"
-            --name artifact
+            --name "${{ matrix.repo_name }}"
 
       - name: Attest new vuln
         if: ${{ matrix.snyk_short_id != 'none' }}
         run:
-          kosli attest generic "${{ matrix.artifact_name }}"
+          kosli attest custom "${{ matrix.artifact_name }}"
             --fingerprint "${{ matrix.artifact_fingerprint }}"
-            --name artifact.${{ matrix.snyk_severity }}-${{ matrix.snyk_short_id }}
-            --compliant=false
+            --type single-snyk-vuln
+            --attestation-data ${ATTESTATION_DATA_FILENAME}
+            --name "${{ matrix.repo_name }}.${{ matrix.snyk_severity }}-${{ matrix.snyk_short_id }}"
 
       - name: Attest no new vuln
         if: ${{ matrix.snyk_short_id == 'none' }}
         run:
-          kosli attest generic "${{ matrix.artifact_name }}"
+          kosli attest custom "${{ matrix.artifact_name }}"
             --fingerprint "${{ matrix.artifact_fingerprint }}"
-            --name artifact.none
-            --compliant=true
+            --type single-snyk-vuln
+            --attestation-data ${ATTESTATION_DATA_FILENAME}
+            --name "${{ matrix.repo_name }}.none"

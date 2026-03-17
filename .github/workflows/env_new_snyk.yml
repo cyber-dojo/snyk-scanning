@@ -137,7 +137,7 @@ jobs:
           echo "new_vulns=${new_vulns}" >> ${GITHUB_OUTPUT}
 
 
-  env-attest-some-new-snyk-vulns:
+  env-attest-new-snyk-vulns:
     needs: [env-find-new-snyk-vulns]
     if: ${{ needs.env-find-new-snyk-vulns.outputs.new_vulns != '[]' }}
     runs-on: ubuntu-latest

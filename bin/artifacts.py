@@ -1,4 +1,7 @@
+#!/usr/bin/env python3
+
 import json
+import subprocess
 import sys
 
 
@@ -10,7 +13,7 @@ def print_help():
 
         Example:
 
-          $ ./bin/get_snapshot_json.sh | python3 ./bin/artifacts.py    
+          $ ./bin/kosli_get_snapshot_json.sh | ./bin/artifacts.py
           [
             {
               "artifact_name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/languages-start-points:8836628@sha256:1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a",
@@ -39,7 +42,7 @@ def artifacts():
             fingerprint = artifact["fingerprint"]
             for flow in artifact["flows"]:
                 flow_name = flow["flow_name"]
-                if not excluded_flow(flow_name):
+                if build_flow(flow_name):
                     git_commit = flow["git_commit"]
                     commit_url = flow["commit_url"]
                     repo_name = flow_name[:-3]
@@ -57,15 +60,20 @@ def artifacts():
     return result
 
 
-def excluded_flow(flow_name):
-    if flow_name == "production-promotion":
-        return True
-    elif flow_name == "aws-snyk-scan":
-        return True
-    elif flow_name == "aws-beta-synk-vuln-ages":
-        return True
-    elif flow_name == "aws-prod-synk-vuln-ages":
-        return True
+def build_flow(flow_name):
+    command = [
+        'kosli', 'get', 'flow',
+        f"{flow_name}",
+        '--org=cyber-dojo',
+        '--api-token=read-only',
+        '--debug=false',
+        '--output=json'
+    ]
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode == 0:
+        flow_json = json.loads(result.stdout)
+        tags = flow_json.get("tags", {})
+        return tags.get("kind", "") == "build"
     else:
         return False
 

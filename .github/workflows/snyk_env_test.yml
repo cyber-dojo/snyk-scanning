@@ -21,10 +21,6 @@ on:
         description: "The name of the Kosli Trail to create holding the most recent attestations for all snyk vulns in the given Env"
         required: true
         type: string
-      kosli_flow_name_new_vulns:
-        description: "Name of Kosli Flow to attest new vulns in Environment"
-        required: true
-        type: string
 
 env:
   KOSLI_DEBUG:   ${{ vars.KOSLI_DEBUG }}   # true/false
@@ -77,7 +73,6 @@ jobs:
       commit_url:           ${{ matrix.commit_url }}
       kosli_flow_name_all_vulns:  ${{ inputs.kosli_flow_name_all_vulns }}
       kosli_trail_name_all_vulns: ${{ inputs.kosli_trail_name_all_vulns }}
-      kosli_flow_name_new_vulns: ${{ inputs.kosli_flow_name_new_vulns }}
     secrets:
       snyk_token:      ${{ secrets.snyk_token }}
       kosli_api_token: ${{ secrets.kosli_api_token }}

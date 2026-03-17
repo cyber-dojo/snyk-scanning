@@ -42,9 +42,10 @@ if __name__ == "__main__":
                 att_json = json.loads(result.stdout)
                 att_data_json = att_json['data'][0]['attestation_data']
                 snyk_full_id = att_data_json['snyk_full_id']
-                if snyk_full_id != '':
-                    fingerprint = att_data_json['artifact_fingerprint']
-                    atts[fingerprint][snyk_full_id] = att_data_json
+                # snyk_full_id can be 'none' here, but that is ok.
+                # We add that to the data so we can make attestations for this too.
+                fingerprint = att_data_json['artifact_fingerprint']
+                atts[fingerprint][snyk_full_id] = att_data_json
             else:
                 print(result.stderr)
                 sys.exit(result.returncode)

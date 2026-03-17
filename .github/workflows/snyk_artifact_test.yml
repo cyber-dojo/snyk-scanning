@@ -37,10 +37,6 @@ on:
         description: "The name of the Kosli Trail to create holding attestations for all snyk vulns in the given Env"
         required: true
         type: string
-      kosli_flow_name_new_vulns:
-        description: "Name of Kosli Flow to attest new vulns in Environment"
-        required: true
-        type: string
 
 env:
   KOSLI_DEBUG:   ${{ vars.KOSLI_DEBUG }}   # true/false
@@ -149,9 +145,9 @@ jobs:
             --arg artifact_name        "${{ inputs.artifact_name }}"
             --arg artifact_fingerprint "${{ inputs.artifact_fingerprint }}"
             --arg snyk_version         "${{ needs.find-all-snyk-vulns.outputs.version }}"
-            --arg snyk_full_id          ''
-            --arg snyk_short_id         ''
-            --arg snyk_severity         ''
+            --arg snyk_full_id          'none'
+            --arg snyk_short_id         'none'
+            --arg snyk_severity         'none'
             --arg snyk_vuln_url         ''
             '$ARGS.named' <<< '{}' 
             > ${ATTESTATION_DATA_FILENAME}
@@ -165,26 +161,6 @@ jobs:
             --type single-snyk-vuln
             --attestation-data ${ATTESTATION_DATA_FILENAME}
             --name ${{ inputs.repo_name }}-none
-
-      - name: Attest to Kosli trail for new-vulns
-        env:
-          KOSLI_FLOW:  ${{ inputs.kosli_flow_name_new_vulns }}
-          KOSLI_TRAIL: ${{ inputs.repo_name }}-${{ inputs.artifact_fingerprint }}
-        run:
-          kosli attest artifact "${{ inputs.artifact_name }}"
-            --fingerprint "${{ inputs.artifact_fingerprint }}"
-            --name artifact
-
-      - name: Attest to Kosli trail for new-vulns
-        env:
-          KOSLI_FLOW:  ${{ inputs.kosli_flow_name_new_vulns }}
-          KOSLI_TRAIL: ${{ inputs.repo_name }}-${{ inputs.artifact_fingerprint }}
-        run:
-          kosli attest generic ${{ inputs.artifact_name }}
-            --fingerprint "${{ inputs.artifact_fingerprint }}"
-            --user-data ${ATTESTATION_DATA_FILENAME}
-            --name artifact.none
-            --compliant=true
 
 
   some-snyk-vulns:

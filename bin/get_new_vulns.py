@@ -23,15 +23,18 @@ if __name__ == "__main__":
     with open(current_filename) as current_file:
         current_data = json.load(current_file)
 
-    new_vulns = []
+    vulns = []
 
     for fingerprint, current_vulns in current_data.items():
         if fingerprint in previous_data:
+            # The artifact is the previous-trail and the current-trail
             for current_vuln_id, current_vuln in current_vulns.items():
-                if current_vuln_id not in previous_data[fingerprint]:
-                    new_vulns.append(current_vuln)
+                if current_vuln_id == 'none':
+                    vulns.append(current_vuln)
+                elif current_vuln_id not in previous_data[fingerprint]:
+                    vulns.append(current_vuln)
 
-    print(json.dumps(new_vulns, default=str))
+    print(json.dumps(vulns, default=str))
 
 
 #   Severity. CVSS v3 Rating

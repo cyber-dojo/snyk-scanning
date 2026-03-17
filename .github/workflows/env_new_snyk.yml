@@ -51,7 +51,7 @@ jobs:
         run:
           kosli create attestation-type single-snyk-vuln
             --schema=single-snyk-vuln.schema.json
-            --jq '.snyk_full_id == ""'
+            --jq '.snyk_full_id == "none"'
 
 
   env-snyk-scan:
@@ -61,7 +61,6 @@ jobs:
       kosli_env:                  ${{ inputs.kosli_env }}
       kosli_flow_name_all_vulns:  ${{ inputs.kosli_flow_name_all_vulns }}      
       kosli_trail_name_all_vulns: ${{ inputs.kosli_trail_name_all_vulns }}
-      kosli_flow_name_new_vulns: ${{ inputs.kosli_flow_name_new_vulns }}
     secrets :
       snyk_token:      ${{ secrets.SNYK_TOKEN }}
       kosli_api_token: ${{ secrets.KOSLI_API_TOKEN }}
@@ -177,9 +176,18 @@ jobs:
             --fingerprint "${{ matrix.artifact_fingerprint }}"
             --name artifact
 
-      - name: Attest artifact has new vuln
+      - name: Attest new vuln
+        if: ${{ matrix.snyk_short_id != 'none' }}
         run:
           kosli attest generic "${{ matrix.artifact_name }}"
             --fingerprint "${{ matrix.artifact_fingerprint }}"
             --name artifact.${{ matrix.snyk_severity }}-${{ matrix.snyk_short_id }}
             --compliant=false
+
+      - name: Attest no new vuln
+        if: ${{ matrix.snyk_short_id == 'none' }}
+        run:
+          kosli attest generic "${{ matrix.artifact_name }}"
+            --fingerprint "${{ matrix.artifact_fingerprint }}"
+            --name artifact.none
+            --compliant=true

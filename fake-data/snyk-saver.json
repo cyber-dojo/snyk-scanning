@@ -1,8 +1,8 @@
 [
     {
-        "snyk_full_id": "SNYK-GOLANG-GOLANGORGXNETHTML-15237740",
-        "snyk_short_id": "15237740",
-        "snyk_severity": "medium",
-        "snyk_vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GOLANGORGXNETHTML-15237740"
+        "snyk_full_id": "SNYK-ALPINE321-RUBY-14100871",
+        "snyk_short_id": "14100871",
+        "snyk_severity": "low",
+        "snyk_vuln_url": "https://security.snyk.io/vuln/SNYK-ALPINE321-RUBY-14100871"
     }
 ]

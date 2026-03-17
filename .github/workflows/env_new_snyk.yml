@@ -145,6 +145,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.env-find-new-snyk-vulns.outputs.new_vulns) }}
     env:
+      ATTESTATION_DATA_JSON: ${{ toJSON(matrix) }}
       ATTESTATION_DATA_FILENAME: new-snyk-vuln.json
       KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
       KOSLI_FLOW:      ${{ inputs.kosli_flow_name_new_vulns }}
@@ -177,8 +178,9 @@ jobs:
 
       - name: Convert matrix back to JSON
         run: |
-          echo "${{ toJSON(matrix) }}" > /tmp/attest.json
+          echo "${ATTESTATION_DATA_JSON}" > /tmp/attest.json
           jq . /tmp/attest.json
+          jq . <<< "${ATTESTATION_DATA_JSON}"
 
       # - name: Print new vuln
       #   run:

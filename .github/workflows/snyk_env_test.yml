@@ -49,6 +49,9 @@ jobs:
         env:
           KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
         run: |
+          snapshot="$(./bin/kosli_get_snapshot_json.sh)"
+          echo "${snapshot}" | ./bin/artifacts.py
+          exit 42
           artifacts="$(make artifacts | jq --raw-output --compact-output .)"
           echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}
 

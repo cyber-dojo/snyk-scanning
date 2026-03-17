@@ -70,12 +70,13 @@ def build_flow(flow_name):
         '--output=json'
     ]
     result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode == 0:
-        flow_json = json.loads(result.stdout)
-        tags = flow_json.get("tags", {})
-        return tags.get("kind", "") == "build"
-    else:
-        return False
+    if result.returncode != 0:
+        print(result.stderr)
+        sys.exit(result.returncode)
+
+    flow_json = json.loads(result.stdout)
+    tags = flow_json.get("tags", {})
+    return tags.get("kind", "") == "build"
 
 
 def stderr(message):

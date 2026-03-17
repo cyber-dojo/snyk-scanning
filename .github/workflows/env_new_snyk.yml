@@ -145,6 +145,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.env-find-new-snyk-vulns.outputs.new_vulns) }}
     env:
+      ATTESTATION_DATA_FILENAME: new-snyk-vuln.json
       KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
       KOSLI_FLOW:      ${{ inputs.kosli_flow_name_new_vulns }}
       KOSLI_TRAIL:     ${{ matrix.repo_name }}-${{ matrix.artifact_fingerprint }}
@@ -158,17 +159,30 @@ jobs:
         with:
           version: ${{ vars.KOSLI_CLI_VERSION }}
 
+      - name: Create file containing custom attestation data
+        run:
+          jq
+            --arg repo_name            "${{ matrix.repo_name }}"
+            --arg git_commit           "${{ matrix.git_commit }}"
+            --arg commit_url           "${{ matrix.commit_url }}"
+            --arg artifact_name        "${{ matrix.artifact_name }}"
+            --arg artifact_fingerprint "${{ matrix.artifact_fingerprint }}"
+            --arg snyk_version         "${{ matrix.snyk_version }}"
+            --arg snyk_full_id         "${{ matrix.snyk_full_id }}"
+            --arg snyk_short_id        "${{ matrix.snyk_short_id }}"
+            --arg snyk_severity        "${{ matrix.snyk_severity }}"
+            --arg snyk_vuln_url        "${{ matrix.snyk_vuln_url }}"
+            '$ARGS.named' <<< '{}' 
+            > ${ATTESTATION_DATA_FILENAME}
+
+      - name: Convert matrix back to JSON
+        run: |
+          json="${{ toJSON(matrix) }}"
+          jq . <<< "${json}"
+
       # - name: Print new vuln
-      #   run: |
-      #     echo "${{ matrix.snyk_full_id }}"
-      #     echo "${{ matrix.snyk_short_id }}"
-      #     echo "${{ matrix.snyk_severity }}"
-      #     echo "${{ matrix.snyk_vuln_url }}"
-      #     echo "${{ matrix.artifact_name }}"
-      #     echo "${{ matrix.artifact_fingerprint }}"
-      #     echo "${{ matrix.repo_name }}"
-      #     echo "${{ matrix.git_commit }}"
-      #     echo "${{ matrix.commit_url}}"
+      #   run:
+      #     cat "${ATTESTATION_DATA_FILENAME}"
 
       - name: Attest artifact
         run:

@@ -160,31 +160,9 @@ jobs:
         with:
           version: ${{ vars.KOSLI_CLI_VERSION }}
 
-      - name: Create file containing custom attestation data
+      - name: Save matrix JSON to file
         run:
-          jq
-            --arg repo_name            "${{ matrix.repo_name }}"
-            --arg git_commit           "${{ matrix.git_commit }}"
-            --arg commit_url           "${{ matrix.commit_url }}"
-            --arg artifact_name        "${{ matrix.artifact_name }}"
-            --arg artifact_fingerprint "${{ matrix.artifact_fingerprint }}"
-            --arg snyk_version         "${{ matrix.snyk_version }}"
-            --arg snyk_full_id         "${{ matrix.snyk_full_id }}"
-            --arg snyk_short_id        "${{ matrix.snyk_short_id }}"
-            --arg snyk_severity        "${{ matrix.snyk_severity }}"
-            --arg snyk_vuln_url        "${{ matrix.snyk_vuln_url }}"
-            '$ARGS.named' <<< '{}' 
-            > ${ATTESTATION_DATA_FILENAME}
-
-      - name: Convert matrix back to JSON
-        run: |
-          echo "${ATTESTATION_DATA_JSON}" > /tmp/attest.json
-          jq . /tmp/attest.json
-          jq . <<< "${ATTESTATION_DATA_JSON}"
-
-      # - name: Print new vuln
-      #   run:
-      #     cat "${ATTESTATION_DATA_FILENAME}"
+          echo "${ATTESTATION_DATA_JSON}" > "${ATTESTATION_DATA_FILENAME}"
 
       - name: Attest artifact
         run:

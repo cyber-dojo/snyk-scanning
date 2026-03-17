@@ -62,56 +62,56 @@ jobs:
         with:
           fetch-depth: 1
 
-      # - name: Load docker image from registry
-      #   uses: cyber-dojo/load-image-from-registry@main
-      #   with:
-      #     image_name: "${{ inputs.artifact_name }}"
-      #     aws_rolename: "gh_actions_live_snyk_scans"
+      - name: Load docker image from registry
+        uses: cyber-dojo/load-image-from-registry@main
+        with:
+          image_name: "${{ inputs.artifact_name }}"
+          aws_rolename: "gh_actions_live_snyk_scans"
 
       - name: Setup Snyk
         uses: snyk/actions/setup@master
         with:
           snyk-version: v1.1300.2
 
-      # - name: Set empty .snyk policy file
-      #   run:
-      #     echo '' > "${SNYK_POLICY_FILENAME}"
+      - name: Set empty .snyk policy file
+        run:
+          echo '' > "${SNYK_POLICY_FILENAME}"
 
-      # - name: Run Snyk container test
-      #   env:
-      #     SNYK_TOKEN: ${{ secrets.snyk_token }}
-      #   run:
-      #     snyk container test "${{ inputs.artifact_name }}"
-      #       --policy-path="${SNYK_POLICY_FILENAME}"
-      #       --sarif
-      #       --sarif-file-output="${SNYK_SARIF_FILENAME}" || true
+      - name: Run Snyk container test
+        env:
+          SNYK_TOKEN: ${{ secrets.snyk_token }}
+        run:
+          snyk container test "${{ inputs.artifact_name }}"
+            --policy-path="${SNYK_POLICY_FILENAME}"
+            --sarif
+            --sarif-file-output="${SNYK_SARIF_FILENAME}" || true
 
-      # - name: Fail if the sarif file is not created
-      #   run: |
-      #     if ! test -f "${SNYK_SARIF_FILENAME}" ; then
-      #       echo "ERROR: ${SNYK_SARIF_FILENAME} was not created"
-      #       exit 43
-      #     fi
+      - name: Fail if the sarif file is not created
+        run: |
+          if ! test -f "${SNYK_SARIF_FILENAME}" ; then
+            echo "ERROR: ${SNYK_SARIF_FILENAME} was not created"
+            exit 43
+          fi
 
-      # - name: Get vulns from sarif file
-      #   id: set-vulns
-      #   env:
-      #     JSON_FILENAME: vulns.json
-      #   run: |
-      #     ./bin/get_sarif_vulns.py ${SNYK_SARIF_FILENAME} > ${JSON_FILENAME}
-      #     vulns="$(jq --compact-output . ${JSON_FILENAME})"
-      #     jq . <<< "${vulns}"
-      #     echo "vulns=${vulns}" >> ${GITHUB_OUTPUT}
-
-      - name: Fake combining snyk vulns from sarif file with ignore-expiries in Snyk policy file
+      - name: Get vulns from sarif file
         id: set-vulns
         env:
           JSON_FILENAME: vulns.json
         run: |
-          cp fake-data/snyk-${{ inputs.repo_name }}.json ${JSON_FILENAME}
+          ./bin/get_sarif_vulns.py ${SNYK_SARIF_FILENAME} > ${JSON_FILENAME}
           vulns="$(jq --compact-output . ${JSON_FILENAME})"
           jq . <<< "${vulns}"
           echo "vulns=${vulns}" >> ${GITHUB_OUTPUT}
+
+      # - name: Fake combining snyk vulns from sarif file with ignore-expiries in Snyk policy file
+      #   id: set-vulns
+      #   env:
+      #     JSON_FILENAME: vulns.json
+      #   run: |
+      #     cp fake-data/snyk-${{ inputs.repo_name }}.json ${JSON_FILENAME}
+      #     vulns="$(jq --compact-output . ${JSON_FILENAME})"
+      #     jq . <<< "${vulns}"
+      #     echo "vulns=${vulns}" >> ${GITHUB_OUTPUT}
 
       - name: Output snyk version
         id: set-version

@@ -61,6 +61,7 @@ jobs:
       kosli_env:                  ${{ inputs.kosli_env }}
       kosli_flow_name_all_vulns:  ${{ inputs.kosli_flow_name_all_vulns }}      
       kosli_trail_name_all_vulns: ${{ inputs.kosli_trail_name_all_vulns }}
+      kosli_flow_name_new_vulns: ${{ inputs.kosli_flow_name_new_vulns }}
     secrets :
       snyk_token:      ${{ secrets.SNYK_TOKEN }}
       kosli_api_token: ${{ secrets.KOSLI_API_TOKEN }}
@@ -72,6 +73,8 @@ jobs:
     outputs:
       current_trail_name:  ${{ steps.set-trail-names.outputs.current_trail_name }}
       previous_trail_name: ${{ steps.set-trail-names.outputs.previous_trail_name }}
+    env:
+      JSON_FILENAME: trail.json
     steps:
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v2
@@ -79,18 +82,20 @@ jobs:
           version: ${{ vars.KOSLI_CLI_VERSION }}
 
       - name: Find most recent Trails in Flow aws-beta-all-snyk-vulns
-        id: set-trail-names
         env:
           KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
           KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
-          JSON_FILENAME:   trail.json
         run: |
           # NOTE: On the first run, .data[1].name will be null, which is not
           # the name of a trail, so dependent jobs will fail, which is ok
           kosli list trails --output=json > ${JSON_FILENAME}
-           current_trail_name="$(jq --raw-output '.data[0].name' ${JSON_FILENAME})"
+
+      - name: Set trail name outputs
+        id: set-trail-names
+        run: |
+          current_trail_name="$(jq --raw-output '.data[0].name' ${JSON_FILENAME})"
           previous_trail_name="$(jq --raw-output '.data[1].name' ${JSON_FILENAME})"
-          echo  current_trail_name="${current_trail_name}"  >> ${GITHUB_OUTPUT}
+          echo current_trail_name="${current_trail_name}"  >> ${GITHUB_OUTPUT}
           echo previous_trail_name="${previous_trail_name}" >> ${GITHUB_OUTPUT}
 
 
@@ -171,7 +176,6 @@ jobs:
           kosli attest artifact "${{ matrix.artifact_name }}"
             --fingerprint "${{ matrix.artifact_fingerprint }}"
             --name artifact
-            --dry-run
 
       - name: Attest artifact has new vuln
         run:
@@ -179,12 +183,3 @@ jobs:
             --fingerprint "${{ matrix.artifact_fingerprint }}"
             --name artifact.${{ matrix.snyk_severity }}-${{ matrix.snyk_short_id }}
             --compliant=false
-            --dry-run
-
-
-# TODO: make attestation if new_vulns == '[]'
-# Have to create a 2nd output in env-find-new-snyk-vulns
-# which corresponds to all artifacts in current_trail
-# that have no snyk vulns or no new snyk vulns.
-# This ensures each artifact in the scan gets one attestation
-# Or is it simpler to do it in snyk_artifact_test.yml ?

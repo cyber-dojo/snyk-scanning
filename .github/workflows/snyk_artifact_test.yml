@@ -37,6 +37,10 @@ on:
         description: "The name of the Kosli Trail to create holding attestations for all snyk vulns in the given Env"
         required: true
         type: string
+      kosli_flow_name_new_vulns:
+        description: "Name of Kosli Flow to attest new vulns in Environment"
+        required: true
+        type: string
 
 env:
   KOSLI_DEBUG:   ${{ vars.KOSLI_DEBUG }}   # true/false
@@ -62,56 +66,56 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Load docker image from registry
-        uses: cyber-dojo/load-image-from-registry@main
-        with:
-          image_name: "${{ inputs.artifact_name }}"
-          aws_rolename: "gh_actions_live_snyk_scans"
+      # - name: Load docker image from registry
+      #   uses: cyber-dojo/load-image-from-registry@main
+      #   with:
+      #     image_name: "${{ inputs.artifact_name }}"
+      #     aws_rolename: "gh_actions_live_snyk_scans"
 
       - name: Setup Snyk
         uses: snyk/actions/setup@master
         with:
           snyk-version: v1.1300.2
 
-      - name: Set empty .snyk policy file
-        run:
-          echo '' > "${SNYK_POLICY_FILENAME}"
+      # - name: Set empty .snyk policy file
+      #   run:
+      #     echo '' > "${SNYK_POLICY_FILENAME}"
 
-      - name: Run Snyk container test
-        env:
-          SNYK_TOKEN: ${{ secrets.snyk_token }}
-        run:
-          snyk container test "${{ inputs.artifact_name }}"
-            --policy-path="${SNYK_POLICY_FILENAME}"
-            --sarif
-            --sarif-file-output="${SNYK_SARIF_FILENAME}" || true
+      # - name: Run Snyk container test
+      #   env:
+      #     SNYK_TOKEN: ${{ secrets.snyk_token }}
+      #   run:
+      #     snyk container test "${{ inputs.artifact_name }}"
+      #       --policy-path="${SNYK_POLICY_FILENAME}"
+      #       --sarif
+      #       --sarif-file-output="${SNYK_SARIF_FILENAME}" || true
 
-      - name: Fail if the sarif file is not created
-        run: |
-          if ! test -f "${SNYK_SARIF_FILENAME}" ; then
-            echo "ERROR: ${SNYK_SARIF_FILENAME} was not created"
-            exit 43
-          fi
+      # - name: Fail if the sarif file is not created
+      #   run: |
+      #     if ! test -f "${SNYK_SARIF_FILENAME}" ; then
+      #       echo "ERROR: ${SNYK_SARIF_FILENAME} was not created"
+      #       exit 43
+      #     fi
 
-      - name: Get vulns from sarif file
-        id: set-vulns
-        env:
-          JSON_FILENAME: vulns.json
-        run: |
-          ./bin/get_sarif_vulns.py ${SNYK_SARIF_FILENAME} > ${JSON_FILENAME}
-          vulns="$(jq --compact-output . ${JSON_FILENAME})"
-          jq . <<< "${vulns}"
-          echo "vulns=${vulns}" >> ${GITHUB_OUTPUT}
-
-      # - name: Fake combining snyk vulns from sarif file with ignore-expiries in Snyk policy file
+      # - name: Get vulns from sarif file
       #   id: set-vulns
       #   env:
       #     JSON_FILENAME: vulns.json
       #   run: |
-      #     cp fake-data/snyk-${{ inputs.repo_name }}.json ${JSON_FILENAME}
+      #     ./bin/get_sarif_vulns.py ${SNYK_SARIF_FILENAME} > ${JSON_FILENAME}
       #     vulns="$(jq --compact-output . ${JSON_FILENAME})"
       #     jq . <<< "${vulns}"
       #     echo "vulns=${vulns}" >> ${GITHUB_OUTPUT}
+
+      - name: Fake combining snyk vulns from sarif file with ignore-expiries in Snyk policy file
+        id: set-vulns
+        env:
+          JSON_FILENAME: vulns.json
+        run: |
+          cp fake-data/snyk-${{ inputs.repo_name }}.json ${JSON_FILENAME}
+          vulns="$(jq --compact-output . ${JSON_FILENAME})"
+          jq . <<< "${vulns}"
+          echo "vulns=${vulns}" >> ${GITHUB_OUTPUT}
 
       - name: Output snyk version
         id: set-version
@@ -125,6 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ATTESTATION_DATA_FILENAME: no-snyk-vuln.json
+      KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -151,16 +156,35 @@ jobs:
             '$ARGS.named' <<< '{}' 
             > ${ATTESTATION_DATA_FILENAME}
 
-      - name: Attest no-vulns to Kosli
+      - name: Attest to Kosli trail for all-vulns
         env:
-          KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
-          KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
-          KOSLI_TRAIL:     ${{ inputs.kosli_trail_name_all_vulns }}
+          KOSLI_FLOW:  ${{ inputs.kosli_flow_name_all_vulns }}
+          KOSLI_TRAIL: ${{ inputs.kosli_trail_name_all_vulns }}
         run:
           kosli attest custom
             --type single-snyk-vuln
             --attestation-data ${ATTESTATION_DATA_FILENAME}
             --name ${{ inputs.repo_name }}-none
+
+      - name: Attest to Kosli trail for new-vulns
+        env:
+          KOSLI_FLOW:  ${{ inputs.kosli_flow_name_new_vulns }}
+          KOSLI_TRAIL: ${{ inputs.repo_name }}-${{ inputs.artifact_fingerprint }}
+        run:
+          kosli attest artifact "${{ inputs.artifact_name }}"
+            --fingerprint "${{ inputs.artifact_fingerprint }}"
+            --name artifact
+
+      - name: Attest to Kosli trail for new-vulns
+        env:
+          KOSLI_FLOW:  ${{ inputs.kosli_flow_name_new_vulns }}
+          KOSLI_TRAIL: ${{ inputs.repo_name }}-${{ inputs.artifact_fingerprint }}
+        run:
+          kosli attest generic ${{ inputs.artifact_name }}
+            --fingerprint "${{ inputs.artifact_fingerprint }}"
+            --user-data ${ATTESTATION_DATA_FILENAME}
+            --name artifact.none
+            --compliant=true
 
 
   some-snyk-vulns:

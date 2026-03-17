@@ -6,6 +6,10 @@ import os
 import subprocess
 import sys
 
+KOSLI_HOST = os.environ.get("KOSLI_HOST")
+KOSLI_ORG = os.environ.get("KOSLI_ORG")
+KOSLI_API_TOKEN = os.environ.get("KOSLI_API_TOKEN")
+
 # Reads the file containing the json output from a call to
 #   kosli get trail "${KOSLI_TRAIL} --output=json
 # and gets the json custom-attestation-data in each attestation.
@@ -24,8 +28,9 @@ if __name__ == "__main__":
             command = [
                 'kosli', 'get', 'attestation',
                 f"--attestation-id={id}",
-                '--org=cyber-dojo',
-                '--api-token=read-only',
+                f"--host={KOSLI_HOST}",
+                f"--org={KOSLI_ORG}",
+                f"--api-token={KOSLI_API_TOKEN}",
                 '--debug=false',
                 '--output=json'
             ]

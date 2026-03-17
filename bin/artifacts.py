@@ -1,8 +1,14 @@
 #!/usr/bin/env python3
 
 import json
+import os
 import subprocess
 import sys
+
+
+KOSLI_HOST = os.environ.get("KOSLI_HOST")
+KOSLI_ORG = os.environ.get("KOSLI_ORG")
+KOSLI_API_TOKEN = os.environ.get("KOSLI_API_TOKEN")
 
 
 def print_help():
@@ -64,8 +70,9 @@ def build_flow(flow_name):
     command = [
         'kosli', 'get', 'flow',
         f"{flow_name}",
-        '--org=cyber-dojo',
-        '--api-token=read-only',
+        f"--host={KOSLI_HOST}",
+        f"--org={KOSLI_ORG}",
+        f"--api-token={KOSLI_API_TOKEN}",
         '--debug=false',
         '--output=json'
     ]

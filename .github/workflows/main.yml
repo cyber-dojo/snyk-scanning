@@ -13,10 +13,46 @@ jobs:
     outputs:
       kosli_trail: ${{ steps.set-kosli-trail.outputs.kosli_trail }}
     steps:
+      - name: Setup Kosli CLI
+        uses: kosli-dev/setup-cli-action@v2
+        with:
+          version: ${{vars.KOSLI_CLI_VERSION}}
+
+      - name: Create Kosli Flows with descriptions
+        run: |
+          kosli create flow aws-beta-all-snyk-vulns \
+            --description="All snyk vulns currently in aws-beta"
+          kosli create flow aws-prod-all-snyk-vulns \
+            --description="All snyk vulns currently in aws-prod"
+          kosli create flow aws-beta-new-snyk-vulns \
+            --description="New snyk vulns, since deployment, in aws-beta"
+          kosli create flow aws-prod-new-snyk-vulns \
+            --description="New snyk vulns, since deployment, in aws-beta"
+
+      - name: Create Kosli Tags
+        run: |
+          kosli tag flow aws-beta-all-snyk-vulns \
+            --set kind=run \
+            --set ci=github \
+            --set repo_url=https://github.com/cyber-dojo/live-snyk-scans
+          kosli tag flow aws-prod-all-snyk-vulns \
+            --set kind=run \
+            --set ci=github \
+            --set repo_url=https://github.com/cyber-dojo/live-snyk-scans
+          kosli tag flow aws-beta-new-snyk-vulns \
+            --set kind=run \
+            --set ci=github \
+            --set repo_url=https://github.com/cyber-dojo/live-snyk-scans
+          kosli tag flow aws-prod-new-snyk-vulns \
+            --set kind=run \
+            --set ci=github \
+            --set repo_url=https://github.com/cyber-dojo/live-snyk-scans
+
       - name: Set kosli-trail output
         id: set-kosli-trail
         run:
           echo "kosli_trail=$(date +%Y-%m-%dT%H.%M.%S)" >> ${GITHUB_OUTPUT}
+
 
   aws-beta-new-env-snyk:
     needs: [setup]

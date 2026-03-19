@@ -2,11 +2,15 @@ A CI workflow to run live snyk container tests on the Docker images running in c
 [aws-beta](https://app.kosli.com/cyber-dojo/environments/aws-beta/events/) and
 [aws-prod](https://app.kosli.com/cyber-dojo/environments/aws-prod/events/) runtime environments.  
 
+# All snyk vulnerabilities
+
 Report _all_ snyk vulnerabilities to dedicated Kosli Flows:
 - [All aws-beta](https://app.kosli.com/cyber-dojo/flows/aws-beta-all-snyk-vulns/trails/)
 - [All aws-prod](https://app.kosli.com/cyber-dojo/flows/aws-prod-all-snyk-vulns/trails/)
 
 The snyk tests use an _empty_ Snyk policy file, which means no vulnerabilities are "hidden".
+
+# New snyk vulnerabilities
 
 Reports _new_ snyk vulnerabilities to dedicated Kosli Flows:
 - [New aws-beta](https://app.kosli.com/cyber-dojo/flows/aws-beta-new-snyk-vulns/trails/)

@@ -6,6 +6,12 @@ on:
   #schedule: # At 06:00 every day
   #  - cron: '0 6 * * *'
 
+env:
+  KOSLI_DEBUG:   ${{ vars.KOSLI_DEBUG }}   # true/false
+  KOSLI_DRY_RUN: ${{ vars.KOSLI_DRY_RUN }} # true/false
+  KOSLI_HOST:    ${{ vars.KOSLI_HOST }}    # https://app.kosli.com
+  KOSLI_ORG:     ${{ vars.KOSLI_ORG }}     # cyber-dojo
+
 jobs:
   setup:
     needs: []

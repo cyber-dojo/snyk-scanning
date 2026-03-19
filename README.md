@@ -1,12 +1,17 @@
-A CI workflow to run snyk container tests on the Docker images running in cyber-dojo's 
+A CI workflow to run live snyk container tests on the Docker images running in cyber-dojo's 
 [aws-beta](https://app.kosli.com/cyber-dojo/environments/aws-beta/events/) and
 [aws-prod](https://app.kosli.com/cyber-dojo/environments/aws-prod/events/) runtime environments.  
 
-Reports newly found snyk vulnerabilities to a dedicated [Kosli Flow](https://app.kosli.com/cyber-dojo/flows/aws-snyk-scan/trails/).
+Report _all_ snyk vulnerabilities to dedicated Kosli Flows:
+- [All aws-beta](https://app.kosli.com/cyber-dojo/flows/aws-beta-all-snyk-vulns/trails/)
+- [All aws-prod](https://app.kosli.com/cyber-dojo/flows/aws-prod-all-snyk-vulns/trails/)
+The snyk tests use an _empty_ Snyk policy file, which means no vulnerabilities are "hidden".
 
-Uses the `.snyk` policy file from the repo's git commit whose CI workflow
-built the deployed image. This means `ignore` entries in the `.snyk` file 
-_will_ be used and only new vulnerabilties (or vulnerabilities now past their 
-`expires` date) will cause a non-compliance.
+Reports _new_ snyk vulnerabilities to dedicated Kosli Flows:
+- [New aws-beta](https://app.kosli.com/cyber-dojo/flows/aws-beta-new-snyk-vulns/trails/)
+- [New aws-prod](https://app.kosli.com/cyber-dojo/flows/aws-prod-new-snyk-vulns/trails/)
+When an artifact is first deployed it may have snyk vulnerabilities, but whether those
+vulnerabilities constitute non-compliance is assumed to be handled by other processes.
+In other words, _new_ means vulnerabilities which have newly arisen _since_ the artifact was first deployed.
 
-Run's daily at 09:00.
+Workflow runs daily at 06:00 AM.

@@ -1,4 +1,4 @@
-name: Live Snyk Test of aws-beta and aws-prod
+name: Live Snyk test of artifacts in aws-beta and aws-prod environments
 
 on:
   schedule: # At 06:00 every day

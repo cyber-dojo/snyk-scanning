@@ -1,4 +1,4 @@
-name: Snyk Test a Live Artifact
+name: Live Snyk test of one artifact already deployed to an environment
 
 on:
   workflow_call:

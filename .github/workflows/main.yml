@@ -1,4 +1,4 @@
-name: Live Snyk Test od aws-beta and aws-prod
+name: Live Snyk Test of aws-beta and aws-prod
 
 on:
   #workflow_dispatch:
@@ -23,21 +23,21 @@ jobs:
     uses: ./.github/workflows/env_new_snyk.yml
     with:
       kosli_env: aws-beta
-      kosli_flow_name_all_vulns: aws-beta-all-snyk-vulns-TEST
+      kosli_flow_name_all_vulns: aws-beta-all-snyk-vulns
       kosli_trail_name_all_vulns: ${{ needs.setup.outputs.kosli_trail }}
-      kosli_flow_name_new_vulns: aws-beta-new-snyk-vulns-TEST
+      kosli_flow_name_new_vulns: aws-beta-new-snyk-vulns
     secrets:
       snyk_token:      ${{ secrets.snyk_token }}
       kosli_api_token: ${{ secrets.kosli_api_token }}
 
-  # aws-prod-new-env-snyk:
-  #   needs: [setup]
-  #   uses: ./.github/workflows/env_new_snyk.yml
-  #   with:
-  #     kosli_env: aws-prod
-  #     kosli_flow_name_all_vulns: aws-prod-all-snyk-vulns-TEST
-  #     kosli_trail_name_all_vulns: ${{ needs.setup.outputs.kosli_trail }}
-  #     kosli_flow_name_new_vulns: aws-prod-new-snyk-vulns-TEST
-  #   secrets:
-  #     snyk_token:      ${{ secrets.snyk_token }}
-  #     kosli_api_token: ${{ secrets.kosli_api_token }}
+  aws-prod-new-env-snyk:
+    needs: [setup]
+    uses: ./.github/workflows/env_new_snyk.yml
+    with:
+      kosli_env: aws-prod
+      kosli_flow_name_all_vulns: aws-prod-all-snyk-vulns
+      kosli_trail_name_all_vulns: ${{ needs.setup.outputs.kosli_trail }}
+      kosli_flow_name_new_vulns: aws-prod-new-snyk-vulns
+    secrets:
+      snyk_token:      ${{ secrets.snyk_token }}
+      kosli_api_token: ${{ secrets.kosli_api_token }}

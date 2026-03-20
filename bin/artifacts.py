@@ -78,8 +78,16 @@ def build_flow(flow_name):
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode != 0:
-        print(result.stderr)
-        sys.exit(result.returncode)
+        # We need a hack here...
+        # The incoming snapshot is from an Environment on a SINGLE-SERVER eg app.kosli.com.
+        # But we are making a multi-host call. And this breaks because we can find
+        # Flows that have been renamed on other servers and the new flow name includes
+        # a timestamp of when it was renamed. Eg
+        #   aws-beta-new-snyk-vulns-TEST-archived-at-1773914589
+        # In theory this could happen at any time, since artifacts can be rolled back.
+        if "archived-at" not in flow_name:
+            print(result.stderr)
+            sys.exit(result.returncode)
 
     flow_json = json.loads(result.stdout)
     tags = flow_json.get("tags", {})

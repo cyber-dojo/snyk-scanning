@@ -67,6 +67,17 @@ def artifacts():
 
 
 def build_flow(flow_name):
+    # The incoming snapshot is from an Environment on a SINGLE-SERVER eg app.kosli.com
+    # and the Flows it finds for its artifacts will be from that server.
+    # But in the CI worflow, the following kosli-get-flow will be a multi-host call. 
+    # And this breaks because although the original Flow exists on all the servers,
+    # when a Flow is renamed, its new name includes a timestamp of when it was renamed. Eg
+    #   aws-beta-new-snyk-vulns-TEST-archived-at-1773914589
+    # This timestamp will be different on different servers.
+    # This could happen at any time, since artifacts can be rolled back.
+    if "archived-at" in flow_name:
+        return False
+
     command = [
         'kosli', 'get', 'flow',
         f"{flow_name}",
@@ -78,16 +89,8 @@ def build_flow(flow_name):
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode != 0:
-        # We need a hack here...
-        # The incoming snapshot is from an Environment on a SINGLE-SERVER eg app.kosli.com.
-        # But we are making a multi-host call. And this breaks because we can find
-        # Flows that have been renamed on other servers and the new flow name includes
-        # a timestamp of when it was renamed. Eg
-        #   aws-beta-new-snyk-vulns-TEST-archived-at-1773914589
-        # In theory this could happen at any time, since artifacts can be rolled back.
-        if "archived-at" not in flow_name:
-            print(result.stderr)
-            sys.exit(result.returncode)
+        print(result.stderr)
+        sys.exit(result.returncode)
 
     flow_json = json.loads(result.stdout)
     tags = flow_json.get("tags", {})

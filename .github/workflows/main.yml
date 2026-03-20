@@ -1,7 +1,6 @@
 name: Live Snyk test of artifacts in aws-beta and aws-prod environments
 
 on:
-  push:
   schedule: # At 06:00 every day
     - cron: '0 6 * * *'
 

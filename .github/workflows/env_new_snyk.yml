@@ -176,6 +176,7 @@ jobs:
           kosli attest custom "${{ matrix.artifact_name }}"
             --fingerprint "${{ matrix.artifact_fingerprint }}"
             --type single-snyk-vuln
+            --annotate snyk_URL=${{ matrix.snyk_vuln_url }}
             --attestation-data ${ATTESTATION_DATA_FILENAME}
             --name "${{ matrix.repo_name }}.${{ matrix.snyk_severity }}-${{ matrix.snyk_short_id }}"
 

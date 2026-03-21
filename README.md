@@ -20,8 +20,8 @@ Reports _new_ snyk vulnerabilities to another pair of dedicated [Kosli](https://
 
 When an artifact is _first_ deployed it may have snyk vulnerabilities, but whether those
 vulnerabilities constitute non-compliance is assumed to be handled by other processes.
-In other words, _new_ here means vulnerabilities which have newly arisen _since_ the 
-artifact was first deployed. Hold artifact-level attestations which _do_ affect Environment
-compliance.
+In other words, _new_ here means vulnerabilities which have newly arisen, on a still
+running artifact, _since_ the artifact was deployed. 
+Hold artifact-level attestations which _do_ affect Environment compliance.
 
 The CI workflow runs daily at 06:00 AM.

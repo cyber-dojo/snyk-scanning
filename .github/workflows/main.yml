@@ -1,9 +1,9 @@
 name: Live Snyk test of artifacts in aws-beta and aws-prod environments
 
 on:
-  workflow_dispatch: # Allow manual triggering
   schedule: 
     - cron: '0 6 * * *' # At 06:00 every day
+  workflow_dispatch: # Allow manual triggering
 
 env:
   KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}

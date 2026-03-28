@@ -28,12 +28,16 @@ jobs:
       - name: Create Kosli Flows with descriptions
         run: |
           kosli create flow aws-beta-all-snyk-vulns \
+            --use-empty-template \
             --description="All snyk vulns currently in aws-beta"
           kosli create flow aws-prod-all-snyk-vulns \
+            --use-empty-template \
             --description="All snyk vulns currently in aws-prod"
           kosli create flow aws-beta-new-snyk-vulns \
+            --use-empty-template \
             --description="New snyk vulns, since deployment, in aws-beta"
           kosli create flow aws-prod-new-snyk-vulns \
+            --use-empty-template \
             --description="New snyk vulns, since deployment, in aws-beta"
 
       - name: Create Kosli Tags

@@ -2,11 +2,11 @@ name: Live Snyk test of artifacts with new vulnerabilities in an environment
 
 on:
   workflow_call:
-    # secrets:
-    #   snyk_token:
-    #     required: true
-    #   kosli_api_token:
-    #     required: true
+    secrets:
+      KOSLI_API_TOKEN:
+        required: true
+      SNYK_TOKEN:
+        required: true
     inputs:
       kosli_env:
         description: "The Kosli Environment to live snyk test"
@@ -62,9 +62,9 @@ jobs:
       kosli_env:                  ${{ inputs.kosli_env }}
       kosli_flow_name_all_vulns:  ${{ inputs.kosli_flow_name_all_vulns }}      
       kosli_trail_name_all_vulns: ${{ inputs.kosli_trail_name_all_vulns }}
-    #secrets :
-    #  snyk_token:      ${{ secrets.SNYK_TOKEN }}
-    #  kosli_api_token: ${{ secrets.KOSLI_API_TOKEN }}
+    secrets :
+     KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
+     SNYK_TOKEN:      ${{ secrets.SNYK_TOKEN }}
 
 
   env-trail-names:

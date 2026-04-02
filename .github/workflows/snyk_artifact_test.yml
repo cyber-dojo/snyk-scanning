@@ -2,11 +2,11 @@ name: Live Snyk test of one artifact already deployed to an environment
 
 on:
   workflow_call:
-    # secrets:
-    #   snyk_token:
-    #     required: true
-    #   kosli_api_token:
-    #     required: true
+    secrets:
+      KOSLI_API_TOKEN:
+        required: true
+      SNYK_TOKEN:
+        required: true
 
     inputs:
       artifact_name:

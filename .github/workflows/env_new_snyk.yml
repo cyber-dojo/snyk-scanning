@@ -26,10 +26,11 @@ on:
         type: string
 
 env:
-  KOSLI_DEBUG:   ${{ vars.KOSLI_DEBUG }}   # true/false
-  KOSLI_DRY_RUN: ${{ vars.KOSLI_DRY_RUN }} # true/false
-  KOSLI_HOST:    ${{ vars.KOSLI_HOST }}    # https://app.kosli.com
-  KOSLI_ORG:     ${{ vars.KOSLI_ORG }}     # cyber-dojo
+  KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
+  KOSLI_DEBUG:     ${{ vars.KOSLI_DEBUG }}   # true/false
+  KOSLI_DRY_RUN:   ${{ vars.KOSLI_DRY_RUN }} # true/false
+  KOSLI_HOST:      ${{ vars.KOSLI_HOST }}    # https://app.kosli.com
+  KOSLI_ORG:       ${{ vars.KOSLI_ORG }}     # cyber-dojo
 
 jobs:
   setup:
@@ -82,8 +83,7 @@ jobs:
 
       - name: Find most recent Trails in Flow aws-beta-all-snyk-vulns
         env:
-          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
-          KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
+          KOSLI_FLOW: ${{ inputs.kosli_flow_name_all_vulns }}
         run:
           kosli list trails --output=json > ${JSON_FILENAME}
 
@@ -117,8 +117,7 @@ jobs:
       - name: Find new vulns by comparing previous_trail and current_trail
         id: set-new-vulns
         env:
-          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
-          KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
+          KOSLI_FLOW: ${{ inputs.kosli_flow_name_all_vulns }}
           PREVIOUS_TRAIL_NAME: ${{ needs.env-trail-names.outputs.previous_trail_name }}
           CURRENT_TRAIL_NAME:  ${{ needs.env-trail-names.outputs.current_trail_name }}
           PREVIOUS_VULNS_FILENAME: previous_vulns.json
@@ -148,9 +147,8 @@ jobs:
     env:
       ATTESTATION_DATA_JSON: ${{ toJSON(matrix) }}
       ATTESTATION_DATA_FILENAME: new-snyk-vuln.json
-      KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
-      KOSLI_FLOW:      ${{ inputs.kosli_flow_name_new_vulns }}
-      KOSLI_TRAIL:     ${{ matrix.repo_name }}-${{ matrix.artifact_fingerprint }}
+      KOSLI_FLOW:  ${{ inputs.kosli_flow_name_new_vulns }}
+      KOSLI_TRAIL: ${{ matrix.repo_name }}-${{ matrix.artifact_fingerprint }}
     steps:
       - uses: actions/checkout@v6
         with:

@@ -23,10 +23,11 @@ on:
         type: string
 
 env:
-  KOSLI_DEBUG:   ${{ vars.KOSLI_DEBUG }}   # true/false
-  KOSLI_DRY_RUN: ${{ vars.KOSLI_DRY_RUN }} # true/false
-  KOSLI_HOST:    ${{ vars.KOSLI_HOST }}    # https://app.kosli.com
-  KOSLI_ORG:     ${{ vars.KOSLI_ORG }}     # cyber-dojo
+  KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
+  KOSLI_DEBUG:     ${{ vars.KOSLI_DEBUG }}   # true/false
+  KOSLI_DRY_RUN:   ${{ vars.KOSLI_DRY_RUN }} # true/false
+  KOSLI_HOST:      ${{ vars.KOSLI_HOST }}    # https://app.kosli.com
+  KOSLI_ORG:       ${{ vars.KOSLI_ORG }}     # cyber-dojo
 
 jobs:
 
@@ -46,8 +47,8 @@ jobs:
 
       - name: Generate JSON for each Artifact in kosli_env for following job's strategy:matrix:include
         id: set-artifacts
-        env:
-          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
+        #env:
+        #  KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
         run: |
           artifacts="$(make artifacts | jq --raw-output --compact-output .)"
           echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}

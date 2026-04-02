@@ -19,13 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       kosli_trail: ${{ steps.set-kosli-trail.outputs.kosli_trail }}
-    env:
-      KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
     steps:
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v3
         with:
-          version: ${{vars.KOSLI_CLI_VERSION}}
+          version: ${{ vars.KOSLI_CLI_VERSION }}
 
       - name: Create Kosli Flows with descriptions
         run: |

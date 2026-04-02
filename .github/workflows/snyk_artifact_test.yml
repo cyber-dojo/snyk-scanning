@@ -39,7 +39,6 @@ on:
         type: string
 
 env:
-  KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
   KOSLI_DEBUG:     ${{ vars.KOSLI_DEBUG }}   # true/false
   KOSLI_DRY_RUN:   ${{ vars.KOSLI_DRY_RUN }} # true/false
   KOSLI_HOST:      ${{ vars.KOSLI_HOST }}    # https://app.kosli.com
@@ -154,8 +153,9 @@ jobs:
 
       - name: Attest to Kosli trail for all-vulns
         env:
-          KOSLI_FLOW:  ${{ inputs.kosli_flow_name_all_vulns }}
-          KOSLI_TRAIL: ${{ inputs.kosli_trail_name_all_vulns }}
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
+          KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
+          KOSLI_TRAIL:     ${{ inputs.kosli_trail_name_all_vulns }}
         run:
           kosli attest custom
             --type single-snyk-vuln
@@ -200,8 +200,9 @@ jobs:
 
       - name: Attest single-snyk-vuln to Kosli
         env:
-          KOSLI_FLOW:  ${{ inputs.kosli_flow_name_all_vulns }}
-          KOSLI_TRAIL: ${{ inputs.kosli_trail_name_all_vulns }}
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
+          KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
+          KOSLI_TRAIL:     ${{ inputs.kosli_trail_name_all_vulns }}
         run:
           kosli attest custom
             --type single-snyk-vuln

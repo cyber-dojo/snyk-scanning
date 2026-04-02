@@ -26,11 +26,10 @@ on:
         type: string
 
 env:
-  KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
-  KOSLI_DEBUG:     ${{ vars.KOSLI_DEBUG }}   # true/false
-  KOSLI_DRY_RUN:   ${{ vars.KOSLI_DRY_RUN }} # true/false
-  KOSLI_HOST:      ${{ vars.KOSLI_HOST }}    # https://app.kosli.com
-  KOSLI_ORG:       ${{ vars.KOSLI_ORG }}     # cyber-dojo
+  KOSLI_DEBUG:   ${{ vars.KOSLI_DEBUG }}   # true/false
+  KOSLI_DRY_RUN: ${{ vars.KOSLI_DRY_RUN }} # true/false
+  KOSLI_HOST:    ${{ vars.KOSLI_HOST }}    # https://app.kosli.com
+  KOSLI_ORG:     ${{ vars.KOSLI_ORG }}     # cyber-dojo
 
 jobs:
   setup:
@@ -83,7 +82,8 @@ jobs:
 
       - name: Find most recent Trails in Flow aws-beta-all-snyk-vulns
         env:
-          KOSLI_FLOW: ${{ inputs.kosli_flow_name_all_vulns }}
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
+          KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
         run:
           kosli list trails --output=json > ${JSON_FILENAME}
 
@@ -117,12 +117,13 @@ jobs:
       - name: Find new vulns by comparing previous_trail and current_trail
         id: set-new-vulns
         env:
-          KOSLI_FLOW: ${{ inputs.kosli_flow_name_all_vulns }}
+          KOSLI_API_TOKEN:     ${{ secrets.KOSLI_API_TOKEN }}
+          KOSLI_FLOW:          ${{ inputs.kosli_flow_name_all_vulns }}
           PREVIOUS_TRAIL_NAME: ${{ needs.env-trail-names.outputs.previous_trail_name }}
           CURRENT_TRAIL_NAME:  ${{ needs.env-trail-names.outputs.current_trail_name }}
           PREVIOUS_VULNS_FILENAME: previous_vulns.json
           CURRENT_VULNS_FILENAME:  current_vulns.json
-          NEW_VULNS_FILENAME: new_vulns.json
+          NEW_VULNS_FILENAME:      new_vulns.json
         run: |
           KOSLI_TRAIL="${PREVIOUS_TRAIL_NAME}" make get_vulns | jq . > ${PREVIOUS_VULNS_FILENAME}
           KOSLI_TRAIL="${CURRENT_TRAIL_NAME}"  make get_vulns | jq . > ${CURRENT_VULNS_FILENAME}
@@ -145,7 +146,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(needs.env-find-new-snyk-vulns.outputs.new_vulns) }}
     env:
-      ATTESTATION_DATA_JSON: ${{ toJSON(matrix) }}
+      ATTESTATION_DATA_JSON:     ${{ toJSON(matrix) }}
       ATTESTATION_DATA_FILENAME: new-snyk-vuln.json
       KOSLI_FLOW:  ${{ inputs.kosli_flow_name_new_vulns }}
       KOSLI_TRAIL: ${{ matrix.repo_name }}-${{ matrix.artifact_fingerprint }}
@@ -164,6 +165,8 @@ jobs:
           echo "${ATTESTATION_DATA_JSON}" > "${ATTESTATION_DATA_FILENAME}"
 
       - name: Attest artifact
+        env:
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
         run:
           kosli attest artifact "${{ matrix.artifact_name }}"
             --fingerprint "${{ matrix.artifact_fingerprint }}"
@@ -171,6 +174,8 @@ jobs:
 
       - name: Attest new vuln
         if: ${{ matrix.snyk_short_id != 'none' }}
+        env:
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
         run:
           kosli attest custom "${{ matrix.artifact_name }}"
             --fingerprint "${{ matrix.artifact_fingerprint }}"
@@ -181,6 +186,8 @@ jobs:
 
       - name: Attest no new vuln
         if: ${{ matrix.snyk_short_id == 'none' }}
+        env:
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
         run:
           kosli attest custom "${{ matrix.artifact_name }}"
             --fingerprint "${{ matrix.artifact_fingerprint }}"

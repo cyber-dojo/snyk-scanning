@@ -7,11 +7,10 @@ on:
   # workflow_dispatch: # Allow manual triggering
 
 env:
-  KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
-  KOSLI_DEBUG:     ${{ vars.KOSLI_DEBUG }}   # true/false
-  KOSLI_DRY_RUN:   ${{ vars.KOSLI_DRY_RUN }} # true/false
-  KOSLI_HOST:      ${{ vars.KOSLI_HOST }}    # https://app.kosli.com
-  KOSLI_ORG:       ${{ vars.KOSLI_ORG }}     # cyber-dojo
+  KOSLI_DEBUG:   ${{ vars.KOSLI_DEBUG }}   # true/false
+  KOSLI_DRY_RUN: ${{ vars.KOSLI_DRY_RUN }} # true/false
+  KOSLI_HOST:    ${{ vars.KOSLI_HOST }}    # https://app.kosli.com
+  KOSLI_ORG:     ${{ vars.KOSLI_ORG }}     # cyber-dojo
 
 jobs:
   setup:
@@ -26,6 +25,8 @@ jobs:
           version: ${{ vars.KOSLI_CLI_VERSION }}
 
       - name: Create Kosli Flows with descriptions
+        env:
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
         run: |
           kosli create flow aws-beta-all-snyk-vulns \
             --use-empty-template \
@@ -41,6 +42,8 @@ jobs:
             --description="New snyk vulns, since deployment, in aws-beta"
 
       - name: Create Kosli Tags
+        env:
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
         run: |
           kosli tag flow aws-beta-all-snyk-vulns \
             --set kind=run \
@@ -69,10 +72,10 @@ jobs:
     needs: [setup]
     uses: ./.github/workflows/env_new_snyk.yml
     with:
-      kosli_env: aws-beta
-      kosli_flow_name_all_vulns: aws-beta-all-snyk-vulns
+      kosli_env:                  aws-beta
+      kosli_flow_name_all_vulns:  aws-beta-all-snyk-vulns
       kosli_trail_name_all_vulns: ${{ needs.setup.outputs.kosli_trail }}
-      kosli_flow_name_new_vulns: aws-beta-new-snyk-vulns
+      kosli_flow_name_new_vulns:  aws-beta-new-snyk-vulns
     secrets:
       KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
       SNYK_TOKEN:      ${{ secrets.SNYK_TOKEN }}
@@ -81,10 +84,10 @@ jobs:
     needs: [setup]
     uses: ./.github/workflows/env_new_snyk.yml
     with:
-      kosli_env: aws-prod
-      kosli_flow_name_all_vulns: aws-prod-all-snyk-vulns
+      kosli_env:                  aws-prod
+      kosli_flow_name_all_vulns:  aws-prod-all-snyk-vulns
       kosli_trail_name_all_vulns: ${{ needs.setup.outputs.kosli_trail }}
-      kosli_flow_name_new_vulns: aws-prod-new-snyk-vulns
+      kosli_flow_name_new_vulns:  aws-prod-new-snyk-vulns
     secrets:
       KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
       SNYK_TOKEN:      ${{ secrets.SNYK_TOKEN }}

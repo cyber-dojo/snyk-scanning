@@ -2,11 +2,11 @@ name: Live Snyk test of artifacts with new vulnerabilities in an environment
 
 on:
   workflow_call:
-    secrets:
-      snyk_token:
-        required: true
-      kosli_api_token:
-        required: true
+    # secrets:
+    #   snyk_token:
+    #     required: true
+    #   kosli_api_token:
+    #     required: true
     inputs:
       kosli_env:
         description: "The Kosli Environment to live snyk test"
@@ -41,13 +41,13 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v2
+        uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{ vars.KOSLI_CLI_VERSION }}
 
       - name: Create single-snyk-vulnerability custom attestation type
         env:
-          KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
         run:
           kosli create attestation-type single-snyk-vuln
             --schema=single-snyk-vuln.schema.json
@@ -61,9 +61,9 @@ jobs:
       kosli_env:                  ${{ inputs.kosli_env }}
       kosli_flow_name_all_vulns:  ${{ inputs.kosli_flow_name_all_vulns }}      
       kosli_trail_name_all_vulns: ${{ inputs.kosli_trail_name_all_vulns }}
-    secrets :
-      snyk_token:      ${{ secrets.SNYK_TOKEN }}
-      kosli_api_token: ${{ secrets.KOSLI_API_TOKEN }}
+    #secrets :
+    #  snyk_token:      ${{ secrets.SNYK_TOKEN }}
+    #  kosli_api_token: ${{ secrets.KOSLI_API_TOKEN }}
 
 
   env-trail-names:
@@ -76,22 +76,23 @@ jobs:
       JSON_FILENAME: trail.json
     steps:
       - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v2
+        uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{ vars.KOSLI_CLI_VERSION }}
 
       - name: Find most recent Trails in Flow aws-beta-all-snyk-vulns
         env:
-          KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
           KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
-        run: |
-          # NOTE: On the first run, .data[1].name will be null, which is not
-          # the name of a trail, so dependent jobs will fail, which is ok
+        run:
           kosli list trails --output=json > ${JSON_FILENAME}
 
       - name: Set trail name outputs
         id: set-trail-names
         run: |
+          # NOTE: On the first run, .data[1].name will be null, which is not
+          # the name of a trail, so dependent jobs will fail, which is ok
+
           current_trail_name="$(jq --raw-output '.data[0].name' ${JSON_FILENAME})"
           previous_trail_name="$(jq --raw-output '.data[1].name' ${JSON_FILENAME})"
           echo current_trail_name="${current_trail_name}"  >> ${GITHUB_OUTPUT}
@@ -109,14 +110,14 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v2
+        uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{ vars.KOSLI_CLI_VERSION }}
 
       - name: Find new vulns by comparing previous_trail and current_trail
         id: set-new-vulns
         env:
-          KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
           KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
           PREVIOUS_TRAIL_NAME: ${{ needs.env-trail-names.outputs.previous_trail_name }}
           CURRENT_TRAIL_NAME:  ${{ needs.env-trail-names.outputs.current_trail_name }}
@@ -147,7 +148,7 @@ jobs:
     env:
       ATTESTATION_DATA_JSON: ${{ toJSON(matrix) }}
       ATTESTATION_DATA_FILENAME: new-snyk-vuln.json
-      KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
+      KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
       KOSLI_FLOW:      ${{ inputs.kosli_flow_name_new_vulns }}
       KOSLI_TRAIL:     ${{ matrix.repo_name }}-${{ matrix.artifact_fingerprint }}
     steps:
@@ -156,7 +157,7 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v2
+        uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{ vars.KOSLI_CLI_VERSION }}
 

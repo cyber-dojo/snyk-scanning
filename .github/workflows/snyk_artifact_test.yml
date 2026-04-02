@@ -2,11 +2,11 @@ name: Live Snyk test of one artifact already deployed to an environment
 
 on:
   workflow_call:
-    secrets:
-      snyk_token:
-        required: true
-      kosli_api_token:
-        required: true
+    # secrets:
+    #   snyk_token:
+    #     required: true
+    #   kosli_api_token:
+    #     required: true
 
     inputs:
       artifact_name:
@@ -79,7 +79,7 @@ jobs:
 
       - name: Run Snyk container test
         env:
-          SNYK_TOKEN: ${{ secrets.snyk_token }}
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         run:
           snyk container test "${{ inputs.artifact_name }}"
             --policy-path="${SNYK_POLICY_FILENAME}"
@@ -125,14 +125,14 @@ jobs:
     runs-on: ubuntu-latest
     env:
       ATTESTATION_DATA_FILENAME: no-snyk-vuln.json
-      KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
+      KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
     steps:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
       - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v2
+        uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{ vars.KOSLI_CLI_VERSION }}
       
@@ -178,7 +178,7 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v2
+        uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{vars.KOSLI_CLI_VERSION}}
 
@@ -200,7 +200,7 @@ jobs:
 
       - name: Attest single-snyk-vuln to Kosli
         env:
-          KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
           KOSLI_FLOW:      ${{ inputs.kosli_flow_name_all_vulns }}
           KOSLI_TRAIL:     ${{ inputs.kosli_trail_name_all_vulns }}
         run:

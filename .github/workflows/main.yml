@@ -21,7 +21,7 @@ jobs:
       kosli_trail: ${{ steps.set-kosli-trail.outputs.kosli_trail }}
     steps:
       - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v2
+        uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{vars.KOSLI_CLI_VERSION}}
 
@@ -73,9 +73,9 @@ jobs:
       kosli_flow_name_all_vulns: aws-beta-all-snyk-vulns
       kosli_trail_name_all_vulns: ${{ needs.setup.outputs.kosli_trail }}
       kosli_flow_name_new_vulns: aws-beta-new-snyk-vulns
-    secrets:
-      snyk_token:      ${{ secrets.snyk_token }}
-      kosli_api_token: ${{ secrets.kosli_api_token }}
+    #secrets:
+    #  snyk_token:      ${{ secrets.snyk_token }}
+    #  kosli_api_token: ${{ secrets.kosli_api_token }}
 
   aws-prod-new-env-snyk:
     needs: [setup]
@@ -85,6 +85,6 @@ jobs:
       kosli_flow_name_all_vulns: aws-prod-all-snyk-vulns
       kosli_trail_name_all_vulns: ${{ needs.setup.outputs.kosli_trail }}
       kosli_flow_name_new_vulns: aws-prod-new-snyk-vulns
-    secrets:
-      snyk_token:      ${{ secrets.snyk_token }}
-      kosli_api_token: ${{ secrets.kosli_api_token }}
+    #secrets:
+    #  snyk_token:      ${{ secrets.snyk_token }}
+    #  kosli_api_token: ${{ secrets.kosli_api_token }}

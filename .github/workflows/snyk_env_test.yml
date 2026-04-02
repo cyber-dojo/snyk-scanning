@@ -2,11 +2,11 @@ name: Live Snyk test of all artifacts deployed to an environment
 
 on:
   workflow_call:
-    secrets:
-      snyk_token:
-        required: true
-      kosli_api_token:
-        required: true
+    # secrets:
+    #   snyk_token:
+    #     required: true
+    #   kosli_api_token:
+    #     required: true
 
     inputs:
       kosli_env:
@@ -40,14 +40,14 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v2
+        uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{ vars.KOSLI_CLI_VERSION }}
 
       - name: Generate JSON for each Artifact in kosli_env for following job's strategy:matrix:include
         id: set-artifacts
         env:
-          KOSLI_API_TOKEN: ${{ secrets.kosli_api_token }}
+          KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
         run: |
           artifacts="$(make artifacts | jq --raw-output --compact-output .)"
           echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}
@@ -73,7 +73,7 @@ jobs:
       commit_url:           ${{ matrix.commit_url }}
       kosli_flow_name_all_vulns:  ${{ inputs.kosli_flow_name_all_vulns }}
       kosli_trail_name_all_vulns: ${{ inputs.kosli_trail_name_all_vulns }}
-    secrets:
-      snyk_token:      ${{ secrets.snyk_token }}
-      kosli_api_token: ${{ secrets.kosli_api_token }}
+    # secrets:
+    #   snyk_token:      ${{ secrets.snyk_token }}
+    #   kosli_api_token: ${{ secrets.kosli_api_token }}
 

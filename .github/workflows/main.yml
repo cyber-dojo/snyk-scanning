@@ -1,4 +1,4 @@
-name: Live Snyk test of artifacts in aws-beta and aws-prod environments
+name: Artifacts in aws-beta and aws-prod environments
 
 on:
   push:

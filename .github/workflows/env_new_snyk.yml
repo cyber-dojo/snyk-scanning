@@ -1,4 +1,4 @@
-name: Live Snyk test of artifacts with new vulnerabilities in an environment
+name: Artifacts with new vulnerabilities in an environment
 
 on:
   workflow_call:

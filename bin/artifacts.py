@@ -1,4 +1,5 @@
 import json
+import os
 import sys
 
 
@@ -29,7 +30,7 @@ def print_help():
     """)
 
 
-def artifacts():
+def artifacts(environment_name):
     raw = json.loads(sys.stdin.read())
     result = []
     snapshot_index = raw["index"]
@@ -54,7 +55,7 @@ def artifacts():
                         "repo_name": repo_name,
                         "snapshot_index": snapshot_index,
                         "snapshot_artifact_url": f"{html_url}?fingerprint={fingerprint}",
-                        "environment_name": "aws-prod",
+                        "environment_name": environment_name,
                         "raw_snyk_policy_url": raw_snyk_policy_url(commit_url)
                     })
 
@@ -99,6 +100,10 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
         print_help()
     else:
+        environment_name = os.environ.get("KOSLI_ENV")
+        if environment_name is None:
+            stderr("KOSLI_ENV environment variable is not set")
+            sys.exit(1)
         # Note: This is expecting input on stdin
-        print(json.dumps(artifacts(), indent=2))
+        print(json.dumps(artifacts(environment_name), indent=2))
 

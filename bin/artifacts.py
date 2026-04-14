@@ -1,5 +1,4 @@
 import json
-import os
 import sys
 
 
@@ -22,7 +21,6 @@ def print_help():
               "repo_name": "languages-start-points",
               "snapshot_index": 3600,
               "snapshot_artifact_url": "https://app.kosli.com/cyber-dojo/environments/aws-prod/snapshots/3600?fingerprint=1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a",
-              "environment_name": "aws-prod",
               "raw_snyk_policy_url": "https://raw.githubusercontent.com/cyber-dojo/languages-start-points/commit/88366281011d1aa83c5db4280aa8a6daa0be8541/.snyk"
             },          
             ...
@@ -30,7 +28,7 @@ def print_help():
     """)
 
 
-def artifacts(environment_name):
+def artifacts():
     raw = json.loads(sys.stdin.read())
     result = []
     snapshot_index = raw["index"]
@@ -55,7 +53,6 @@ def artifacts(environment_name):
                         "repo_name": repo_name,
                         "snapshot_index": snapshot_index,
                         "snapshot_artifact_url": f"{html_url}?fingerprint={fingerprint}",
-                        "environment_name": environment_name,
                         "raw_snyk_policy_url": raw_snyk_policy_url(commit_url)
                     })
 
@@ -100,10 +97,6 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] in ["-h", "--help"]:
         print_help()
     else:
-        environment_name = os.environ.get("KOSLI_ENV")
-        if environment_name is None:
-            stderr("KOSLI_ENV environment variable is not set")
-            sys.exit(1)
         # Note: This is expecting input on stdin
-        print(json.dumps(artifacts(environment_name), indent=2))
+        print(json.dumps(artifacts(), indent=2))
 

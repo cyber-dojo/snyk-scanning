@@ -62,6 +62,8 @@ jobs:
 
       - name: Generate JSON for each Artifact in KOSLI_ENV for following job's strategy:matrix:include
         id: set-artifacts
+        env:
+          KOSLI_ENV: ${{inputs.kosli_env}}
         run: |
           artifacts="$(make artifacts | jq --raw-output --compact-output .)"
           jq . <<< "${artifacts}"
@@ -88,7 +90,6 @@ jobs:
       git_commit:           ${{matrix.git_commit}}
       commit_url:           ${{matrix.commit_url}}
       raw_snyk_policy_url:  ${{matrix.raw_snyk_policy_url}}
-      kosli_env:            ${{inputs.kosli_env}}
       kosli_flow:           ${{inputs.kosli_flow}}
       kosli_cat:            ${{inputs.kosli_cat}}
     secrets:

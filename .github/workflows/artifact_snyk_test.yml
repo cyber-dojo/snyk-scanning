@@ -33,20 +33,14 @@ on:
         description: "URL of snyk policy file (in commit for artifact)"
         required: true
         type: string
-      kosli_env:
-        description: "Name of Kosli environment the artifact is running in"
-        required: true
-        type: string
       kosli_flow:
         description: "Name of Kosli flow to attest evidence in"
-        required: false
+        required: true
         type: string
-        default: ${{inputs.kosli_env}}-synk-vuln-ages
       kosli_cat:
         description: "Name of custom attestion type"
         required: true
         type: string
-        default: ${{inputs.kosli_env}}-synk-vuln-ages
 
 
 env:

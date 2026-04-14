@@ -132,76 +132,6 @@ jobs:
           echo "version=$(snyk --version)" >> ${GITHUB_OUTPUT}
 
 
-  attest-no-snyk-vulns:
-    needs: find-snyk-vulns
-    if: ${{needs.find-snyk-vulns.outputs.vulns == '[]'}}
-    runs-on: ubuntu-latest
-    env:
-      ATTESTATION_DATA_FILENAME: custom.json
-      KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
-      KOSLI_FLOW: ${{inputs.kosli_flow}}
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v2
-        with:
-          version: ${{vars.KOSLI_CLI_VERSION}}
-
-      - name: Set Kosli trail name
-        run: |
-          repo_name=${{inputs.repo_name}}
-          digest=${{inputs.artifact_fingerprint}}
-          echo "KOSLI_TRAIL=${repo_name}-${digest}" >> "${GITHUB_ENV}"
-
-      - name: Begin Kosli trail (idempotent)
-        run:
-          kosli begin trail ${KOSLI_TRAIL}
-
-      - name: Get trail info
-        run:
-          kosli get trail ${KOSLI_TRAIL}
-            --output json > trail.json
-
-      - name: Get trail creation timestamp
-        run:
-          echo "FIRST_SEEN_TS=$(jq .created_at trail.json)" >> ${GITHUB_ENV}
-
-      - name: Attest artifact to Kosli
-        run:
-          kosli attest artifact ${{inputs.artifact_name}}
-            --fingerprint ${{inputs.artifact_fingerprint}}
-            --name artifact
-
-      - name: Create file containing custom attestation data
-        run:
-          jq
-            --arg     version                "${{needs.find-snyk-vulns.outputs.version}}"
-            --arg     id                      none
-            --arg     severity                none
-            --arg     url                     ''
-            --arg     ignore_expires_exists   false
-            --arg     ignore_expires          ''
-            --argjson ignore_expires_ts       0
-            --argjson first_seen_ts           ${FIRST_SEEN_TS}
-            '$ARGS.named' <<< '{}' 
-            > ${ATTESTATION_DATA_FILENAME}
-
-      - name: Print custom attestation data
-        run:
-          cat ${ATTESTATION_DATA_FILENAME}
-
-      - name: Attest custom to Kosli
-        run:
-          kosli attest custom ${{inputs.artifact_name}}
-            --attestation-data ${ATTESTATION_DATA_FILENAME}
-            --fingerprint ${{inputs.artifact_fingerprint}}
-            --name artifact.none-SNYK
-            --type ${{inputs.kosli_cat}}
-
-
   attest-snyk-vulns:
     needs: find-snyk-vulns
     if: ${{needs.find-snyk-vulns.outputs.vulns != '[]'}}
@@ -225,9 +155,7 @@ jobs:
 
       - name: Set Kosli trail name
         run: |
-          repo_name=${{inputs.repo_name}}
-          digest=${{inputs.artifact_fingerprint}}
-          echo "KOSLI_TRAIL=${repo_name}-${digest}" >> "${GITHUB_ENV}"
+          echo "KOSLI_TRAIL=${{inputs.repo_name}}-${{matrix.snyk_severity}}-${{matrix.snyk_id}}" >> "${GITHUB_ENV}"
 
       - name: Begin Kosli trail (idempotent)
         run:
@@ -266,11 +194,20 @@ jobs:
         run:
           cat ${ATTESTATION_DATA_FILENAME}
 
+      - name: Set attestation slot name
+        run: |
+          if [ "${{matrix.snyk_ignore_expires_exists}}" = "true" ]; then
+            echo "SLOT_NAME=ignored" >> "${GITHUB_ENV}"
+          else
+            days=$(( ($(date +%s) - ${FIRST_SEEN_TS}) / 86400 ))
+            echo "SLOT_NAME=days-old-${days}" >> "${GITHUB_ENV}"
+          fi
+
       - name: Attest custom to Kosli
         run:
           kosli attest custom ${{inputs.artifact_name}}
             --annotate snyk_URL=${{matrix.snyk_url}}
             --attestation-data ${ATTESTATION_DATA_FILENAME}
             --fingerprint ${{inputs.artifact_fingerprint}}
-            --name artifact.${{matrix.snyk_severity}}-${{matrix.snyk_id}}
+            --name artifact.${SLOT_NAME}
             --type ${{inputs.kosli_cat}}

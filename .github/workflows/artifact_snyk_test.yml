@@ -69,7 +69,6 @@ jobs:
         uses: cyber-dojo/load-image-from-registry@main
         with:
           image_name: ${{inputs.artifact_name}}
-          aws_rolename: gh_actions_snyk_scanning
 
       - name: Setup Snyk
         uses: snyk/actions/setup@master

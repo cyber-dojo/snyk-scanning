@@ -74,6 +74,7 @@ jobs:
       - name: Generate JSON for each Artifact in KOSLI_ENV for following job's strategy:matrix:include
         id: set-artifacts
         run: |
+          make artifacts
           # FAKE getting snapshot from kosli_env so we only do 1 snyk-container-test
           artifacts="$(jq --compact-output . ./fake-data/artifacts-${{inputs.kosli_env}}.json)"
           echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}          

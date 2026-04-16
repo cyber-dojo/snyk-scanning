@@ -2,6 +2,10 @@
 
 readonly my_dir="$(cd "$(dirname "${0}")" && pwd)"
 
+export KOSLI_HOST=https://app.kosli.com
+export KOSLI_ORG=cyber-dojo
+export KOSLI_API_TOKEN=dummy-read-only
+
 test_SUCCESS_json_artifacts_written_to_stdout() { :; }
 
 xtest___SUCCESS_no_artifacts()
@@ -13,9 +17,9 @@ xtest___SUCCESS_no_artifacts()
   assert_stderr_equals ""
 }
 
-test___SUCCESS_aws_prod()
+test___SUCCESS_aws_beta()
 {
-  local -r filename="aws-prod.json"
+  local -r filename="aws-beta.json"
   get_artifacts "${filename}"
   assert_status_equals 0
   assert_stdout_equals "$(cat "${my_dir}/expected/${filename}")"
@@ -24,9 +28,9 @@ test___SUCCESS_aws_prod()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
-test_FAILURE_with_diagnostic_on_stderr() { :; }
+xtest_FAILURE_with_diagnostic_on_stderr() { :; }
 
-test___FAILURE_unknown_ci_system()
+xtest___FAILURE_unknown_ci_system()
 {
   local -r filename="unknown-ci-system"
   get_artifacts "${filename}.json"

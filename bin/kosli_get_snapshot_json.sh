@@ -7,7 +7,7 @@ source "${ROOT_DIR}/bin/lib.sh"
 KOSLI_HOST="${KOSLI_HOST:-https://app.kosli.com}"
 KOSLI_ORG="${KOSLI_ORG:-cyber-dojo}"
 KOSLI_API_TOKEN="${KOSLI_API_TOKEN:-read-only-dummy}"
-KOSLI_ENV="${KOSLI_ENV:-aws-prod}"
+KOSLI_ENV="${KOSLI_ENV:-aws-beta}"
 
 # NOTE: in a Github Action, stdout and stderr are multiplexed together.
 # This multiplexing is standard behaviour inside a docker container with a tty.

@@ -48,19 +48,19 @@ jobs:
           kosli tag flow aws-beta-all-snyk-vulns \
             --set kind=run \
             --set ci=github \
-            --set repo_url=https://github.com/cyber-dojo/live-snyk-scans
+            --set repo_url=https://github.com/${{ github.repository }}
           kosli tag flow aws-prod-all-snyk-vulns \
             --set kind=run \
             --set ci=github \
-            --set repo_url=https://github.com/cyber-dojo/live-snyk-scans
+            --set repo_url=https://github.com/${{ github.repository }}
           kosli tag flow aws-beta-new-snyk-vulns \
             --set kind=run \
             --set ci=github \
-            --set repo_url=https://github.com/cyber-dojo/live-snyk-scans
+            --set repo_url=https://github.com/${{ github.repository }}
           kosli tag flow aws-prod-new-snyk-vulns \
             --set kind=run \
             --set ci=github \
-            --set repo_url=https://github.com/cyber-dojo/live-snyk-scans
+            --set repo_url=https://github.com/${{ github.repository }}
 
       - name: Set kosli-trail output
         id: set-kosli-trail

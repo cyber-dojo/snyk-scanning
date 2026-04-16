@@ -38,16 +38,10 @@ jobs:
 
       - name: Create custom-attestation-type
         run:
-          kosli create attestation-type 
+          kosli create attestation-type
             ${KOSLI_CUSTOM_ATTESTATION_TYPE}
-            --jq '24*60*60 as $day |
-                  now - .first_seen_ts as $age |
-                  now < .ignore_expires_ts as $ignore_till_expires |
-                  $ignore_till_expires or
-                  ((.severity == "low")      and ($age < 90 * $day)) or
-                  ((.severity == "medium")   and ($age < 30 * $day)) or
-                  ((.severity == "high")     and ($age <  7 * $day)) or
-                  ((.severity == "critical") and ($age <  3 * $day))'
+            --schema single-snyk-vuln.schema.json
+            --jq 'true'
             
       - name: Create environment-policy
         run: |

@@ -164,12 +164,6 @@ jobs:
         run:
           echo "FIRST_SEEN_TS=$(jq '.created_at | floor' trail.json)" >> ${GITHUB_ENV}
 
-      - name: Attest artifact to Kosli
-        run:
-          kosli attest artifact ${{inputs.artifact_name}}
-            --fingerprint ${{inputs.artifact_fingerprint}}
-            --name artifact
-
       - name: Create file containing custom attestation data
         run:
           jq
@@ -177,7 +171,7 @@ jobs:
             --arg     id                   "${{matrix.snyk_full_id}}"
             --arg     severity             "${{matrix.snyk_severity}}"
             --arg     url                  "${{matrix.snyk_vuln_url}}"
-            --arg     ignore_expires_exists ${{matrix.snyk_ignore_expires_exists}}
+            --argjson ignore_expires_exists ${{matrix.snyk_ignore_expires_exists}}
             --arg     ignore_expires       "${{matrix.snyk_ignore_expires}}"
             --argjson ignore_expires_ts     ${{matrix.snyk_ignore_expires_ts}}
             --argjson first_seen_ts         ${FIRST_SEEN_TS}
@@ -196,6 +190,12 @@ jobs:
             days=$(( ($(date +%s) - ${FIRST_SEEN_TS}) / 86400 ))
             echo "SLOT_NAME=days-old-${days}" >> "${GITHUB_ENV}"
           fi
+
+      - name: Attest artifact to Kosli
+        run:
+          kosli attest artifact ${{inputs.artifact_name}}
+            --fingerprint ${{inputs.artifact_fingerprint}}
+            --name artifact
 
       - name: Attest custom to Kosli
         run:

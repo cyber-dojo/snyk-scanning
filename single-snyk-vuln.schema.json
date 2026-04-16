@@ -3,57 +3,48 @@
   "type": "object",
   "description": "Schema for a specific Artifact with a specific Snyk vulnerability",
   "properties": {
-    "repo_name": {
-      "type": "string",
-      "description": "Repo whose workflow built the Artifact with the vulnerability"
-    },
-    "git_commit": {
-      "type": "string",
-      "description": "40 character git commit whose workflow built the Artifact with the vulnerability"
-    },
-    "commit_url": {
-      "type": "string",
-      "description": "The git commit URL whose workflow built the Artifact with the vulnerability"
-    },
-    "artifact_name": {
-      "type": "string",
-      "description": "The name of the Artifact with the vulnerability"
-    },
-    "artifact_fingerprint": {
-      "type": "string",
-      "description": "64 character digest of the Artifact with the vulnerability"
-    },
-    "snyk_version": {
+    "version": {
       "type": "string",
       "description": "The version of Snyk that found the vulnerability, eg 1.1300.2"
     },
-    "snyk_full_id": {
+    "id": {
       "type": "string",
       "description": "The full identifier of the vulnerability, eg SNYK-ALPINE321-RUBY-14100871"
     },
-    "snyk_short_id": {
+    "severity": {
       "type": "string",
-      "description": "The short identifier of the vulnerability, eg 14100871"
+      "enum": ["low", "medium", "high", "critical"],
+      "description": "The severity of the vulnerability"
     },
-    "snyk_severity": {
-      "type": "string",
-      "description": "The severity of the vulnerability, eg high"
-    },
-    "snyk_vuln_url": {
+    "url": {
       "type": "string",
       "description": "The URL of the vulnerability"
+    },
+    "ignore_expires_exists": {
+      "type": "boolean",
+      "description": "Whether the vulnerability has an active Snyk ignore entry"
+    },
+    "ignore_expires": {
+      "type": "string",
+      "description": "The expiry date of the Snyk ignore entry, empty string if none"
+    },
+    "ignore_expires_ts": {
+      "type": "number",
+      "description": "Unix timestamp of the ignore expiry, 0 if none"
+    },
+    "first_seen_ts": {
+      "type": "number",
+      "description": "Unix timestamp when this vulnerability was first seen (Kosli trail creation time)"
     }
   },
   "required": [
-    "repo_name",
-    "git_commit",
-    "commit_url",
-    "artifact_name",
-    "artifact_fingerprint",
-    "snyk_version",
-    "snyk_full_id",
-    "snyk_short_id",
-    "snyk_severity",
-    "snyk_vuln_url"
+    "version",
+    "id",
+    "severity",
+    "url",
+    "ignore_expires_exists",
+    "ignore_expires",
+    "ignore_expires_ts",
+    "first_seen_ts"
   ]
 }

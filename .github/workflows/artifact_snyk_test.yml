@@ -37,10 +37,6 @@ on:
         description: "Name of Kosli flow to attest evidence in"
         required: true
         type: string
-      kosli_cat:
-        description: "Name of custom attestion type"
-        required: true
-        type: string
 
 
 env:
@@ -48,6 +44,7 @@ env:
   KOSLI_DRY_RUN: ${{vars.KOSLI_DRY_RUN}} # true/false
   KOSLI_HOST:    ${{vars.KOSLI_HOST}}    # https://app.kosli.com
   KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
+
 
 jobs:
 
@@ -195,4 +192,4 @@ jobs:
             --attestation-data ${ATTESTATION_DATA_FILENAME}
             --fingerprint ${{inputs.artifact_fingerprint}}
             --name artifact.snyk
-            --type ${{inputs.kosli_cat}}
+            --type single-snyk-vuln

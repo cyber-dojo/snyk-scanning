@@ -14,7 +14,6 @@ env:
 
   KOSLI_ENV: aws-beta
   KOSLI_FLOW: snyk-vulns-aws-beta
-  KOSLI_CUSTOM_ATTESTATION_TYPE: single-snyk-vuln
 
 jobs:
 
@@ -23,7 +22,6 @@ jobs:
     outputs:
       kosli_env: ${{steps.set-env.outputs.env}}
       kosli_flow: ${{steps.set-flow.outputs.flow}}
-      kosli_cat: ${{steps.set-cat.outputs.cat}}
     env:
       KOSLI_API_TOKEN: ${{secrets.KOSLI_API_TOKEN}}
     steps:
@@ -66,11 +64,6 @@ jobs:
         run:
           echo "flow=${KOSLI_FLOW}" >> ${GITHUB_OUTPUT}
 
-      - name: Set cat output
-        id: set-cat
-        run:
-          echo "cat=${KOSLI_CUSTOM_ATTESTATION_TYPE}" >> ${GITHUB_OUTPUT}
-
 
   scan-aws-beta:
     needs: setup
@@ -78,7 +71,6 @@ jobs:
     with:
       kosli_env:  ${{needs.setup.outputs.kosli_env}}
       kosli_flow: ${{needs.setup.outputs.kosli_flow}}
-      kosli_cat:  ${{needs.setup.outputs.kosli_cat}}
     secrets:
       snyk_token:      ${{secrets.SNYK_TOKEN}}
       kosli_api_token: ${{secrets.KOSLI_API_TOKEN}}

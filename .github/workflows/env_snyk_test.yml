@@ -65,6 +65,7 @@ jobs:
         env:
           KOSLI_ENV: ${{inputs.kosli_env}}
         run: |
+          make artifacts
           artifacts="$(make artifacts | jq --raw-output --compact-output .)"
           jq . <<< "${artifacts}"
           echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}

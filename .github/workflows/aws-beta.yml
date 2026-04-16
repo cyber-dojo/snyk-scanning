@@ -13,7 +13,7 @@ env:
   KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
 
   KOSLI_ENV: aws-beta
-  KOSLI_FLOW: snyk-vulns
+  KOSLI_FLOW: snyk-vulns-aws-beta
   KOSLI_CUSTOM_ATTESTATION_TYPE: single-snyk-vuln
 
 jobs:

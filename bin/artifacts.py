@@ -87,18 +87,7 @@ def raw_snyk_policy_url(commit_url):
         sys.exit(42)
 
 
-def excluded_flow(flow_name):
-    if flow_name == "production-promotion":
-        return True
-    elif flow_name == "snyk-vulns":
-        return True
-    elif flow_name == "aws-beta":
-        return True
-    elif flow_name == "aws-prod":
-        return True
-    else:
-        return False
-
+def build_flow(flow_name):
     command = [
         'kosli', 'get', 'flow',
         f"{flow_name}",
@@ -110,7 +99,7 @@ def excluded_flow(flow_name):
     ]
     result = subprocess.run(command, capture_output=True, text=True)
     if result.returncode != 0:
-        print(result.stderr)
+        stderr(result.stderr)
         sys.exit(result.returncode)
 
     flow_json = json.loads(result.stdout)

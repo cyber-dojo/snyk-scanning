@@ -1,3 +1,11 @@
+# This workflow is called from build workflows in other repos,
+# such as cyberdojo/.github/workflows/main.yml.
+# This has two consequences:
+# 1) The checkout action in the find-snyk-vulns job must specify
+#    its own repository explicitly (not rely on the default).
+# 2) The workflow cannot rely on GitHub env-vars that are only
+#    present at the repo level.
+
 name: Artifact Snyk Test
 
 on:

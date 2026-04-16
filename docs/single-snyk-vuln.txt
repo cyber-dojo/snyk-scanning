@@ -1,0 +1,7 @@
+Open question: where should the custom-attestation-type "single-snyk-vuln" be created?
+
+Should artifact_snyk_test.yml create it itself (creation is idempotent)
+to ensure it always exists before it is used?
+
+Should creation of the type be in its own workflow which
+is called when needed?

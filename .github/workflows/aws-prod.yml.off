@@ -1,10 +1,10 @@
-name: Live Snyk Test aws-prod
+name: Live Snyk Test aws-beta
 
 on:
   workflow_dispatch:
   push:
-  schedule: # At 08:00 every day
-    - cron: '0 8 * * *'
+  #schedule: # At 08:00 every day
+  #  - cron: '0 8 * * *'
 
 env:
   KOSLI_DEBUG:   ${{vars.KOSLI_DEBUG}}   # true/false
@@ -13,10 +13,7 @@ env:
   KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
 
   KOSLI_ENV: aws-prod
-  KOSLI_FLOW: aws-prod-synk-vuln-ages
-  KOSLI_CUSTOM_ATTESTATION_TYPE: aws-prod-synk-vuln-ages
-  KOSLI_POLICY_NAME: aws-prod-synk-vuln-ages
-  KOSLI_POLICY_FILEPATH: aws-prod-synk-vuln-ages.yml
+  KOSLI_FLOW: snyk-vulns-aws-prod
 
 jobs:
 
@@ -25,9 +22,8 @@ jobs:
     outputs:
       kosli_env: ${{steps.set-env.outputs.env}}
       kosli_flow: ${{steps.set-flow.outputs.flow}}
-      kosli_cat: ${{steps.set-cat.outputs.cat}}
     env:
-      KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
+      KOSLI_API_TOKEN: ${{secrets.KOSLI_API_TOKEN}}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -40,18 +36,10 @@ jobs:
 
       - name: Create custom-attestation-type
         run:
-          kosli create attestation-type 
-            ${KOSLI_CUSTOM_ATTESTATION_TYPE}
-            --jq '24*60*60 as $day |
-                  .severity == "none" as $no_vulnerability |
-                  now - .first_seen_ts as $age |
-                  now < .ignore_expires_ts as $ignore_till_expires |
-                  $no_vulnerability or
-                  $ignore_till_expires or
-                  ((.severity == "low")      and ($age < 3 * $day)) or
-                  ((.severity == "medium")   and ($age < 1 * $day)) or
-                  ((.severity == "high")     and ($age < 0 * $day)) or
-                  ((.severity == "critical") and ($age < 0 * $day))'
+          kosli create attestation-type
+            single-snyk-vuln
+            --schema single-snyk-vuln.schema.json
+            --jq 'true'
             
       - name: Create environment-policy
         run: |
@@ -76,19 +64,13 @@ jobs:
         run:
           echo "flow=${KOSLI_FLOW}" >> ${GITHUB_OUTPUT}
 
-      - name: Set cat output
-        id: set-cat
-        run:
-          echo "cat=${KOSLI_CUSTOM_ATTESTATION_TYPE}" >> ${GITHUB_OUTPUT}
 
-
-  scan-aws-prod:
+  scan-aws-beta:
     needs: setup
     uses: ./.github/workflows/env_snyk_test.yml
     with:
       kosli_env:  ${{needs.setup.outputs.kosli_env}}
       kosli_flow: ${{needs.setup.outputs.kosli_flow}}
-      kosli_cat:  ${{needs.setup.outputs.kosli_cat}}
     secrets:
       snyk_token:      ${{secrets.SNYK_TOKEN}}
       kosli_api_token: ${{secrets.KOSLI_API_TOKEN}}

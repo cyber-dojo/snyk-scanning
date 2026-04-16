@@ -22,16 +22,19 @@ on:
         required: true
         type: string
 
+
+env:
+  KOSLI_DEBUG:     ${{vars.KOSLI_DEBUG}}   # true/false
+  KOSLI_DRY_RUN:   ${{vars.KOSLI_DRY_RUN}} # true/false
+  KOSLI_HOST:      ${{vars.KOSLI_HOST}}    # https://app.kosli.com
+  KOSLI_ORG:       ${{vars.KOSLI_ORG}}     # cyber-dojo
+  KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
+
+
 jobs:
 
   setup:
     runs-on: ubuntu-latest
-    env:
-      KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
-      KOSLI_DEBUG:     ${{vars.KOSLI_DEBUG}}          # true/false
-      KOSLI_DRY_RUN:   ${{vars.KOSLI_DRY_RUN}}        # true/false
-      KOSLI_HOST:      ${{vars.KOSLI_HOST}}           # https://app.kosli.com
-      KOSLI_ORG:       ${{vars.KOSLI_ORG}}            # cyber-dojo
     steps:
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v3
@@ -41,7 +44,6 @@ jobs:
       - name: Create Kosli flow
         run:
           kosli create flow ${{inputs.kosli_flow}}
-            --description "Holds snyk vulnerabilityfor Artifacts destined for, or running in, the '${{inputs.kosli_env}}' Environment"
             --use-empty-template
 
 

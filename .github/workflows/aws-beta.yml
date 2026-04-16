@@ -13,10 +13,8 @@ env:
   KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
 
   KOSLI_ENV: aws-beta
-  KOSLI_FLOW: aws-beta
-  KOSLI_CUSTOM_ATTESTATION_TYPE: aws-beta-snyk-vuln
-  #KOSLI_POLICY_NAME: aws-beta-synk-vuln-ages
-  #KOSLI_POLICY_FILEPATH: aws-beta-synk-vuln-ages.yml
+  KOSLI_FLOW: snyk-vulns
+  KOSLI_CUSTOM_ATTESTATION_TYPE: single-snyk-vuln
 
 jobs:
 
@@ -46,10 +44,10 @@ jobs:
                   now - .first_seen_ts as $age |
                   now < .ignore_expires_ts as $ignore_till_expires |
                   $ignore_till_expires or
-                  ((.severity == "low")      and ($age < 5 * $day)) or
-                  ((.severity == "medium")   and ($age < 2 * $day)) or
-                  ((.severity == "high")     and ($age < 1 * $day)) or
-                  ((.severity == "critical") and ($age < 0 * $day))'
+                  ((.severity == "low")      and ($age < 90 * $day)) or
+                  ((.severity == "medium")   and ($age < 30 * $day)) or
+                  ((.severity == "high")     and ($age <  7 * $day)) or
+                  ((.severity == "critical") and ($age <  3 * $day))'
             
       - name: Create environment-policy
         run: |

@@ -62,22 +62,21 @@ jobs:
         with:
           version: ${{vars.KOSLI_CLI_VERSION}}
 
-      - name: Generate JSON for each Artifact in KOSLI_ENV for following job's strategy:matrix:include
-        id: set-artifacts
-        env:
-          KOSLI_ENV: ${{inputs.kosli_env}}
-        run: |
-          make artifacts
-          artifacts="$(make artifacts | jq --raw-output --compact-output .)"
-          jq . <<< "${artifacts}"
-          echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}
-
       # - name: Generate JSON for each Artifact in KOSLI_ENV for following job's strategy:matrix:include
       #   id: set-artifacts
+      #   env:
+      #     KOSLI_ENV: ${{inputs.kosli_env}}
       #   run: |
-      #     # FAKE getting snapshot from kosli_env so we only do 1 snyk-container-test
-      #     artifacts="$(jq --compact-output . ./fake-data/artifacts-${{inputs.kosli_env}}.json)"
-      #     echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}          
+      #     artifacts="$(make artifacts | jq --raw-output --compact-output .)"
+      #     jq . <<< "${artifacts}"
+      #     echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}
+
+      - name: Generate JSON for each Artifact in KOSLI_ENV for following job's strategy:matrix:include
+        id: set-artifacts
+        run: |
+          # FAKE getting snapshot from kosli_env so we only do 1 snyk-container-test
+          artifacts="$(jq --compact-output . ./fake-data/artifacts-${{inputs.kosli_env}}.json)"
+          echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}          
 
 
   artifact-snyk-test:

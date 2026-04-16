@@ -49,7 +49,7 @@ def artifacts():
             fingerprint = artifact["fingerprint"]
             for flow in artifact["flows"]:
                 flow_name = flow["flow_name"]
-                if build_flow(flow_name):
+                if is_build_flow(flow_name):
                     git_commit = flow["git_commit"]
                     commit_url = flow["commit_url"]
                     repo_name = flow_name[:-3]
@@ -87,24 +87,25 @@ def raw_snyk_policy_url(commit_url):
         sys.exit(42)
 
 
-def build_flow(flow_name):
-    command = [
-        'kosli', 'get', 'flow',
-        f"{flow_name}",
-        f"--host={KOSLI_HOST}",
-        f"--org={KOSLI_ORG}",
-        f"--api-token={KOSLI_API_TOKEN}",
-        '--debug=false',
-        '--output=json'
-    ]
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode != 0:
-        stderr(result.stderr)
-        sys.exit(result.returncode)
+BUILD_FLOWS = [
+    "dashboard-ci",
+    "differ-ci",
+    "custom-start-points-ci",
+    "languages-start-points-ci",
+    "exercises-start-points-ci",
+    "saver-ci",
+    "web-ci",
+    "creator-ci",
+    "runner-ci",
+    "nginx-ci"
+]
 
-    flow_json = json.loads(result.stdout)
-    tags = flow_json.get("tags", {})
-    return tags.get("kind", "") == "build"
+def is_build_flow(flow_name):
+    """
+    Originally tried this by doing a kosli-get-flow --output=json
+    and then looking the tags in the json but it was very slow.
+    """
+    return flow_name in BUILD_FLOWS
 
 
 def stderr(message):

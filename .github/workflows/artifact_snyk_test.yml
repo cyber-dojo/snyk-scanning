@@ -12,6 +12,7 @@ on:
       aws_rolename:
         description: "Rolename for permission to download artifact"
         required: false
+        type: string
         default: "gh_actions_snyk_scanning"
       artifact_name:
         description: "Artifact name"

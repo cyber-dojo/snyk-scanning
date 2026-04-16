@@ -9,6 +9,10 @@ on:
         required: true
 
     inputs:
+      aws_rolename:
+        description: "Rolename for permission to download artifact"
+        required: false
+        default: "gh_actions_snyk_scanning"
       artifact_name:
         description: "Artifact name"
         required: true
@@ -69,6 +73,7 @@ jobs:
         uses: cyber-dojo/load-image-from-registry@main
         with:
           image_name: ${{inputs.artifact_name}}
+          aws_rolename: ${{inputs.aws_rolename}}
 
       - name: Setup Snyk
         uses: snyk/actions/setup@master

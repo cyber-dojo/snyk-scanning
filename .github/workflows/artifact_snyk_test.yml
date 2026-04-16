@@ -149,7 +149,7 @@ jobs:
 
       - name: Set Kosli trail name
         run: |
-          echo "KOSLI_TRAIL=${{inputs.repo_name}}-${{matrix.snyk_severity}}-${{matrix.snyk_id}}" >> "${GITHUB_ENV}"
+          echo "KOSLI_TRAIL=${{inputs.repo_name}}-${{matrix.snyk_severity}}-${{matrix.snyk_full_id}}" >> "${GITHUB_ENV}"
 
       - name: Begin Kosli trail (idempotent)
         run:
@@ -174,9 +174,9 @@ jobs:
         run:
           jq
             --arg     version              "${{needs.find-snyk-vulns.outputs.version}}"
-            --arg     id                   "${{matrix.snyk_id}}"
+            --arg     id                   "${{matrix.snyk_full_id}}"
             --arg     severity             "${{matrix.snyk_severity}}"
-            --arg     url                  "${{matrix.snyk_url}}"
+            --arg     url                  "${{matrix.snyk_vuln_url}}"
             --arg     ignore_expires_exists ${{matrix.snyk_ignore_expires_exists}}
             --arg     ignore_expires       "${{matrix.snyk_ignore_expires}}"
             --argjson ignore_expires_ts     ${{matrix.snyk_ignore_expires_ts}}
@@ -200,7 +200,7 @@ jobs:
       - name: Attest custom to Kosli
         run:
           kosli attest custom ${{inputs.artifact_name}}
-            --annotate snyk_URL=${{matrix.snyk_url}}
+            --annotate snyk_URL=${{matrix.snyk_vuln_url}}
             --attestation-data ${ATTESTATION_DATA_FILENAME}
             --fingerprint ${{inputs.artifact_fingerprint}}
             --name artifact.${SLOT_NAME}

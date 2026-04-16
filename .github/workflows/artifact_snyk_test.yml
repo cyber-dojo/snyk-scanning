@@ -162,7 +162,7 @@ jobs:
 
       - name: Get trail creation timestamp
         run:
-          echo "FIRST_SEEN_TS=$(jq .created_at trail.json)" >> ${GITHUB_ENV}
+          echo "FIRST_SEEN_TS=$(jq '.created_at | floor' trail.json)" >> ${GITHUB_ENV}
 
       - name: Attest artifact to Kosli
         run:

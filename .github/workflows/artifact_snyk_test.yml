@@ -49,7 +49,6 @@ env:
   KOSLI_DRY_RUN: ${{vars.KOSLI_DRY_RUN}} # true/false
   KOSLI_HOST:    ${{vars.KOSLI_HOST}}    # https://app.kosli.com
   KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
-  KOSLI_CAT:     ${{vars.KOSLI_CUSTOM_ATTESTATION_TYPE}}
 
 
 jobs:
@@ -200,4 +199,4 @@ jobs:
             --attestation-data ${ATTESTATION_DATA_FILENAME}
             --fingerprint ${{inputs.artifact_fingerprint}}
             --name artifact.snyk
-            --type ${KOSLI_CAT}
+            --type single-snyk-vuln

@@ -11,7 +11,6 @@ env:
   KOSLI_DRY_RUN: ${{vars.KOSLI_DRY_RUN}} # true/false
   KOSLI_HOST:    ${{vars.KOSLI_HOST}}    # https://app.kosli.com
   KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
-  KOSLI_CAT:     ${{vars.KOSLI_CUSTOM_ATTESTATION_TYPE}}
 
   KOSLI_ENV: aws-beta
   KOSLI_FLOW: snyk-vulns-aws-beta
@@ -38,7 +37,7 @@ jobs:
       - name: Create custom-attestation-type
         run:
           kosli create attestation-type
-            ${KOSLI_CAT}
+            single-snyk-vuln
             --schema single-snyk-vuln.schema.json
             --jq 'true'
             

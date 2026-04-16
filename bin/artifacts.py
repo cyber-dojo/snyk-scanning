@@ -81,6 +81,8 @@ def raw_snyk_policy_url(commit_url):
 def excluded_flow(flow_name):
     if flow_name == "production-promotion":
         return True
+    elif flow_name == "snyk-vulns":
+        return True
     elif flow_name == "aws-beta":
         return True
     elif flow_name == "aws-prod":

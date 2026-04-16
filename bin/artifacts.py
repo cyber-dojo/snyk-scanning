@@ -29,7 +29,8 @@ def print_help():
               "commit_url": "https://github.com/cyber-dojo/languages-start-points/commit/88366281011d1aa83c5db4280aa8a6daa0be8541",
               "repo_name": "languages-start-points",
               "snapshot_index": 3600,
-              "snapshot_artifact_url": "https://app.kosli.com/cyber-dojo/environments/aws-prod/snapshots/3600?fingerprint=1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a"
+              "snapshot_artifact_url": "https://app.kosli.com/cyber-dojo/environments/aws-prod/snapshots/3600?fingerprint=1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a",
+              "raw_snyk_policy_url": "https://raw.githubusercontent.com/cyber-dojo/languages-start-points/commit/88366281011d1aa83c5db4280aa8a6daa0be8541/.snyk"
             },          
             ...
           ]
@@ -60,22 +61,42 @@ def artifacts():
                         "commit_url": commit_url,
                         "repo_name": repo_name,
                         "snapshot_index": snapshot_index,
-                        "snapshot_artifact_url": f"{html_url}?fingerprint={fingerprint}"
+                        "snapshot_artifact_url": f"{html_url}?fingerprint={fingerprint}",
+                        "raw_snyk_policy_url": raw_snyk_policy_url(commit_url)
                     })
 
     return result
 
 
-def build_flow(flow_name):
-    # The incoming snapshot is from an Environment on a SINGLE-SERVER eg app.kosli.com
-    # and the Flows it finds for its artifacts will be from that server.
-    # But in the CI worflow, the following kosli-get-flow will be a multi-host call. 
-    # And this breaks because although the original Flow exists on all the servers,
-    # when a Flow is renamed, its new name includes a timestamp of when it was renamed. Eg
-    #   aws-beta-new-snyk-vulns-TEST-archived-at-1773914589
-    # This timestamp will be different on different servers.
-    # This could happen at any time, since artifacts can be rolled back.
-    if "archived-at" in flow_name:
+def raw_snyk_policy_url(commit_url):
+    commit_sha = commit_url[-40:]
+    if commit_url.startswith("https://github.com"):
+        # https://github.com/cyber-dojo/languages-start-points/commit/88366281011d1aa83c5db4280aa8a6daa0be8541
+        cut_suffix = "/commit/88366281011d1aa83c5db4280aa8a6daa0be8541"
+        prefix_url = commit_url[len("https://github.com/"):-len(cut_suffix)]
+        # eg prefix_url = cyber-dojo/languages-start-points/commit
+        return f"https://raw.githubusercontent.com/{prefix_url}/{commit_sha}/.snyk"
+    elif commit_url.startswith("https://gitlab.com"):
+        # https://gitlab.com/cyber-dojo/creator/-/commit/dca5d2f7571f9b63d651088c2b38946091853083
+        cut_suffix = "/-/commit/dca5d2f7571f9b63d651088c2b38946091853083"
+        prefix_url = commit_url[:-len(cut_suffix)]
+        # eg prefix_url = https://gitlab.com/cyber-dojo/creator
+        return f"{prefix_url}/-/raw/{commit_sha}/.snyk"
+    else:
+        stderr(f"Unknown CI system {commit_url}")
+        sys.exit(42)
+
+
+def excluded_flow(flow_name):
+    if flow_name == "production-promotion":
+        return True
+    elif flow_name == "snyk-vulns":
+        return True
+    elif flow_name == "aws-beta":
+        return True
+    elif flow_name == "aws-prod":
+        return True
+    else:
         return False
 
     command = [

@@ -34,7 +34,7 @@ jobs:
       KOSLI_ORG:       ${{vars.KOSLI_ORG}}            # cyber-dojo
     steps:
       - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v2
+        uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{vars.KOSLI_CLI_VERSION}}
 
@@ -51,12 +51,12 @@ jobs:
     outputs:
       artifacts: ${{steps.set-artifacts.outputs.artifacts}}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
       - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v2
+        uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{vars.KOSLI_CLI_VERSION}}
 

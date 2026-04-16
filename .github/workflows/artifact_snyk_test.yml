@@ -63,7 +63,7 @@ jobs:
       SNYK_SARIF_FILENAME: snyk.container.test.json
       SNYK_POLICY_FILENAME: .snyk
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
@@ -138,12 +138,12 @@ jobs:
       matrix:
         include: ${{fromJSON(needs.find-snyk-vulns.outputs.vulns)}}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 1
 
       - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v2
+        uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{vars.KOSLI_CLI_VERSION}}
 

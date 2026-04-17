@@ -229,6 +229,6 @@ jobs:
         id: set-trail-names
         run: |
           trail_names=$(echo '${{needs.find-snyk-vulns.outputs.vulns}}' | \
-            jq --arg repo '${{inputs.repo_name}}' \
+            jq --compact-output --arg repo '${{inputs.repo_name}}' \
             '[.[] | "\($repo)-\(.snyk_severity)-\(.snyk_full_id)"]')
           echo "trail_names=${trail_names}" >> ${GITHUB_OUTPUT}

@@ -10,6 +10,10 @@ name: Artifact Snyk Test
 
 on:
   workflow_call:
+    outputs:
+      trail_names:
+        description: "JSON array of Kosli trail names attested to"
+        value: ${{jobs.collect-trail-names.outputs.trail_names}}
     secrets:
       snyk_token:
         required: true
@@ -214,3 +218,19 @@ jobs:
             --fingerprint ${{inputs.artifact_fingerprint}}
             --name artifact.snyk
             --type ${{needs.create-snyk-cat.outputs.name}}
+
+
+  collect-trail-names:
+    needs: [find-snyk-vulns, attest-snyk-vulns]
+    if: always() && needs.find-snyk-vulns.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      trail_names: ${{steps.set-trail-names.outputs.trail_names}}
+    steps:
+      - name: Set trail names
+        id: set-trail-names
+        run: |
+          trail_names=$(echo '${{needs.find-snyk-vulns.outputs.vulns}}' | \
+            jq --arg repo '${{inputs.repo_name}}' \
+            '[.[] | "\($repo)-\(.snyk_severity)-\(.snyk_full_id)"]')
+          echo "trail_names=${trail_names}" >> ${GITHUB_OUTPUT}

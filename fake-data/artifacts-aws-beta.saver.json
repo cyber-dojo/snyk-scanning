@@ -1,9 +1,8 @@
 [
-    {
-        "artifact_name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/saver:dc0016b@sha256:b45f890c0475037394a56fda0a30958e3d48e5edfd1a77554926d9f8edb87d04",
-        "artifact_fingerprint": "b45f890c0475037394a56fda0a30958e3d48e5edfd1a77554926d9f8edb87d04",
-        "repo_name": "saver",
-        "git_commit": "dc0016bd811d5eb63b3add09c78e25502b3cdd91",
-        "commit_url": "https://github.com/cyber-dojo/saver/commit/dc0016bd811d5eb63b3add09c78e25502b3cdd91"
-    }
+  {
+    "artifact_name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/saver:dc0016b@sha256:b45f890c0475037394a56fda0a30958e3d48e5edfd1a77554926d9f8edb87d04",
+    "artifact_fingerprint": "b45f890c0475037394a56fda0a30958e3d48e5edfd1a77554926d9f8edb87d04",
+    "repo_name": "saver",
+    "git_commit": "dc0016bd811d5eb63b3add09c78e25502b3cdd91"
+  }
 ]

@@ -3,7 +3,6 @@
     "SNYK-GOLANG-GITHUBCOMGOVIPERMAPSTRUCTUREV2-10558294": {
       "artifact_fingerprint": "3f59b9757ad165654ea18008d34a6aef6f8842c0fb92740d153377164cc13989",
       "artifact_name": "runner:d579c7a",
-      "commit_url": "https://github.com/cyber-dojo/runner/commit/d579c7a17cc224f22b6b7db3f1e4f3421b511f00",
       "git_commit": "d579c7a17cc224f22b6b7db3f1e4f3421b511f00",
       "repo_name": "runner",
       "snyk_full_id": "SNYK-GOLANG-GITHUBCOMGOVIPERMAPSTRUCTUREV2-10558294",
@@ -15,7 +14,6 @@
     "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804": {
       "artifact_fingerprint": "3f59b9757ad165654ea18008d34a6aef6f8842c0fb92740d153377164cc13989",
       "artifact_name": "runner:d579c7a",
-      "commit_url": "https://github.com/cyber-dojo/runner/commit/d579c7a17cc224f22b6b7db3f1e4f3421b511f00",
       "git_commit": "d579c7a17cc224f22b6b7db3f1e4f3421b511f00",
       "repo_name": "runner",
       "snyk_full_id": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",

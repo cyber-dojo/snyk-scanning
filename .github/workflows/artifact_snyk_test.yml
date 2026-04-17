@@ -38,16 +38,12 @@ on:
         description: "Artifact commit (40 chars)"
         required: true
         type: string
-      commit_url:
-        description: "Artifact commit URL"
-        required: true
-        type: string
       raw_snyk_policy_url:
         description: "URL of snyk policy file (in commit for artifact)"
         required: true
         type: string
       kosli_flow:
-        description: "Name of Kosli flow to attest evidence in"
+        description: "Name of Kosli flow to attest snyk vulns to"
         required: true
         type: string
 
@@ -178,7 +174,7 @@ jobs:
         run:
           echo "FIRST_SEEN_TS=$(jq '.created_at' trail.json)" >> ${GITHUB_ENV}
 
-      - name: Create file containing custom attestation data
+      - name: Create file containing snyk vuln data
         run:
           jq
             --arg     version              "${{needs.find-snyk-vulns.outputs.version}}"
@@ -202,7 +198,7 @@ jobs:
             --fingerprint ${{inputs.artifact_fingerprint}}
             --name artifact
 
-      - name: Attest custom to Kosli
+      - name: Attest snyk vuln to Kosli
         run:
           kosli attest custom ${{inputs.artifact_name}}
             --annotate snyk_URL=${{matrix.snyk_vuln_url}}

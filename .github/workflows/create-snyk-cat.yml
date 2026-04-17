@@ -23,6 +23,11 @@ jobs:
     outputs:
       name: ${{steps.create.outputs.name}}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@v6
         with:
           repository: cyber-dojo/snyk-scanning

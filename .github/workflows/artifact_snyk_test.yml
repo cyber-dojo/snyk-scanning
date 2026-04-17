@@ -69,6 +69,11 @@ jobs:
       SNYK_SARIF_FILENAME: snyk.container.test.json
       SNYK_POLICY_FILENAME: .snyk
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@v6
         with:
           repository: cyber-dojo/snyk-scanning                                                                                                           
@@ -152,6 +157,11 @@ jobs:
       matrix:
         include: ${{fromJSON(needs.find-snyk-vulns.outputs.vulns)}}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v3
         with:

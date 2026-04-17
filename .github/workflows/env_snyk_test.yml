@@ -30,6 +30,11 @@ jobs:
     outputs:
       artifacts: ${{steps.set-artifacts.outputs.artifacts}}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@v6
         with:
           fetch-depth: 1

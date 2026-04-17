@@ -119,7 +119,7 @@ jobs:
 
       - name: Get the real .snyk file
         run: |
-          curl "${{inputs.raw_snyk_policy_url}}" > ${SNYK_POLICY_FILENAME}
+          curl --fail-with-body "${{inputs.raw_snyk_policy_url}}" > ${SNYK_POLICY_FILENAME}
           cat ${SNYK_POLICY_FILENAME}
 
       - name: Combine vulns in sarif file with snyk policy file

@@ -90,7 +90,7 @@ jobs:
       - name: Load docker image from registry
         uses: cyber-dojo/load-image-from-registry@main
         with:
-          image_name: ${{inputs.artifact_name}}@${{inputs.artifact_fingerprint}}
+          image_name: ${{inputs.artifact_name}}
           aws_rolename: ${{inputs.aws_rolename}}
 
       - name: Setup Snyk
@@ -113,7 +113,7 @@ jobs:
         env:
           SNYK_TOKEN: ${{secrets.snyk_token}}
         run:
-          snyk container test ${{inputs.artifact_name}}@${{inputs.artifact_fingerprint}}
+          snyk container test ${{inputs.artifact_name}}
             --policy-path=${SNYK_POLICY_FILENAME}
             --sarif
             --sarif-file-output=${SNYK_SARIF_FILENAME} || true

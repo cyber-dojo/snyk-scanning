@@ -11,3 +11,7 @@ Tidy fake_data/
 
 Tidy test/
 
+bin/combine_snyk.py has a comment
+    # else:
+    #   .snyk has ignore entry for vuln that artifact does not have
+Can we somehow get thet written out somewhere, eg a github summary

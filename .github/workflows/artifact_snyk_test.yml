@@ -161,17 +161,10 @@ jobs:
         run: |
           echo "KOSLI_TRAIL=${{inputs.repo_name}}-${{matrix.snyk_severity}}-${{matrix.snyk_full_id}}" >> "${GITHUB_ENV}"
 
-      - name: Begin Kosli trail (idempotent)
-        run:
+      - name: Get time vuln first seen for this repo 
+        run: |
           kosli begin trail ${KOSLI_TRAIL}
-
-      - name: Get trail info
-        run:
-          kosli get trail ${KOSLI_TRAIL}
-            --output json > trail.json
-
-      - name: Get trail creation timestamp
-        run:
+          kosli get trail ${KOSLI_TRAIL} --output json > trail.json
           echo "FIRST_SEEN_TS=$(jq '.created_at' trail.json)" >> ${GITHUB_ENV}
 
       - name: Create file containing snyk vuln data

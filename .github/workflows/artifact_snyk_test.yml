@@ -56,9 +56,15 @@ env:
 
 
 jobs:
+  create-snyk-cat:
+    uses: ./.github/workflows/create-snyk-cat.yml
+    secrets:
+      kosli_api_token: ${{secrets.kosli_api_token}}
+
 
   find-snyk-vulns:
     runs-on: ubuntu-latest
+    needs: [create-snyk-cat]
     outputs:
       vulns: ${{steps.set-vulns.outputs.vulns}}
       version: ${{steps.set-version.outputs.version}}
@@ -139,14 +145,8 @@ jobs:
           echo "version=$(snyk --version)" >> ${GITHUB_OUTPUT}
 
 
-  create-snyk-cat:
-    uses: ./.github/workflows/create-snyk-cat.yml
-    secrets:
-      kosli_api_token: ${{secrets.kosli_api_token}}
-
-
   attest-snyk-vulns:
-    needs: [find-snyk-vulns, create-snyk-cat]
+    needs: [create-snyk-cat, find-snyk-vulns]
     if: ${{needs.find-snyk-vulns.outputs.vulns != '[]'}}
     runs-on: ubuntu-latest
     env:

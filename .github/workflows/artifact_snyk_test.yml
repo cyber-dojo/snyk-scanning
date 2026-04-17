@@ -182,6 +182,7 @@ jobs:
             > ${ATTESTATION_DATA_FILENAME}
 
       - name: Print custom attestation data
+        if: ${{env.KOSLI_DEBUG == 'true'}}
         run:
           cat ${ATTESTATION_DATA_FILENAME}
 

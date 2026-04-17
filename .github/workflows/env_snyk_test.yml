@@ -18,33 +18,14 @@ on:
         required: true
         type: string
 
-
 env:
   KOSLI_DEBUG:     ${{vars.KOSLI_DEBUG}}   # true/false
   KOSLI_DRY_RUN:   ${{vars.KOSLI_DRY_RUN}} # true/false
   KOSLI_HOST:      ${{vars.KOSLI_HOST}}    # https://app.kosli.com
   KOSLI_ORG:       ${{vars.KOSLI_ORG}}     # cyber-dojo
-  KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
-
 
 jobs:
-
-  setup:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v3
-        with:
-          version: ${{vars.KOSLI_CLI_VERSION}}
-
-      - name: Create Kosli flow
-        run:
-          kosli create flow ${{inputs.kosli_flow}}
-            --use-empty-template
-
-
   find-artifacts:
-    needs: setup
     runs-on: ubuntu-latest
     outputs:
       artifacts: ${{steps.set-artifacts.outputs.artifacts}}
@@ -61,16 +42,15 @@ jobs:
       - name: Generate JSON for each Artifact in KOSLI_ENV for following job's strategy:matrix:include
         id: set-artifacts
         env:
+          KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
           KOSLI_ENV: ${{inputs.kosli_env}}
         run: |
           artifacts="$(make artifacts | jq --raw-output --compact-output .)"
-          jq . <<< "${artifacts}"
           echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}
 
       # - name: Generate JSON for each Artifact in KOSLI_ENV for following job's strategy:matrix:include
       #   id: set-artifacts
       #   run: |
-      #     make artifacts
       #     # FAKE getting snapshot from kosli_env so we only do 1 snyk-container-test
       #     artifacts="$(jq --compact-output . ./fake-data/artifacts-${{inputs.kosli_env}}.json)"
       #     echo "artifacts=${artifacts}" >> ${GITHUB_OUTPUT}

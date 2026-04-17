@@ -1,7 +1,14 @@
 
-Caller will be doing get-trail's so they have data for a 
-kosli-evaluate. So I think artifact_snyk_test.yml is going
-to need to return the names of the trails it has created.
+artifact_snyk_test.yml's 
+- Implement input.attest_to_kosli
+  If false, don't do attestations, return null
+     ?do the snyk-container-test and return its exit-status?
+  If true, do attestations, return [] or [trail-names]
+- Need to pass kosli_slot_name as an input
+  This is for the attestation to the "callers" context
+
+
+
 
 Revive tests of artifacts.py
 

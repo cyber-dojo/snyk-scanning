@@ -30,6 +30,10 @@ on:
         description: "Artifact name"
         required: true
         type: string
+      kosli_flow:
+        description: "Name of Kosli flow to attest snyk vulns to"
+        required: true
+        type: string
       repo_name:
         description: "Artifact repo"
         required: false
@@ -40,10 +44,11 @@ on:
         required: false
         type: string
         default: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/.snyk
-      kosli_flow:
-        description: "Name of Kosli flow to attest snyk vulns to"
-        required: true
-        type: string
+      attest_to_kosli:
+        description: "Whether to make attestations for each vuln"
+        required: false
+        default: ${{ github.ref == 'refs/heads/main' }}
+
 
 
 env:

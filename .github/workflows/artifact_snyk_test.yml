@@ -129,7 +129,7 @@ jobs:
         run: |
           ./bin/combine_snyk.py ${SNYK_SARIF_FILENAME} ${SNYK_POLICY_FILENAME} > ${JSON_FILENAME}                  
           vulns="$(jq --compact-output . ${JSON_FILENAME})"
-          jq . <<< "${vulns}"
+          # jq . <<< "${vulns}"
           echo "vulns=${vulns}" >> ${GITHUB_OUTPUT}
 
       - name: Output snyk version
@@ -138,8 +138,14 @@ jobs:
           echo "version=$(snyk --version)" >> ${GITHUB_OUTPUT}
 
 
+  create-snyk-cat:
+    uses: ./.github/workflows/create-snyk-cat.yml
+    secrets:
+      kosli_api_token: ${{secrets.kosli_api_token}}
+
+
   attest-snyk-vulns:
-    needs: find-snyk-vulns
+    needs: [find-snyk-vulns, create-snyk-cat]
     if: ${{needs.find-snyk-vulns.outputs.vulns != '[]'}}
     runs-on: ubuntu-latest
     env:
@@ -150,10 +156,6 @@ jobs:
       matrix:
         include: ${{fromJSON(needs.find-snyk-vulns.outputs.vulns)}}
     steps:
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v3
         with:
@@ -207,4 +209,4 @@ jobs:
             --attestation-data ${ATTESTATION_DATA_FILENAME}
             --fingerprint ${{inputs.artifact_fingerprint}}
             --name artifact.snyk
-            --type single-snyk-vuln
+            --type ${{needs.create-snyk-cat.outputs.name}}

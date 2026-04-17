@@ -202,19 +202,12 @@ jobs:
         run:
           cat ${ATTESTATION_DATA_FILENAME}
 
-      - name: Attest artifact to Kosli
-        run:
-          kosli attest artifact ${{inputs.artifact_name}}
-            --fingerprint ${{inputs.artifact_fingerprint}}
-            --name artifact
-
       - name: Attest snyk vuln to Kosli
         run:
-          kosli attest custom ${{inputs.artifact_name}}
+          kosli attest custom
             --annotate snyk_URL=${{matrix.snyk_vuln_url}}
             --attestation-data ${ATTESTATION_DATA_FILENAME}
-            --fingerprint ${{inputs.artifact_fingerprint}}
-            --name artifact.snyk
+            --name snyk
             --type ${{needs.create-snyk-cat.outputs.name}}
 
 

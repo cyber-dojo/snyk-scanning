@@ -1,0 +1,13 @@
+
+Revive tests of artifacts.py
+
+Revive tests of combine_snyk.py
+
+Dead bin/dead folder
+
+Tidy docs/
+
+Tidy fake_data/
+
+Tidy test/
+

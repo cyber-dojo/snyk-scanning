@@ -224,11 +224,12 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       trail_names: ${{steps.set-trail-names.outputs.trail_names}}
+    env:
+      VULNS: ${{ needs.find-snyk-vulns.outputs.vulns }}      
     steps:
-      - name: Set trail names
-        id: set-trail-names
+      - id: set-trail-names
         run: |
-          trail_names=$(echo '${{needs.find-snyk-vulns.outputs.vulns}}' | \
+          trail_names=$(echo "${VULNS}" | \
             jq --compact-output --arg repo '${{inputs.repo_name}}' \
             '[.[] | "\($repo)-\(.snyk_severity)-\(.snyk_full_id)"]')
           echo "trail_names=${trail_names}" >> ${GITHUB_OUTPUT}

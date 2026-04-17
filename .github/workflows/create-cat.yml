@@ -1,0 +1,38 @@
+name: Create Custom Attestation Type
+
+on:
+  workflow_call:
+    secrets:
+      kosli_api_token:
+        required: true
+
+env:
+  KOSLI_DEBUG:   ${{vars.KOSLI_DEBUG}}   # true/false
+  KOSLI_DRY_RUN: ${{vars.KOSLI_DRY_RUN}} # true/false
+  KOSLI_HOST:    ${{vars.KOSLI_HOST}}    # https://app.kosli.com
+  KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
+
+jobs:
+
+  create-cat:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          repository: cyber-dojo/snyk-scanning
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Kosli CLI
+        uses: kosli-dev/setup-cli-action@v3
+        with:
+          version: ${{vars.KOSLI_CLI_VERSION}}
+
+      - name: Create custom-attestation-type
+        env:
+          KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
+        run:
+          kosli create attestation-type
+            single-snyk-vuln
+            --schema single-snyk-vuln.schema.json
+            --jq 'true'

@@ -11,7 +11,7 @@ name: Artifact Snyk Test
 on:
   workflow_call:
     outputs:
-      trail_names:
+      trail_names_json:
         description: "JSON array of Kosli trail names attested to"
         value: ${{jobs.collect-trail-names.outputs.trail_names}}
     secrets:
@@ -223,13 +223,13 @@ jobs:
     if: always() && needs.find-snyk-vulns.result == 'success'
     runs-on: ubuntu-latest
     outputs:
-      trail_names: ${{steps.set-trail-names.outputs.trail_names}}
+      trail_names_json: ${{steps.set-trail-names-json.outputs.trail_names_json}}
     env:
       VULNS: ${{ needs.find-snyk-vulns.outputs.vulns }}      
     steps:
-      - id: set-trail-names
+      - id: set-trail-names-json
         run: |
-          trail_names=$(echo "${VULNS}" | \
+          trail_names_json=$(echo "${VULNS}" | \
             jq --compact-output --arg repo '${{inputs.repo_name}}' \
             '[.[] | "\($repo)-\(.snyk_severity)-\(.snyk_full_id)"]')
-          echo "trail_names=${trail_names}" >> ${GITHUB_OUTPUT}
+          echo "trail_names_json=${trail_names_json}" >> ${GITHUB_OUTPUT}

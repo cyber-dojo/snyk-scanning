@@ -23,8 +23,7 @@ jobs:
     outputs:
       name: ${{steps.create.outputs.name}}
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
+      - uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
 

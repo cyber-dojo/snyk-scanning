@@ -75,8 +75,7 @@ jobs:
       SNYK_SARIF_FILENAME: snyk.container.test.json
       SNYK_POLICY_FILENAME: .snyk
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
+      - uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
 
@@ -157,8 +156,7 @@ jobs:
       matrix:
         include: ${{fromJSON(needs.find-snyk-vulns.outputs.vulns)}}
     steps:
-      - name: Harden Runner
-        uses: step-security/harden-runner@v2
+      - uses: step-security/harden-runner@v2
         with:
           egress-policy: audit
 
@@ -174,12 +172,12 @@ jobs:
           version: ${{vars.KOSLI_CLI_VERSION}}
 
       - name: Set Kosli trail name
-        run: |
+        run:
           echo "KOSLI_TRAIL=${{inputs.repo_name}}-${{matrix.snyk_severity}}-${{matrix.snyk_full_id}}" >> "${GITHUB_ENV}"
 
       - name: Get time vuln first seen for this repo 
         run: |
-          kosli begin trail ${KOSLI_TRAIL}
+          kosli begin trail ${KOSLI_TRAIL} # idempotent
           kosli get trail ${KOSLI_TRAIL} --output json > trail.json
           echo "FIRST_SEEN_TS=$(jq '.created_at' trail.json)" >> ${GITHUB_ENV}
 

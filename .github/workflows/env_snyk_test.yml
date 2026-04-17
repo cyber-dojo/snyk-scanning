@@ -70,7 +70,6 @@ jobs:
       artifact_name:        ${{matrix.artifact_name}}
       artifact_fingerprint: ${{matrix.artifact_fingerprint}}
       repo_name:            ${{matrix.repo_name}}
-      git_commit:           ${{matrix.git_commit}}
       raw_snyk_policy_url:  ${{matrix.raw_snyk_policy_url}}
       kosli_flow:           ${{inputs.kosli_flow}}
     secrets:

@@ -166,8 +166,6 @@ jobs:
 
       - uses: actions/checkout@v6
         with:
-          repository: cyber-dojo/snyk-scanning
-          ref: main
           fetch-depth: 1
 
       - name: Setup Kosli CLI

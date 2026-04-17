@@ -1,4 +1,8 @@
 
+Caller will be doing get-trail's so they have data for a 
+kosli-evaluate. So I think artifact_snyk_test.yml is going
+to need to return the names of the trails it has created.
+
 Revive tests of artifacts.py
 
 Revive tests of combine_snyk.py

@@ -30,10 +30,6 @@ on:
         description: "Artifact name"
         required: true
         type: string
-      artifact_fingerprint:
-        description: "Artifact fingerprint/digest (64 chars)"
-        required: true
-        type: string
       repo_name:
         description: "Artifact repo"
         required: false

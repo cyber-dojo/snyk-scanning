@@ -68,7 +68,6 @@ jobs:
     uses: ./.github/workflows/artifact_snyk_test.yml
     with:
       artifact_name:        ${{matrix.artifact_name}}
-      artifact_fingerprint: ${{matrix.artifact_fingerprint}}
       repo_name:            ${{matrix.repo_name}}
       raw_snyk_policy_url:  ${{matrix.raw_snyk_policy_url}}
       kosli_flow:           ${{inputs.kosli_flow}}

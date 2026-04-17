@@ -47,7 +47,7 @@ on:
       attest_to_kosli:
         description: "Whether to make attestations for each vuln"
         required: false
-        type: string
+        type: boolean
         default: ${{ github.ref == 'refs/heads/main' }}
 
 

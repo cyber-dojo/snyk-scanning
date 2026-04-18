@@ -32,11 +32,15 @@ on:
         required: true
         type: string
       kosli_flow:
-        description: "Name of 'inner' Kosli flow to attest individual snyk vulns to"
+        description: "The Kosli flow to attest to"
         required: true
         type: string
-      kosli_slot_name:
-        description: "For the attestion in the callers context"
+      kosli_trail:
+        description: "The Kosli trail to attest to"
+        required: true
+        type: string
+      kosli_slot:
+        description: "The Kosli slot to attest to"
         required: true
         type: string
       repo_name:
@@ -61,10 +65,13 @@ on:
         default: ${{ github.ref == 'refs/heads/main' }}
 
 env:
-  KOSLI_DEBUG:   ${{vars.KOSLI_DEBUG}}   # false
-  KOSLI_DRY_RUN: ${{vars.KOSLI_DRY_RUN}} # false
-  KOSLI_HOST:    ${{vars.KOSLI_HOST}}    # https://app.kosli.com
-  KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
+  KOSLI_DEBUG:     ${{vars.KOSLI_DEBUG}}   # false
+  KOSLI_DRY_RUN:   ${{vars.KOSLI_DRY_RUN}} # false
+  KOSLI_HOST:      ${{vars.KOSLI_HOST}}    # https://app.kosli.com
+  KOSLI_ORG:       ${{vars.KOSLI_ORG}}     # cyber-dojo
+  KOSLI_FLOW:      ${{inputs.kosli_flow}}
+  KOSLI_TRAIL:     ${{inputs.kosli_trail}}
+  KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
 
   FAKING: true
   DEBUG: true
@@ -104,8 +111,6 @@ jobs:
 
       - name: Create custom-attestation-type
         id: create
-        env:
-          KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
         run: |
           name=single-snyk-vuln
           kosli create attestation-type \
@@ -227,8 +232,7 @@ jobs:
     env:
       VULN_JSON: ${{toJSON(matrix)}}
       VULN_FILENAME: vuln-${{matrix.trail_name}}.json
-      KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
-      KOSLI_FLOW: ${{inputs.kosli_flow}}
+      KOSLI_FLOW: snyk-vulns
       KOSLI_TRAIL: ${{matrix.trail_name}}
     strategy:
       matrix:
@@ -292,6 +296,7 @@ jobs:
     env:
       POLICY_FILENAME: snyk-vuln-compliance.rego
       VULNS_FILENAME: vulns.json
+      KOSLI_SLOT: ${{inputs.kosli_slot}}
     steps:
       - uses: step-security/harden-runner@v2
         if: ${{env.FAKING == 'false'}}
@@ -333,25 +338,21 @@ jobs:
 
       - name: Attest NO vulns
         if: ${{ github.ref == 'refs/heads/main' && needs.attest-inner-snyk-vulns.result == 'skipped' && (success() || failure()) }}
-        env:
-          KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
-          KOSLI_SLOT_NAME: ${{inputs.kosli_slot_name}}
         run:
           kosli attest generic
             --compliant=true
             --attachments="${POLICY_FILENAME}"
-            --name="${KOSLI_SLOT_NAME}"
+            --name="${KOSLI_SLOT}"
 
       - name: Attest SOME vulns
         if: ${{github.ref == 'refs/heads/main' && needs.attest-inner-snyk-vulns.result != 'skipped' && (success() || failure()) }}
         env:
-          KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
-          KOSLI_SLOT_NAME: ${{inputs.kosli_slot_name}}
           EVALUATION_FILENAME: evaluation.json
         run: |
           TRAIL_NAMES="$(jq --raw-output '[.[].trail_name] | join(" ")' "${VULNS_FILENAME}")"
 
           kosli evaluate trails ${TRAIL_NAMES} \
+            --flow snyk-vulns \
             --policy="${POLICY_FILENAME}" \
             --output=json \
             > ${EVALUATION_FILENAME}
@@ -362,4 +363,4 @@ jobs:
             --compliant="${COMPLIANT}" \
             --attachments="${POLICY_FILENAME}" \
             --user-data=${VULNS_FILENAME} \
-            --name="${KOSLI_SLOT_NAME}"
+            --name="${KOSLI_SLOT}"

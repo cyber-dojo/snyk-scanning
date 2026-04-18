@@ -201,9 +201,9 @@ jobs:
           ref: main
           fetch-depth: 1
 
-      - name: Save vuln data to file
-        run:
-          echo "${VULN_JSON}" > "${VULN_FILENAME}"
+      # - name: Save vuln data to file
+      #   run:
+      #     echo "${VULN_JSON}" > "${VULN_FILENAME}"
 
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v3
@@ -219,11 +219,9 @@ jobs:
           
           jq --argjson val "${FIRST_SEEN_TS}" \
             '. + {"first_seen_ts": $val }' \
-            ${VULN_FILENAME} > tmp.json \
-            && mv tmp.json ${VULN_FILENAME}
+            <<< "${VULN_JSON}" > ${VULN_FILENAME}
 
       - name: Debug print one vuln
-        if: ${{env.KOSLI_DEBUG == 'true'}}
         run:
           jq . ${VULN_FILENAME}
 
@@ -258,6 +256,7 @@ jobs:
       - name: Set vuln output
         id: set-vulns
         run: |
+          ls -al
           VULNS="$(jq --compact-output --slurp . trail-*.json)"
           echo "vulns=${VULNS}" >> ${GITHUB_ENV}
           echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}

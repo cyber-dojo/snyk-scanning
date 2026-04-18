@@ -6,6 +6,16 @@ name: Artifact Snyk Test on saver
 on:
   push:
 
+env:
+  KOSLI_DEBUG:   ${{vars.KOSLI_DEBUG}}   # false
+  KOSLI_DRY_RUN: ${{vars.KOSLI_DRY_RUN}} # false
+  KOSLI_HOST:    ${{vars.KOSLI_HOST}}    # https://app.kosli.com
+  KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
+
+  KOSLI_FLOW: saver-ci
+  KOSLI_TRAIL: ${{ github.sha }}
+  KOSLI_FINGERPRINT: b2e822b4829bc7447f2622eb3621a1b10452fa503a98b7aa15ba714acef2abd9
+
 jobs:
   call-with-saver:
     uses: ./.github/workflows/artifact_snyk_test.yml

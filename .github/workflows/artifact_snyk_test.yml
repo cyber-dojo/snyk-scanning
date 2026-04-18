@@ -32,7 +32,7 @@ on:
         required: true
         type: string
       kosli_flow:
-        description: "Name of Kosli flow to attest individual snyk vulns to"
+        description: "Name of 'inner' Kosli flow to attest individual snyk vulns to"
         required: true
         type: string
       kosli_slot_name:
@@ -60,13 +60,7 @@ on:
         type: boolean
         default: ${{ github.ref == 'refs/heads/main' }}
 
-
 env:
-  KOSLI_DEBUG:   ${{vars.KOSLI_DEBUG}}   # true/false
-  KOSLI_DRY_RUN: ${{vars.KOSLI_DRY_RUN}} # true/false
-  KOSLI_HOST:    ${{vars.KOSLI_HOST}}    # https://app.kosli.com
-  KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
-
   FAKING: true
   DEBUG: true
 
@@ -271,8 +265,6 @@ jobs:
           jq . ${VULN_FILENAME}
 
       - name: Attest snyk vuln to Kosli
-        env:
-          KOSLI_DRY_RUN: true
         run:
           kosli attest custom
             --annotate snyk_URL=${{matrix.vuln_url}}
@@ -295,10 +287,6 @@ jobs:
     env:
       POLICY_FILENAME: snyk-vuln-compliance.rego
       VULNS_FILENAME: vulns.json
-      KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
-      KOSLI_SLOT_NAME: ${{inputs.kosli_slot_name}}
-      # KOSLI_FLOW: must be set in callers context
-      # KOSLI_FINGERPRINT: must be set in callers context
     steps:
       - uses: step-security/harden-runner@v2
         if: ${{env.FAKING == 'false'}}
@@ -340,6 +328,9 @@ jobs:
 
       - name: Attest NO vulns
         if: ${{ github.ref == 'refs/heads/main' && needs.attest-inner-snyk-vulns.result == 'skipped' && (success() || failure()) }}
+        env:
+          KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
+          KOSLI_SLOT_NAME: ${{inputs.kosli_slot_name}}
         run:
           kosli attest generic
             --compliant=true
@@ -349,6 +340,8 @@ jobs:
       - name: Attest SOME vulns
         if: ${{github.ref == 'refs/heads/main' && needs.attest-inner-snyk-vulns.result != 'skipped' && (success() || failure()) }}
         env:
+          KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
+          KOSLI_SLOT_NAME: ${{inputs.kosli_slot_name}}
           EVALUATION_FILENAME: evaluation.json
         run: |
           TRAIL_NAMES="$(jq --raw-output '[.[].trail_name] | join(" ")' "${VULNS_FILENAME}")"

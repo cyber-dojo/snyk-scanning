@@ -85,6 +85,7 @@ jobs:
     env:
       SNYK_SARIF_FILENAME: snyk.container.test.json
       SNYK_POLICY_FILENAME: .snyk
+      VULN_FILENAME: vulns.json
     steps:
       - uses: step-security/harden-runner@v2
         if: ${{env.FAKING == 'false'}}
@@ -159,19 +160,23 @@ jobs:
           version: ${{vars.KOSLI_CLI_VERSION}}
 
       - name: Combine all data
-        id: set-vulns
-        env:
-          JSON_FILENAME: vulns.json
         run: |
           ./bin/combine_snyk.py \
             ${{inputs.snyk_version}} \
             ${{inputs.repo_name}} \
             ${SNYK_SARIF_FILENAME} \
             ${SNYK_POLICY_FILENAME} \
-              > ${JSON_FILENAME}
+              > ${VULN_FILENAME}
 
-          vulns="$(jq --compact-output . ${JSON_FILENAME})"
-          echo "vulns=${vulns}" >> ${GITHUB_OUTPUT}
+      - name: Debug print vulns
+        run:
+          jq . "${VULN_FILENAME}"
+
+      - name: Set output vulns
+        id: set-vulns
+        run: |
+          VULNS="$(jq --compact-output . ${VULN_FILENAME})"
+          echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
 
 
   attest-snyk-vulns:
@@ -180,7 +185,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VULN_JSON: ${{toJSON(matrix)}}
-      VULN_FILENAME: vuln.json
+      VULN_FILENAME: vuln-${{matrix.trail_name}}.json
       KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
       KOSLI_FLOW: ${{inputs.kosli_flow}}
       KOSLI_TRAIL: ${{matrix.trail_name}}
@@ -233,11 +238,10 @@ jobs:
             --name snyk
             --type ${{needs.create-snyk-cat.outputs.name}}
 
-      - name: Set matrix job output
-        uses: actions/upload-artifact@v4 
+      - uses: actions/upload-artifact@v4 
         with:
-          name: trail-${{ matrix.trail_name }}.json
-          path: ${{ env.VULN_FILENAME }}
+          name: ${{env.VULN_FILENAME}}
+          path: ${{env.VULN_FILENAME}}
 
 
   collect-snyk-vulns:
@@ -248,14 +252,14 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          pattern: trail-*.json
-          merge-multiple: false
+          pattern: vuln-*.json
+          merge-multiple: true
 
       - name: Set vuln output
         id: set-vulns
         run: |
           ls -al
-          VULNS="$(jq --compact-output --slurp . trail-*.json)"
+          VULNS="$(jq --compact-output --slurp . vuln-*.json)"
           echo "vulns=${VULNS}" >> ${GITHUB_ENV}
           echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
             

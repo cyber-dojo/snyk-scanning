@@ -359,7 +359,7 @@ jobs:
 
       - name: Get the rego policy file
         run: |
-          URL=https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/.snyk
+          URL=https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/snyk-vuln-compliance.rego
           curl --fail-with-body "${URL}" > ${REGO_POLICY_FILENAME}
 
       - name: Attest NO vulns
@@ -368,6 +368,7 @@ jobs:
           kosli attest generic
             --compliant=true
             --attachments="${REG_POLICY_FILENAME}"
+            --user-data=${VULNS_FILENAME}
             --name="${KOSLI_ATTESTATION_NAME}"
 
       - name: Attest SOME vulns

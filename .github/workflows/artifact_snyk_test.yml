@@ -13,7 +13,7 @@ on:
     outputs:
       vulns_json:
         description: "JSON array of vuln objects"
-        value: ${{jobs.collect-snyk-vulns.outputs.vulns}}
+        value: ${{jobs.attest-snyk-vulns.outputs.vulns}}
 
     secrets:
       snyk_token:
@@ -33,6 +33,10 @@ on:
         type: string
       kosli_flow:
         description: "Name of Kosli flow to attest individual snyk vulns to"
+        required: true
+        type: string
+      kosli_slot_name:
+        description: "For the attestion in the callers context"
         required: true
         type: string
       repo_name:
@@ -67,11 +71,49 @@ env:
   DEBUG: true
 
 jobs:
-  # TODO: inline this
+  debug:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Print inputs
+        run: |
+          echo "repo_name=${{inputs.repo_name}}"
+          echo "raw_snyk_policy_url=${{inputs.raw_snyk_policy_url}}"
+          echo "attest_to_kosli=${{inputs.attest_to_kosli}}"
+
+
   create-snyk-cat:
-    uses: ./.github/workflows/create-snyk-cat.yml
-    secrets:
-      kosli_api_token: ${{secrets.kosli_api_token}}
+    runs-on: ubuntu-latest
+    needs: [debug]
+    outputs:
+      name: ${{steps.create.outputs.name}}
+    steps:
+      - uses: step-security/harden-runner@v2
+        if: ${{env.FAKING == 'false'}}
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v6
+        with:
+          repository: cyber-dojo/snyk-scanning
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Kosli CLI
+        uses: kosli-dev/setup-cli-action@v3
+        with:
+          version: ${{vars.KOSLI_CLI_VERSION}}
+
+      - name: Create custom-attestation-type
+        id: create
+        env:
+          KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
+        run: |
+          name=single-snyk-vuln
+          kosli create attestation-type \
+            ${name} \
+            --schema single-snyk-vuln.schema.json \
+            --jq 'true'
+          echo "name=${name}" >> ${GITHUB_OUTPUT}
 
 
   find-snyk-vulns:
@@ -179,7 +221,7 @@ jobs:
           echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
 
 
-  attest-snyk-vulns:
+  attest-inner-snyk-vulns:
     needs: [create-snyk-cat, find-snyk-vulns]
     if: ${{needs.find-snyk-vulns.outputs.vulns != '[]'}}
     runs-on: ubuntu-latest
@@ -244,13 +286,36 @@ jobs:
           path: ${{env.VULN_FILENAME}}
 
 
-  collect-snyk-vulns:
-    needs: [find-snyk-vulns, attest-snyk-vulns]
+  attest-snyk-vulns:
+    needs: [find-snyk-vulns, attest-inner-snyk-vulns]
     if: always() && needs.find-snyk-vulns.result == 'success'
     outputs:
       vulns: ${{steps.set-vulns.outputs.vulns}}
     runs-on: ubuntu-latest
+    env:
+      POLICY_FILENAME: snyk-vuln-compliance.rego
+      VULNS_FILENAME: vulns.json
+      KOSLI_SLOT_NAME: ${{inputs.kosli_slot_name}}
+      # KOSLI_FLOW: must be set in callers context
+      # KOSLI_FINGERPRINT: must be set in callers context
     steps:
+      - uses: step-security/harden-runner@v2
+        if: ${{env.FAKING == 'false'}}
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v6
+        with:
+          repository: cyber-dojo/snyk-scanning
+          ref: main
+          fetch-depth: 1
+
+      - name: Setup Kosli CLI
+        if: ${{ github.ref == 'refs/heads/main' && (success() || failure()) }}
+        uses: kosli-dev/setup-cli-action@v3
+        with:
+          version: ${{ vars.KOSLI_CLI_VERSION }}
+
       - uses: actions/download-artifact@v4
         with:
           pattern: vuln-*.json
@@ -259,11 +324,43 @@ jobs:
       - name: Set vuln output
         id: set-vulns
         run: |
-          {
-            if [ "${{needs.attest-snyk-vulns.result}}" = "skipped" ]; then
-              echo "vulns=[]"
-            else
-              VULNS="$(jq --compact-output --slurp . vuln-*.json)"
-              echo "vulns=${VULNS}" 
-            fi
-          } >> ${GITHUB_OUTPUT}
+          if [ "${{needs.attest-inner-snyk-vulns.result}}" = "skipped" ]; then
+            VULNS=[]
+          else
+            VULNS="$(jq --compact-output --slurp . vuln-*.json)"
+          fi
+          echo "${VULNS}" > "${VULNS_FILENAME}"
+          echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
+
+      - name: Debug print vulns
+        if: ${{env.DEBUG == 'true'}}
+        run:
+          jq . ${VULNS_FILENAME}
+
+      - name: Attest NO vulns
+        if: ${{ github.ref == 'refs/heads/main' && needs.attest-inner-snyk-vulns.result == "skipped" && (success() || failure()) }}
+        run:
+          kosli attest generic
+            --compliant=true
+            --attachments="${POLICY_FILENAME}"
+            --name="${KOSLI_SLOT_NAME}"
+
+      - name: Attest SOME vulns
+        if: ${{github.ref == 'refs/heads/main' && needs.attest-inner-snyk-vulns.result != "skipped" && (success() || failure()) }}
+        env:
+          EVALUATION_FILENAME: evaluation.json
+        run: |
+          TRAIL_NAMES="$(jq --raw-output '[.[].trail_name] | join(" ")' "${VULNS_FILENAME}")"
+
+          kosli evaluate trails ${TRAIL_NAMES} \
+            --policy="${POLICY_FILENAME}" \
+            --output=json \
+            > ${EVALUATION_FILENAME}
+
+          COMPLIANT="$(jq '.allow' ${EVALUATION_FILENAME})"
+
+          kosli attest generic \
+            --compliant="${COMPLIANT}" \
+            --attachments="${POLICY_FILENAME}" \
+            --user-data=${VULNS_FILENAME} \
+            --name="${KOSLI_SLOT_NAME}"

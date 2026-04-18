@@ -8,11 +8,6 @@ on:
   #workflow_call:
 
 env:
-  KOSLI_DEBUG:   ${{vars.KOSLI_DEBUG}}   # false
-  KOSLI_DRY_RUN: ${{vars.KOSLI_DRY_RUN}} # false
-  KOSLI_HOST:    ${{vars.KOSLI_HOST}}    # https://app.kosli.com
-  KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
-
   KOSLI_FLOW: runner-ci
   KOSLI_TRAIL: ${{ github.sha }}
   KOSLI_FINGERPRINT: 52de66b4e58f5ce2e2284fec2fc4207efe87a1944affb10dbb79e84d5e4c4ced

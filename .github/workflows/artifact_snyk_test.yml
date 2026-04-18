@@ -61,6 +61,11 @@ on:
         default: ${{ github.ref == 'refs/heads/main' }}
 
 env:
+  KOSLI_DEBUG:   ${{vars.KOSLI_DEBUG}}   # false
+  KOSLI_DRY_RUN: ${{vars.KOSLI_DRY_RUN}} # false
+  KOSLI_HOST:    ${{vars.KOSLI_HOST}}    # https://app.kosli.com
+  KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
+
   FAKING: true
   DEBUG: true
 

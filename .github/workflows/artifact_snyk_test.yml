@@ -238,7 +238,7 @@ jobs:
         with:
           repository: cyber-dojo/snyk-scanning
           ref: main
-          fetch-depth: 1
+          #fetch-depth: 1
 
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v3

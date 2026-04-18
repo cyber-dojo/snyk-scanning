@@ -193,8 +193,11 @@ jobs:
           egress-policy: audit
 
       - name: Save vuln data to file
-        run:
-          echo "${VULN_JSON}" > "${VULN_FILENAME}"
+        run: |
+          ls -al
+          jq --compact-output . <<< "${VULN_JSON}" > "${VULN_FILENAME}"
+          echo "We got to here"
+          ls -al
 
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v3

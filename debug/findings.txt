@@ -3,6 +3,11 @@
    Unexpected HTTP response: 504
 
 1. In the CLI docker references with both a tag and a digest are not supported
+   You can't do a kosli-attest with an artifact whose name is
+   cyber-dojo/saver:5d42c57@sha256:DIGEST
+   You have to use
+   cyber-dojo/saver:5d42c57
+   which feels wrong.
 
 2. In the artifact_snyk_test.yml the attestation in the callers
    context needs you to checkout their commit. That is tricky

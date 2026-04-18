@@ -4,8 +4,8 @@
 name: Artifact Snyk Test on runner
 
 on:
-  workflow_call:
-#  push:
+  push:
+  #workflow_call:
 
 jobs:
   call-with-runner:

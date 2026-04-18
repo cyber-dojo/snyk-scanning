@@ -32,7 +32,7 @@ on:
         required: true
         type: string
       kosli_flow:
-        description: "Name of Kosli flow to attest snyk vulns to"
+        description: "Name of Kosli flow to attest individual snyk vulns to"
         required: true
         type: string
       repo_name:
@@ -245,7 +245,8 @@ jobs:
 
 
   collect-snyk-vulns:
-    needs: [attest-snyk-vulns]
+    needs: [find-snyk-vulns, attest-snyk-vulns]
+    if: always() && needs.find-snyk-vulns.result == 'success'
     outputs:
       vulns: ${{steps.set-vulns.outputs.vulns}}
     runs-on: ubuntu-latest
@@ -258,5 +259,11 @@ jobs:
       - name: Set vuln output
         id: set-vulns
         run: |
-          VULNS="$(jq --compact-output --slurp . vuln-*.json)"
-          echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
+          {
+            if [ "${{needs.attest-snyk-vulns.result}}" = "skipped" ]; then
+              echo "vulns=[]"
+            else
+              VULNS="$(jq --compact-output --slurp . vuln-*.json)"
+              echo "vulns=${VULNS}" 
+            fi
+          } >> ${GITHUB_OUTPUT}

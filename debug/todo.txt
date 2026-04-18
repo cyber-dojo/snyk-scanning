@@ -27,34 +27,6 @@ artifact_snyk_test.yml's
   in its trail. I have the flow-name, trail-name, but not the ?attestation_id
   However, the URL without the ?attestation_id is probably good enough for now.
   
-  So I could put the trail-url into the vuln-json 
-  Then return not just the trail-names, but the vuln-json which includes the trail-name
-  Then the trail-names can be extracted
-
-  But attest-snyk-vulns is a matrix job
-  and collect-trail-names is not.
-  So if attest-snyk-vulns has output, how do I collect all of it in collect-trail-names
-  Claude says...
-
-  If the matrix values aren't known ahead of time, use artifacts instead:                                                                            
-   
-    alpha:                                                                                                                                           
-      steps:      
-        - run: echo "some-value" > result-${{ matrix.env }}.txt
-        - uses: actions/upload-artifact@v4                                                                                                           
-          with:
-            name: result-${{ matrix.env }}                                                                                                           
-            path: result-${{ matrix.env }}.txt
-                                                                                                                                                     
-    beta:
-      needs: alpha                                                                                                                                   
-      steps:      
-        - uses: actions/download-artifact@v4
-          with:
-            pattern: result-*
-            merge-multiple: true
-        - run: cat result-*.txt
-
 
 
 Revive tests of artifacts.py

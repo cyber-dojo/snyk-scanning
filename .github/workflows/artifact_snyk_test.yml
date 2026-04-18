@@ -318,6 +318,10 @@ jobs:
         with:
           egress-policy: audit
 
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
       # CANT DO THIS AS NEED CALLERS CONTEXT FOR attestations below...
       # SO DONT NATIVELY HAVE THE rego file
       # - uses: actions/checkout@v6
@@ -352,10 +356,6 @@ jobs:
         if: ${{env.DEBUG == 'true'}}
         run:
           jq . ${VULNS_FILENAME}
-
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
 
       - name: Get the rego policy file
         run: |

@@ -201,6 +201,13 @@ jobs:
         with:
           version: ${{vars.KOSLI_CLI_VERSION}}
 
+      # kosli begin trail has to have a git repo under it
+      - uses: actions/checkout@v6
+        with:
+          repository: cyber-dojo/snyk-scanning
+          ref: main
+          fetch-depth: 1
+
       - name: Add time vuln first seen for the repo
         run: |
           kosli begin trail ${KOSLI_TRAIL} # idempotent

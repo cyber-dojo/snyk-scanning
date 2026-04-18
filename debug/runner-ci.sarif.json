@@ -1,0 +1,856 @@
+{
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/errata01/os/schemas/sarif-schema-2.1.0.json",
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Snyk Container",
+          "semanticVersion": "1.1302.1",
+          "version": "1.1302.1",
+          "informationUri": "https://docs.snyk.io/",
+          "properties": {
+            "artifactsScanned": 125
+          },
+          "rules": [
+            {
+              "id": "SNYK-ALPINE321-RUBY-14100871",
+              "shortDescription": {
+                "text": "Low severity - Improper Cross-boundary Removal of Sensitive Data vulnerability in ruby"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-61594) ruby/ruby@3.3.8-r0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## NVD Description\n**_Note:_** _Versions mentioned in the description apply only to the upstream `ruby` package and not the `ruby` package as distributed by `Alpine`._\n_See `How to fix?` for `Alpine:3.21` relevant fixed versions and status._\n\nURI is a module providing classes to handle Uniform Resource Identifiers. In versions prior to 0.12.5, 0.13.3, and 1.0.4, a bypass exists for the fix to CVE-2025-27221 that can expose user credentials. When using the `+` operator to combine URIs, sensitive information like passwords from the original URI can be leaked, violating RFC3986 and making applications vulnerable to credential exposure. Versions 0.12.5, 0.13.3, and 1.0.4 fix the issue.\n## Remediation\nUpgrade `Alpine:3.21` `ruby` to version 3.3.10-r0 or higher.\n## References\n- [https://github.com/ruby/uri/commit/20157e3e29b125ff41f1d9662e2e3b1d066f5902](https://github.com/ruby/uri/commit/20157e3e29b125ff41f1d9662e2e3b1d066f5902)\n- [https://github.com/ruby/uri/commit/7e521b2da0833d964aab43019e735aea674e1c2c](https://github.com/ruby/uri/commit/7e521b2da0833d964aab43019e735aea674e1c2c)\n- [https://github.com/ruby/uri/commit/d3116ca66a3b1c97dc7577f9d2d6e353f391cd6a](https://github.com/ruby/uri/commit/d3116ca66a3b1c97dc7577f9d2d6e353f391cd6a)\n- [https://github.com/rubysec/ruby-advisory-db/blob/master/gems/uri/CVE-2025-61594.yml](https://github.com/rubysec/ruby-advisory-db/blob/master/gems/uri/CVE-2025-61594.yml)\n- [https://www.ruby-lang.org/en/news/2025/10/07/uri-cve-2025-61594/](https://www.ruby-lang.org/en/news/2025/10/07/uri-cve-2025-61594/)\n"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-212",
+                  "apk"
+                ],
+                "cvssv3_baseScore": null,
+                "security-severity": "null"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SNYK-ALPINE321-RUBY-14100871",
+          "level": "note",
+          "message": {
+            "text": "This file introduces a vulnerable ruby package with a low severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/runner_76176bf@sha256_dcc481864ce145e40dafef0b847dfb869855325a35e36cb2bc8d924e3f906fff/runner_76176bf"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "ruby@3.3.8-r0"
+                }
+              ]
+            }
+          ],
+          "fixes": [
+            {
+              "description": {
+                "text": "Upgrade to ruby/ruby@3.3.10-r0"
+              },
+              "artifactChanges": [
+                {
+                  "artifactLocation": {
+                    "uri": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/runner_76176bf@sha256_dcc481864ce145e40dafef0b847dfb869855325a35e36cb2bc8d924e3f906fff/runner_76176bf"
+                  },
+                  "replacements": [
+                    {
+                      "deletedRegion": {
+                        "startLine": 1
+                      },
+                      "insertedContent": {
+                        "text": "ruby/ruby@3.3.10-r0"
+                      }
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "automationDetails": {
+        "id": "Snyk/Container/docker-image|244531986313.dkr.ecr.eu-central-1.amazonaws.com/runner:76176bf/2026-01-26T10:07:17.457Z"
+      }
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "Snyk Container",
+          "semanticVersion": "1.1302.1",
+          "version": "1.1302.1",
+          "informationUri": "https://docs.snyk.io/",
+          "properties": {
+            "artifactsScanned": 0
+          },
+          "rules": []
+        }
+      },
+      "results": [],
+      "automationDetails": {
+        "id": "Snyk/Container/go-distribution@github.com/containerd/containerd/cmd/containerd/2026-01-26T10:07:17.458Z"
+      }
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "Snyk Container",
+          "semanticVersion": "1.1302.1",
+          "version": "1.1302.1",
+          "informationUri": "https://docs.snyk.io/",
+          "properties": {
+            "artifactsScanned": 0
+          },
+          "rules": []
+        }
+      },
+      "results": [],
+      "automationDetails": {
+        "id": "Snyk/Container/go-distribution@github.com/containerd/containerd/cmd/containerd-shim-runc-v2/2026-01-26T10:07:17.458Z"
+      }
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "Snyk Container",
+          "semanticVersion": "1.1302.1",
+          "version": "1.1302.1",
+          "informationUri": "https://docs.snyk.io/",
+          "properties": {
+            "artifactsScanned": 0
+          },
+          "rules": []
+        }
+      },
+      "results": [],
+      "automationDetails": {
+        "id": "Snyk/Container/go-distribution@github.com/containerd/containerd/cmd/ctr/2026-01-26T10:07:17.458Z"
+      }
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "Snyk Container",
+          "semanticVersion": "1.1302.1",
+          "version": "1.1302.1",
+          "informationUri": "https://docs.snyk.io/",
+          "properties": {
+            "artifactsScanned": 7
+          },
+          "rules": []
+        }
+      },
+      "results": [],
+      "automationDetails": {
+        "id": "Snyk/Container/github.com/docker/docker/2026-01-26T10:07:17.458Z"
+      }
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "Snyk Container",
+          "semanticVersion": "1.1302.1",
+          "version": "1.1302.1",
+          "informationUri": "https://docs.snyk.io/",
+          "properties": {
+            "artifactsScanned": 1034
+          },
+          "rules": [
+            {
+              "id": "SNYK-GOLANG-GITHUBCOMOPENCONTAINERSSELINUXGOSELINUX-13843568",
+              "shortDescription": {
+                "text": "High severity - Race Condition Enabling Link Following vulnerability in github.com/opencontainers/selinux/go-selinux"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-52881) github.com/opencontainers/selinux/go-selinux@v1.12.0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## Overview\n\nAffected versions of this package are vulnerable to Race Condition Enabling Link Following in the handling of `procfs` file writes. An attacker can cause arbitrary writes to sensitive files or trigger a denial of service by redirecting write operations through race conditions and manipulating shared mounts or symbolic links. This can result in bypassing security mechanisms, escalating privileges, or crashing the host system by targeting files such as `/proc/sysrq-trigger` or altering kernel parameters.\r\n\r\n## Workaround \r\n\r\nThis vulnerability can be mitigated by:\r\n\r\n1) Do not run untrusted container images from unknown or unverified sources.\r\n\r\n2) Using rootless containers.\n## Remediation\nUpgrade `github.com/opencontainers/selinux/go-selinux` to version 1.13.0 or higher.\n## References\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/3f925525b44d247e390e529e772a0dc0c0bc3557)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/435cc81be6b79cdec73b4002c0dae549b2f6ae6d)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/44a0fcf685db051c80b8c269812bb177f5802c58)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/4b37cd93f86e72feac866442988b549b5b7bf3e6)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/6fc191449109ea14bb7d61238f24a33fe08c651f)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/77889b56db939c323d29d1130f28f9aea2edb544)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/77d217c7c3775d8ca5af89e477e81568ef4572db)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/a41366e74080fa9f26a2cd3544e2801449697322)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/b3dd1bc562ed9996d1a0f249e056c16624046d28)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/d40b3439a9614a86e87b81a94c6811ec6fa2d7d2)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/d61fd29d854b416feaaf128bf650325cd2182165)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/db19bbed5348847da433faa9d69e9f90192bfa64)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/ed6b1693b8b3ae7eb0250a7e76fc888cdacf98c1)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/fdcc9d3cad2f85954a241ccb910a61aaa1ef47f3)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/ff6fe1324663538167eca8b3d3eec61e1bd4fa51)\n- [GitHub Commit](https://github.com/opencontainers/runc/commit/ff94f9991bd32076c871ef0ad8bc1b763458e480)\n- [GitHub Commit](https://github.com/opencontainers/selinux/commit/c8cfa6fd2d285a96022203163c2075eda85bff54)\n- [GitHub PR](https://github.com/opencontainers/selinux/pull/237)\n- [PoC in GitHub](https://github.com/jq6l43d1/proxmox-lxc-docker-fix)\n"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-363",
+                  "CWE-61",
+                  "gomodules"
+                ],
+                "cvssv3_baseScore": 7.3,
+                "security-severity": "7.3"
+              }
+            },
+            {
+              "id": "SNYK-GOLANG-GOLANGORGXCRYPTOSSH-14059803",
+              "shortDescription": {
+                "text": "Medium severity - Allocation of Resources Without Limits or Throttling vulnerability in golang.org/x/crypto/ssh"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-58181) golang.org/x/crypto/ssh@v0.37.0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## Overview\n[golang.org/x/crypto/ssh](https://pkg.go.dev/golang.org/x/crypto/ssh?tab=doc) is a SSH client and server\n\nAffected versions of this package are vulnerable to Allocation of Resources Without Limits or Throttling via the SSH servers. An attacker can exhaust system memory resources by sending GSSAPI authentication requests with an excessive number of mechanisms specified.\n## Remediation\nUpgrade `golang.org/x/crypto/ssh` to version 0.45.0 or higher.\n## References\n- [Fix Commit](https://go.googlesource.com/crypto/+/e79546e28b85ea53dd37afe1c4102746ef553b9c)\n- [GO-2025-4134](https://pkg.go.dev/vuln/GO-2025-4134)\n- [go.dev Issue](https://go.dev/issue/76363)\n- [Google Groups Forum](https://groups.google.com/g/golang-announce/c/w-oX3UxNcZA)\n"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-770",
+                  "gomodules"
+                ],
+                "cvssv3_baseScore": 6.9,
+                "security-severity": "6.9"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SNYK-GOLANG-GITHUBCOMOPENCONTAINERSSELINUXGOSELINUX-13843568",
+          "level": "error",
+          "message": {
+            "text": "This file introduces a vulnerable github.com/opencontainers/selinux/go-selinux package with a high severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/local/bin/dockerd"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "github.com/opencontainers/selinux/go-selinux@v1.12.0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SNYK-GOLANG-GOLANGORGXCRYPTOSSH-14059803",
+          "level": "warning",
+          "message": {
+            "text": "This file introduces a vulnerable golang.org/x/crypto/ssh package with a medium severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/local/bin/dockerd"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "golang.org/x/crypto/ssh@v0.37.0"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "automationDetails": {
+        "id": "Snyk/Container/github.com/docker/docker/2026-01-26T10:07:17.458Z"
+      }
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "Snyk Container",
+          "semanticVersion": "1.1302.1",
+          "version": "1.1302.1",
+          "informationUri": "https://docs.snyk.io/",
+          "properties": {
+            "artifactsScanned": 0
+          },
+          "rules": []
+        }
+      },
+      "results": [],
+      "automationDetails": {
+        "id": "Snyk/Container/go-distribution@github.com/opencontainers/runc/2026-01-26T10:07:17.459Z"
+      }
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "Snyk Container",
+          "semanticVersion": "1.1302.1",
+          "version": "1.1302.1",
+          "informationUri": "https://docs.snyk.io/",
+          "properties": {
+            "artifactsScanned": 893
+          },
+          "rules": [
+            {
+              "id": "SNYK-GOLANG-GITHUBCOMGOVIPERMAPSTRUCTUREV2-10558294",
+              "shortDescription": {
+                "text": "Medium severity - Insertion of Sensitive Information into Log File vulnerability in github.com/go-viper/mapstructure/v2"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-52893) github.com/go-viper/mapstructure/v2@v2.0.0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## Overview\n\nAffected versions of this package are vulnerable to Insertion of Sensitive Information into Log File when processing malformed data. An attacker can access sensitive information by submitting specially crafted malformed input that causes error messages to include confidential data in server or audit logs.\n## Remediation\nUpgrade `github.com/go-viper/mapstructure/v2` to version 2.3.0 or higher.\n## References\n- [GitHub Commit](https://github.com/go-viper/mapstructure/commit/ed3f92181528ff776a0324107b8b55026e93766a)\n- [GitHub Release](https://github.com/go-viper/mapstructure/releases/tag/v2.3.0)\n"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-532",
+                  "gomodules"
+                ],
+                "cvssv3_baseScore": 6.7,
+                "security-severity": "6.7"
+              }
+            },
+            {
+              "id": "SNYK-GOLANG-GITHUBCOMGOVIPERMAPSTRUCTUREV2-12177854",
+              "shortDescription": {
+                "text": "Medium severity - Improper Output Neutralization for Logs vulnerability in github.com/go-viper/mapstructure/v2"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-11065) github.com/go-viper/mapstructure/v2@v2.0.0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## Overview\n\nAffected versions of this package are vulnerable to Improper Output Neutralization for Logs via the `WeakDecode` function when handling malformed input data. An attacker can cause sensitive information to be included in error logs by submitting specially crafted input that triggers error messages containing original values.\n## Remediation\nUpgrade `github.com/go-viper/mapstructure/v2` to version 2.4.0 or higher.\n## References\n- [GitHub Commit](https://github.com/go-viper/mapstructure/commit/742921c9ba2854d27baa64272487fc5075d2c39c)\n"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-117",
+                  "gomodules"
+                ],
+                "cvssv3_baseScore": 6,
+                "security-severity": "6"
+              }
+            },
+            {
+              "id": "SNYK-GOLANG-GOLANGORGXCRYPTOSSH-14059803",
+              "shortDescription": {
+                "text": "Medium severity - Allocation of Resources Without Limits or Throttling vulnerability in golang.org/x/crypto/ssh"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-58181) golang.org/x/crypto/ssh@v0.37.0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## Overview\n[golang.org/x/crypto/ssh](https://pkg.go.dev/golang.org/x/crypto/ssh?tab=doc) is a SSH client and server\n\nAffected versions of this package are vulnerable to Allocation of Resources Without Limits or Throttling via the SSH servers. An attacker can exhaust system memory resources by sending GSSAPI authentication requests with an excessive number of mechanisms specified.\n## Remediation\nUpgrade `golang.org/x/crypto/ssh` to version 0.45.0 or higher.\n## References\n- [Fix Commit](https://go.googlesource.com/crypto/+/e79546e28b85ea53dd37afe1c4102746ef553b9c)\n- [GO-2025-4134](https://pkg.go.dev/vuln/GO-2025-4134)\n- [go.dev Issue](https://go.dev/issue/76363)\n- [Google Groups Forum](https://groups.google.com/g/golang-announce/c/w-oX3UxNcZA)\n"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-770",
+                  "gomodules"
+                ],
+                "cvssv3_baseScore": 6.9,
+                "security-severity": "6.9"
+              }
+            },
+            {
+              "id": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-12668891",
+              "shortDescription": {
+                "text": "High severity - Improper Handling of Unexpected Data Type vulnerability in golang.org/x/crypto/ssh/agent"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-47913) golang.org/x/crypto/ssh/agent@v0.37.0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## Overview\n\nAffected versions of this package are vulnerable to Improper Handling of Unexpected Data Type when functions including `List()` and `SignWithFlags()` process `*successAgentMsg`. This can be triggered by a malicious agent sending a single `0x06` byte (`SSH_AGENT_SUCCESS`), which is unmarshalled into a `*successAgentMsg`, causing a panic and client crash.\n\n## Details\n\nDenial of Service (DoS) describes a family of attacks, all aimed at making a system inaccessible to its intended and legitimate users.\n\nUnlike other vulnerabilities, DoS attacks usually do not aim at breaching security. Rather, they are focused on making websites and services unavailable to genuine users resulting in downtime.\n\nOne popular Denial of Service vulnerability is DDoS (a Distributed Denial of Service), an attack that attempts to clog network pipes to the system by generating a large volume of traffic from many machines.\n\nWhen it comes to open source libraries, DoS vulnerabilities allow attackers to trigger such a crash or crippling of the service by using a flaw either in the application code or from the use of open source libraries.\n\nTwo common types of DoS vulnerabilities:\n\n* High CPU/Memory Consumption- An attacker sending crafted requests that could cause the system to take a disproportionate amount of time to process. For example, [commons-fileupload:commons-fileupload](https://security.snyk.io/vuln/SNYK-JAVA-COMMONSFILEUPLOAD-30082).\n\n* Crash - An attacker sending crafted requests that could cause the system to crash. For Example,  [npm `ws` package](https://snyk.io/vuln/npm:ws:20171108)\n\n## Remediation\nUpgrade `golang.org/x/crypto/ssh/agent` to version 0.43.0 or higher.\n## References\n- [GitHub Commit](https://github.com/golang/crypto/commit/559e062ce8bfd6a39925294620b50906ca2a6f95)\n- [GitHub Issue](https://github.com/golang/go/issues/75178)\n"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-241",
+                  "gomodules"
+                ],
+                "cvssv3_baseScore": 7.1,
+                "security-severity": "7.1"
+              }
+            },
+            {
+              "id": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
+              "shortDescription": {
+                "text": "Medium severity - Out-of-bounds Read vulnerability in golang.org/x/crypto/ssh/agent"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-47914) golang.org/x/crypto/ssh/agent@v0.37.0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## Overview\n\nAffected versions of this package are vulnerable to Out-of-bounds Read via the SSH Agent servers. An attacker can cause a panic and disrupt service availability by sending a specially crafted, malformed message that triggers an out-of-bounds read.\n## Remediation\nUpgrade `golang.org/x/crypto/ssh/agent` to version 0.45.0 or higher.\n## References\n- [GO-2025-4135](https://pkg.go.dev/vuln/GO-2025-4135)\n- [go.dev Commit](https://go.googlesource.com/crypto/+/f91f7a7c31bf90b39c1de895ad116a2bacc88748)\n- [go.dev Issue](https://go.dev/issue/76364)\n- [Google Groups Forum](https://groups.google.com/g/golang-announce/c/w-oX3UxNcZA)\n"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-125",
+                  "gomodules"
+                ],
+                "cvssv3_baseScore": 6.9,
+                "security-severity": "6.9"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SNYK-GOLANG-GITHUBCOMGOVIPERMAPSTRUCTUREV2-10558294",
+          "level": "warning",
+          "message": {
+            "text": "This file introduces a vulnerable github.com/go-viper/mapstructure/v2 package with a medium severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/local/libexec/docker/cli-plugins/docker-compose"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "github.com/go-viper/mapstructure/v2@v2.0.0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SNYK-GOLANG-GITHUBCOMGOVIPERMAPSTRUCTUREV2-12177854",
+          "level": "warning",
+          "message": {
+            "text": "This file introduces a vulnerable github.com/go-viper/mapstructure/v2 package with a medium severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/local/libexec/docker/cli-plugins/docker-compose"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "github.com/go-viper/mapstructure/v2@v2.0.0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SNYK-GOLANG-GOLANGORGXCRYPTOSSH-14059803",
+          "level": "warning",
+          "message": {
+            "text": "This file introduces a vulnerable golang.org/x/crypto/ssh package with a medium severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/local/libexec/docker/cli-plugins/docker-compose"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "golang.org/x/crypto/ssh@v0.37.0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-12668891",
+          "level": "error",
+          "message": {
+            "text": "This file introduces a vulnerable golang.org/x/crypto/ssh/agent package with a high severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/local/libexec/docker/cli-plugins/docker-compose"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "golang.org/x/crypto/ssh/agent@v0.37.0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
+          "level": "warning",
+          "message": {
+            "text": "This file introduces a vulnerable golang.org/x/crypto/ssh/agent package with a medium severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/local/libexec/docker/cli-plugins/docker-compose"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "golang.org/x/crypto/ssh/agent@v0.37.0"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "automationDetails": {
+        "id": "Snyk/Container/github.com/docker/compose/v2/2026-01-26T10:07:17.459Z"
+      }
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "Snyk Container",
+          "semanticVersion": "1.1302.1",
+          "version": "1.1302.1",
+          "informationUri": "https://docs.snyk.io/",
+          "properties": {
+            "artifactsScanned": 792
+          },
+          "rules": [
+            {
+              "id": "SNYK-GOLANG-GITHUBCOMGOVIPERMAPSTRUCTUREV2-10558294",
+              "shortDescription": {
+                "text": "Medium severity - Insertion of Sensitive Information into Log File vulnerability in github.com/go-viper/mapstructure/v2"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-52893) github.com/go-viper/mapstructure/v2@v2.0.0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## Overview\n\nAffected versions of this package are vulnerable to Insertion of Sensitive Information into Log File when processing malformed data. An attacker can access sensitive information by submitting specially crafted malformed input that causes error messages to include confidential data in server or audit logs.\n## Remediation\nUpgrade `github.com/go-viper/mapstructure/v2` to version 2.3.0 or higher.\n## References\n- [GitHub Commit](https://github.com/go-viper/mapstructure/commit/ed3f92181528ff776a0324107b8b55026e93766a)\n- [GitHub Release](https://github.com/go-viper/mapstructure/releases/tag/v2.3.0)\n"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-532",
+                  "gomodules"
+                ],
+                "cvssv3_baseScore": 6.7,
+                "security-severity": "6.7"
+              }
+            },
+            {
+              "id": "SNYK-GOLANG-GITHUBCOMGOVIPERMAPSTRUCTUREV2-12177854",
+              "shortDescription": {
+                "text": "Medium severity - Improper Output Neutralization for Logs vulnerability in github.com/go-viper/mapstructure/v2"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-11065) github.com/go-viper/mapstructure/v2@v2.0.0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## Overview\n\nAffected versions of this package are vulnerable to Improper Output Neutralization for Logs via the `WeakDecode` function when handling malformed input data. An attacker can cause sensitive information to be included in error logs by submitting specially crafted input that triggers error messages containing original values.\n## Remediation\nUpgrade `github.com/go-viper/mapstructure/v2` to version 2.4.0 or higher.\n## References\n- [GitHub Commit](https://github.com/go-viper/mapstructure/commit/742921c9ba2854d27baa64272487fc5075d2c39c)\n"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-117",
+                  "gomodules"
+                ],
+                "cvssv3_baseScore": 6,
+                "security-severity": "6"
+              }
+            },
+            {
+              "id": "SNYK-GOLANG-GOLANGORGXCRYPTOSSH-14059803",
+              "shortDescription": {
+                "text": "Medium severity - Allocation of Resources Without Limits or Throttling vulnerability in golang.org/x/crypto/ssh"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-58181) golang.org/x/crypto/ssh@v0.37.0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## Overview\n[golang.org/x/crypto/ssh](https://pkg.go.dev/golang.org/x/crypto/ssh?tab=doc) is a SSH client and server\n\nAffected versions of this package are vulnerable to Allocation of Resources Without Limits or Throttling via the SSH servers. An attacker can exhaust system memory resources by sending GSSAPI authentication requests with an excessive number of mechanisms specified.\n## Remediation\nUpgrade `golang.org/x/crypto/ssh` to version 0.45.0 or higher.\n## References\n- [Fix Commit](https://go.googlesource.com/crypto/+/e79546e28b85ea53dd37afe1c4102746ef553b9c)\n- [GO-2025-4134](https://pkg.go.dev/vuln/GO-2025-4134)\n- [go.dev Issue](https://go.dev/issue/76363)\n- [Google Groups Forum](https://groups.google.com/g/golang-announce/c/w-oX3UxNcZA)\n"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-770",
+                  "gomodules"
+                ],
+                "cvssv3_baseScore": 6.9,
+                "security-severity": "6.9"
+              }
+            },
+            {
+              "id": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-12668891",
+              "shortDescription": {
+                "text": "High severity - Improper Handling of Unexpected Data Type vulnerability in golang.org/x/crypto/ssh/agent"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-47913) golang.org/x/crypto/ssh/agent@v0.37.0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## Overview\n\nAffected versions of this package are vulnerable to Improper Handling of Unexpected Data Type when functions including `List()` and `SignWithFlags()` process `*successAgentMsg`. This can be triggered by a malicious agent sending a single `0x06` byte (`SSH_AGENT_SUCCESS`), which is unmarshalled into a `*successAgentMsg`, causing a panic and client crash.\n\n## Details\n\nDenial of Service (DoS) describes a family of attacks, all aimed at making a system inaccessible to its intended and legitimate users.\n\nUnlike other vulnerabilities, DoS attacks usually do not aim at breaching security. Rather, they are focused on making websites and services unavailable to genuine users resulting in downtime.\n\nOne popular Denial of Service vulnerability is DDoS (a Distributed Denial of Service), an attack that attempts to clog network pipes to the system by generating a large volume of traffic from many machines.\n\nWhen it comes to open source libraries, DoS vulnerabilities allow attackers to trigger such a crash or crippling of the service by using a flaw either in the application code or from the use of open source libraries.\n\nTwo common types of DoS vulnerabilities:\n\n* High CPU/Memory Consumption- An attacker sending crafted requests that could cause the system to take a disproportionate amount of time to process. For example, [commons-fileupload:commons-fileupload](https://security.snyk.io/vuln/SNYK-JAVA-COMMONSFILEUPLOAD-30082).\n\n* Crash - An attacker sending crafted requests that could cause the system to crash. For Example,  [npm `ws` package](https://snyk.io/vuln/npm:ws:20171108)\n\n## Remediation\nUpgrade `golang.org/x/crypto/ssh/agent` to version 0.43.0 or higher.\n## References\n- [GitHub Commit](https://github.com/golang/crypto/commit/559e062ce8bfd6a39925294620b50906ca2a6f95)\n- [GitHub Issue](https://github.com/golang/go/issues/75178)\n"
+              },
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-241",
+                  "gomodules"
+                ],
+                "cvssv3_baseScore": 7.1,
+                "security-severity": "7.1"
+              }
+            },
+            {
+              "id": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
+              "shortDescription": {
+                "text": "Medium severity - Out-of-bounds Read vulnerability in golang.org/x/crypto/ssh/agent"
+              },
+              "fullDescription": {
+                "text": "(CVE-2025-47914) golang.org/x/crypto/ssh/agent@v0.37.0"
+              },
+              "help": {
+                "text": "",
+                "markdown": "## Overview\n\nAffected versions of this package are vulnerable to Out-of-bounds Read via the SSH Agent servers. An attacker can cause a panic and disrupt service availability by sending a specially crafted, malformed message that triggers an out-of-bounds read.\n## Remediation\nUpgrade `golang.org/x/crypto/ssh/agent` to version 0.45.0 or higher.\n## References\n- [GO-2025-4135](https://pkg.go.dev/vuln/GO-2025-4135)\n- [go.dev Commit](https://go.googlesource.com/crypto/+/f91f7a7c31bf90b39c1de895ad116a2bacc88748)\n- [go.dev Issue](https://go.dev/issue/76364)\n- [Google Groups Forum](https://groups.google.com/g/golang-announce/c/w-oX3UxNcZA)\n"
+              },
+              "defaultConfiguration": {
+                "level": "warning"
+              },
+              "properties": {
+                "tags": [
+                  "security",
+                  "CWE-125",
+                  "gomodules"
+                ],
+                "cvssv3_baseScore": 6.9,
+                "security-severity": "6.9"
+              }
+            }
+          ]
+        }
+      },
+      "results": [
+        {
+          "ruleId": "SNYK-GOLANG-GITHUBCOMGOVIPERMAPSTRUCTUREV2-10558294",
+          "level": "warning",
+          "message": {
+            "text": "This file introduces a vulnerable github.com/go-viper/mapstructure/v2 package with a medium severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/local/libexec/docker/cli-plugins/docker-buildx"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "github.com/go-viper/mapstructure/v2@v2.0.0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SNYK-GOLANG-GITHUBCOMGOVIPERMAPSTRUCTUREV2-12177854",
+          "level": "warning",
+          "message": {
+            "text": "This file introduces a vulnerable github.com/go-viper/mapstructure/v2 package with a medium severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/local/libexec/docker/cli-plugins/docker-buildx"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "github.com/go-viper/mapstructure/v2@v2.0.0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SNYK-GOLANG-GOLANGORGXCRYPTOSSH-14059803",
+          "level": "warning",
+          "message": {
+            "text": "This file introduces a vulnerable golang.org/x/crypto/ssh package with a medium severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/local/libexec/docker/cli-plugins/docker-buildx"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "golang.org/x/crypto/ssh@v0.37.0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-12668891",
+          "level": "error",
+          "message": {
+            "text": "This file introduces a vulnerable golang.org/x/crypto/ssh/agent package with a high severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/local/libexec/docker/cli-plugins/docker-buildx"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "golang.org/x/crypto/ssh/agent@v0.37.0"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "ruleId": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
+          "level": "warning",
+          "message": {
+            "text": "This file introduces a vulnerable golang.org/x/crypto/ssh/agent package with a medium severity vulnerability."
+          },
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "/usr/local/libexec/docker/cli-plugins/docker-buildx"
+                },
+                "region": {
+                  "startLine": 1
+                }
+              },
+              "logicalLocations": [
+                {
+                  "fullyQualifiedName": "golang.org/x/crypto/ssh/agent@v0.37.0"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "automationDetails": {
+        "id": "Snyk/Container/github.com/docker/buildx/2026-01-26T10:07:17.459Z"
+      }
+    },
+    {
+      "tool": {
+        "driver": {
+          "name": "Snyk Container",
+          "semanticVersion": "1.1302.1",
+          "version": "1.1302.1",
+          "informationUri": "https://docs.snyk.io/",
+          "properties": {
+            "artifactsScanned": 0
+          },
+          "rules": []
+        }
+      },
+      "results": [],
+      "automationDetails": {
+        "id": "Snyk/Container/go-distribution@github.com/docker/cli/cmd/docker/2026-01-26T10:07:17.459Z"
+      }
+    }
+  ]
+}

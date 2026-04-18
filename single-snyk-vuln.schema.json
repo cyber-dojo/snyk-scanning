@@ -7,7 +7,7 @@
       "type": "string",
       "description": "The version of Snyk that found the vulnerability, eg 1.1300.2"
     },
-    "id": {
+    "full_id": {
       "type": "string",
       "description": "The full identifier of the vulnerability, eg SNYK-ALPINE321-RUBY-14100871"
     },
@@ -16,7 +16,7 @@
       "enum": ["low", "medium", "high", "critical"],
       "description": "The severity of the vulnerability"
     },
-    "url": {
+    "vuln_url": {
       "type": "string",
       "description": "The URL of the vulnerability"
     },
@@ -34,17 +34,22 @@
     },
     "first_seen_ts": {
       "type": "number",
-      "description": "Unix timestamp when this vulnerability was first seen (Kosli trail creation time)"
+      "description": "Unix timestamp when this vulnerability was first seen in the repo"
+    },
+    "trail_name": {
+      "type": "string",
+      "description": "Where this vuln data is attested to"
     }
   },
   "required": [
     "version",
-    "id",
+    "full_id",
     "severity",
-    "url",
+    "vuln_url",
     "ignore_expires_exists",
     "ignore_expires",
     "ignore_expires_ts",
-    "first_seen_ts"
+    "first_seen_ts",
+    "trail_name"
   ]
 }

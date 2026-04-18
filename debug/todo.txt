@@ -1,0 +1,77 @@
+
+artifact_snyk_test.yml's 
+- Implement input.attest_to_kosli
+  If false, don't do attestations, return null
+     ?do the snyk-container-test and return its exit-status?
+  If true, do attestations, return [] or [trail-names]
+- Need to pass kosli_slot_name as an input
+  This is for the attestation to the "callers" context
+
+- what to put into the violations list of strings?
+  This comes from the rego file used in the kosli-evaluate-trails 
+  which is currently in saver/runner but will move to here.
+  runner has a docs/planning/evaluate_snyk_compliance.sh file 
+  with which you can experiment and see the allow/violations output
+  like this...
+  {
+    "allow": false,
+    "violations": [
+      "trail 'runner-critical-SNYK-GOLANG-GOOGLEGOLANGORGGRPC-15691172': SNYK-GOLANG-GOOGLEGOLANGORGGRPC-15691172 snyk ignore entry expired at 2026-05-09 10:53:10.182000+00:00",
+      ...
+    ]
+  }
+  So at present you have only strings.
+  attest-snyk-vulns already get the full vulns JSON.
+  What I really want is for the kosli-attest-custom
+  to return a URL that takes me to that individual attestation 
+  in its trail. I have the flow-name, trail-name, but not the ?attestation_id
+  However, the URL without the ?attestation_id is probably good enough for now.
+  
+  So I could put the trail-url into the vuln-json 
+  Then return not just the trail-names, but the vuln-json which includes the trail-name
+  Then the trail-names can be extracted
+
+  But attest-snyk-vulns is a matrix job
+  and collect-trail-names is not.
+  So if attest-snyk-vulns has output, how do I collect all of it in collect-trail-names
+  Claude says...
+
+  If the matrix values aren't known ahead of time, use artifacts instead:                                                                            
+   
+    alpha:                                                                                                                                           
+      steps:      
+        - run: echo "some-value" > result-${{ matrix.env }}.txt
+        - uses: actions/upload-artifact@v4                                                                                                           
+          with:
+            name: result-${{ matrix.env }}                                                                                                           
+            path: result-${{ matrix.env }}.txt
+                                                                                                                                                     
+    beta:
+      needs: alpha                                                                                                                                   
+      steps:      
+        - uses: actions/download-artifact@v4
+          with:
+            pattern: result-*
+            merge-multiple: true
+        - run: cat result-*.txt
+
+
+
+Revive tests of artifacts.py
+
+Revive tests of combine_snyk.py
+
+Dead bin/dead folder
+
+New Flows need a description
+
+Tidy docs/
+
+Tidy fake_data/
+
+Tidy test/
+
+bin/combine_snyk.py has a comment
+    # else:
+    #   .snyk has ignore entry for vuln that artifact does not have
+Can we somehow get thet written out somewhere, eg a github summary

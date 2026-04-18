@@ -1,0 +1,272 @@
+# PLANNING
+# turn off aws-beta.yml running on a push to main
+# create two top-level workflows that calls this one with hard-coded values
+#  - one using runner for an artifact with some vulns
+#  - one using saver for an artifact with no vulns
+#  - these can both run together on a push!
+#  - initially could even fake the snyk run with existing sarif file
+#
+# remove the collect-trail-names
+#
+# refactor step by step - this way you dont have to build the image first
+# can keep the single-snyk-vuln attestations as the trails already exist
+# initially dry-run all the attestation
+# - create the output from the matrix and gather it subsequent job
+#   see todo.txt file
+# - show the gathered data and be confident you could attest with it
+# - ensure correct behaviour when there are no vulns (saver)
+
+# saver
+# 244531986313.dkr.ecr.eu-central-1.amazonaws.com/saver:5d42c57@sha256:b2e822b4829bc7447f2622eb3621a1b10452fa503a98b7aa15ba714acef2abd9
+
+# runner
+# 244531986313.dkr.ecr.eu-central-1.amazonaws.com/runner:0d6ddbb@sha256:52de66b4e58f5ce2e2284fec2fc4207efe87a1944affb10dbb79e84d5e4c4ced
+
+
+name: Artifact Snyk Test
+
+on:
+  workflow_call:
+    outputs:
+      trail_names_json:
+        description: "JSON array of Kosli trail names attested to"
+        value: ${{jobs.collect-trail-names.outputs.trail_names}}
+    secrets:
+      snyk_token:
+        required: true
+      kosli_api_token:
+        required: true
+
+    inputs:
+      aws_rolename:
+        description: "Rolename for permission to download artifact"
+        required: false
+        type: string
+        default: "gh_actions_snyk_scanning"
+      artifact_name:
+        description: "Artifact name"
+        required: true
+        type: string
+      kosli_flow:
+        description: "Name of Kosli flow to attest snyk vulns to"
+        required: true
+        type: string
+      repo_name:
+        description: "Artifact repo"
+        required: false
+        type: string
+        default: ${{ github.event.repository.name }}
+      raw_snyk_policy_url:
+        description: "URL of snyk policy file (in commit for artifact)"
+        required: false
+        type: string
+        default: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/.snyk
+      attest_to_kosli:
+        description: "Whether to make attestations for each vuln"
+        required: false
+        type: boolean
+        default: ${{ github.ref == 'refs/heads/main' }}
+
+
+
+env:
+  KOSLI_DEBUG:   ${{vars.KOSLI_DEBUG}}   # true/false
+  KOSLI_DRY_RUN: ${{vars.KOSLI_DRY_RUN}} # true/false
+  KOSLI_HOST:    ${{vars.KOSLI_HOST}}    # https://app.kosli.com
+  KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
+
+
+jobs:
+  create-snyk-cat:
+    uses: ./.github/workflows/create-snyk-cat.yml
+    secrets:
+      kosli_api_token: ${{secrets.kosli_api_token}}
+
+
+  find-snyk-vulns:
+    runs-on: ubuntu-latest
+    needs: [create-snyk-cat]
+    outputs:
+      vulns: ${{steps.set-vulns.outputs.vulns}}
+      # version: ${{steps.set-version.outputs.version}}
+    permissions:
+      id-token: write
+      contents: write
+    env:
+      SNYK_SARIF_FILENAME: snyk.container.test.json
+      SNYK_POLICY_FILENAME: .snyk
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v6
+        with:
+          repository: cyber-dojo/snyk-scanning
+          ref: main
+          fetch-depth: 1
+
+      - name: Load docker image from registry
+        uses: cyber-dojo/load-image-from-registry@main
+        with:
+          image_name: ${{inputs.artifact_name}}
+          aws_rolename: ${{inputs.aws_rolename}}
+
+      - name: Setup Snyk
+        uses: snyk/actions/setup@master
+        with:
+          snyk-version: v1.1300.2
+
+      - name: Fail if the sarif file already exists
+        run: |
+          if test -f ${SNYK_SARIF_FILENAME} ; then
+            echo "ERROR: ${SNYK_SARIF_FILENAME} already exists"
+            exit 42
+          fi
+
+      - name: Set empty .snyk policy file
+        run:
+          echo > ${SNYK_POLICY_FILENAME}
+
+      - name: Run Snyk container test
+        env:
+          SNYK_TOKEN: ${{secrets.snyk_token}}
+        run:
+          snyk container test ${{inputs.artifact_name}}
+            --policy-path=${SNYK_POLICY_FILENAME}
+            --sarif
+            --sarif-file-output=${SNYK_SARIF_FILENAME} || true
+
+      - name: Fail if the sarif file is not created
+        run: |
+          # Guard against 0 exit code but no sarif file created!
+          if ! test -f ${SNYK_SARIF_FILENAME} ; then
+            echo "ERROR: ${SNYK_SARIF_FILENAME} was not created"
+            exit 43
+          fi
+
+      - name: Get the real .snyk file
+        run: |
+          curl --fail-with-body "${{inputs.raw_snyk_policy_url}}" > ${SNYK_POLICY_FILENAME}
+          cat ${SNYK_POLICY_FILENAME}
+
+      - name: Combine vulns in sarif file with snyk policy file
+        id: set-vulns
+        env:
+          JSON_FILENAME: vulns.json
+        # TODO: put trail_name into vulns here...[X]
+        # repo-name will need to be extra input argument to combine_snyk.py
+        run: |
+          ./bin/combine_snyk.py ${SNYK_SARIF_FILENAME} ${SNYK_POLICY_FILENAME} > ${JSON_FILENAME}                  
+          vulns="$(jq --compact-output . ${JSON_FILENAME})"
+          echo "vulns=${vulns}" >> ${GITHUB_OUTPUT}
+
+      # TODO: Drop this
+      #- name: Output snyk version
+      #  id: set-version
+      #  run:
+      #    echo "version=$(snyk --version)" >> ${GITHUB_OUTPUT}
+
+
+  attest-snyk-vulns:
+    needs: [create-snyk-cat, find-snyk-vulns]
+    if: ${{needs.find-snyk-vulns.outputs.vulns != '[]'}}
+    runs-on: ubuntu-latest
+    #  [X]... So we can use it as a key here                                                                                           
+    outputs:              
+       ${{ matrix.trail_name }}: ${{ steps.set-data.outputs.data }}
+    env:
+      ATTESTATION_DATA_FILENAME: custom.json
+      KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
+      KOSLI_FLOW: ${{inputs.kosli_flow}}
+      VULN_JSON: ${{matrix}}
+    strategy:
+      matrix:
+        include: ${{fromJSON(needs.find-snyk-vulns.outputs.vulns)}}
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Setup Kosli CLI
+        uses: kosli-dev/setup-cli-action@v3
+        with:
+          version: ${{vars.KOSLI_CLI_VERSION}}
+
+      - name: Set Kosli trail name
+        run:
+          echo "KOSLI_TRAIL=${{inputs.repo_name}}-${{matrix.snyk_severity}}-${{matrix.snyk_full_id}}" >> "${GITHUB_ENV}"
+
+      - name: Get time vuln first seen for this repo 
+        run: |
+          kosli begin trail ${KOSLI_TRAIL} # idempotent
+          kosli get trail ${KOSLI_TRAIL} --output json > trail.json
+          {
+            echo "SNYK_VERSION=$(snyk --version)" 
+            echo "FIRST_SEEN_TS=$(jq '.created_at' trail.json)" 
+          } >> ${GITHUB_ENV}
+
+      - name: Create file with json data
+        id: set-data
+        run: |
+          echo "${VULN_JSON}" > data.json
+
+          jq --argjson val "${VERSION}" '. + {"version": $val }' data.json > tmp.json \
+            && mv tmp.json data.json
+
+          jq --argjson val "${FIRST_SEEN_TS}" '. + {"first_seen_ts": $val }' data.json > tmp.json \
+            && mv tmp.json data.json
+
+          data="$(jq --compact-data . data.json)"
+          echo "data=${data}" >> ${GITHUB_OUTPUT}
+
+      # - name: Create file containing snyk vuln data
+      #   run:
+      #     jq
+      #       --arg     version              "${{needs.find-snyk-vulns.outputs.version}}"
+      #       --arg     id                   "${{matrix.snyk_full_id}}"
+      #       --arg     severity             "${{matrix.snyk_severity}}"
+      #       --arg     url                  "${{matrix.snyk_vuln_url}}"
+      #       --argjson ignore_expires_exists ${{matrix.snyk_ignore_expires_exists}}
+      #       --arg     ignore_expires       "${{matrix.snyk_ignore_expires}}"
+      #       --argjson ignore_expires_ts     ${{matrix.snyk_ignore_expires_ts}}
+      #       --argjson first_seen_ts         ${FIRST_SEEN_TS}
+      #       '$ARGS.named' <<< '{}' 
+      #       > ${ATTESTATION_DATA_FILENAME}
+
+      - name: Print custom attestation data
+        if: ${{env.KOSLI_DEBUG == 'true'}}
+        run:
+          cat ${ATTESTATION_DATA_FILENAME}
+
+      - name: Attest snyk vuln to Kosli
+        run:
+          kosli attest custom
+            --annotate snyk_URL=${{matrix.snyk_vuln_url}}
+            --attestation-data ${ATTESTATION_DATA_FILENAME}
+            --name snyk
+            --type ${{needs.create-snyk-cat.outputs.name}}
+
+
+  # TODO: Here we have to use the syntax to collect the matrix outputs.
+  #.      as per the todo.txt file
+  
+  collect-trail-names:
+    needs: [find-snyk-vulns, attest-snyk-vulns]
+    if: always() && needs.find-snyk-vulns.result == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      trail_names_json: ${{steps.set-trail-names-json.outputs.trail_names_json}}
+    env:
+      VULNS: ${{ needs.find-snyk-vulns.outputs.vulns }}      
+    steps:
+      - id: set-trail-names-json
+        run: |
+          trail_names_json=$(echo "${VULNS}" | \
+            jq --compact-output --arg repo '${{inputs.repo_name}}' \
+            '[.[] | "\($repo)-\(.snyk_severity)-\(.snyk_full_id)"]')
+          echo "trail_names_json=${trail_names_json}" >> ${GITHUB_OUTPUT}

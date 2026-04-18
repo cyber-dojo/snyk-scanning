@@ -1,0 +1,19 @@
+# Debug workflow to work on 2nd half of artifact_snyk_test.yml 
+# when there are vulns 
+
+name: Artifact Snyk Test on runner
+
+on:
+  push:
+
+jobs:
+  call-with-runner:
+    uses: ./.github/workflows/create-snyk-cat.yml
+    with:
+      artifact_name: 244531986313.dkr.ecr.eu-central-1.amazonaws.com/saver:5d42c57@sha256:b2e822b4829bc7447f2622eb3621a1b10452fa503a98b7aa15ba714acef2abd9
+      kosli_flow: saver-ci      
+    secrets:
+      snyk_token:      ${{secrets.SNYK_TOKEN}}
+      kosli_api_token: ${{secrets.KOSLI_API_TOKEN}}
+
+

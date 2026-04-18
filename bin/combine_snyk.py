@@ -6,8 +6,10 @@ import yaml
 
 
 if __name__ == "__main__":  # pragma: no cover
-    sarif_filename = sys.argv[1]
-    snyk_policy_filename = sys.argv[2]
+    snyk_version = sys.argv[1]
+    repo_name = sys.argv[2]
+    sarif_filename = sys.argv[3]
+    snyk_policy_filename = sys.argv[4]
 
     # Extract ids and severities of each vulnerability in sarif file
     with open(sarif_filename) as sarif_file:
@@ -17,22 +19,24 @@ if __name__ == "__main__":  # pragma: no cover
     for run in sarif_data['runs']:
         for rule in run['tool']['driver']['rules']:
             full_id = rule['id'] # SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804
-            short_id = full_id.split('-')[-1] # 14059804
             vuln_url = f"https://security.snyk.io/vuln/{full_id}"
             short_text = rule['shortDescription']['text']
             # cvssv3_base_score = rule['properties']['cvssv3_baseScore'] # eg 6.8 can be None
             # security_severity = rule['properties']['security-severity'] # eg 6.8 can be None
             severity = short_text.split(' ')[0].lower()  # eg "medium"
             assert severity in ["critical", "high", "medium", "low"]
+            
+            trail_name = f"{repo_name}-{severity}-{full_id}"
 
             vulns[full_id] = {
+                'version': snyk_version,
                 'full_id': full_id,
-                'short_id': short_id,
                 'severity': severity,
                 'vuln_url': vuln_url,
                 'ignore_expires': '',
                 'ignore_expires_ts': 0,
-                "ignore_expires_exists": False
+                "ignore_expires_exists": False,
+                'trail_name': trail_name,
             }
 
     # Overwrite specific vulnerability expiry dates if found in snyk policy file (yaml)
@@ -51,19 +55,7 @@ if __name__ == "__main__":  # pragma: no cover
             # else:
             #   .snyk has ignore entry for vuln that artifact does not have
 
-    flat = []
-    for id, values in vulns.items():
-        flat.append({
-            'snyk_full_id': id,
-            'snyk_short_id': values['short_id'],
-            'snyk_severity': values['severity'],
-            'snyk_vuln_url': values['vuln_url'],
-            'snyk_ignore_expires': values['ignore_expires'],
-            'snyk_ignore_expires_ts': values['ignore_expires_ts'],
-            'snyk_ignore_expires_exists': values['ignore_expires_exists']
-        })
-
-    print(json.dumps(flat, default=str))
+    print(json.dumps(list(vulns.values()), default=str))
 
 
 #   Severity. CVSS v3 Rating

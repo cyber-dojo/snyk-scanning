@@ -235,10 +235,10 @@ jobs:
           egress-policy: audit
 
       - uses: actions/checkout@v6
-        with:
-          repository: cyber-dojo/snyk-scanning
-          ref: main
-          #fetch-depth: 1
+        # with:
+        #   repository: cyber-dojo/snyk-scanning
+        #   ref: main
+        #   fetch-depth: 1
 
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v3

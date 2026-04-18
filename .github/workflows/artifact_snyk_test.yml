@@ -59,7 +59,7 @@ on:
 
 env:
   KOSLI_DEBUG:   ${{vars.KOSLI_DEBUG}}   # true/false
-  KOSLI_DRY_RUN: true # ${{vars.KOSLI_DRY_RUN}} # true/false
+  KOSLI_DRY_RUN: ${{vars.KOSLI_DRY_RUN}} # true/false
   KOSLI_HOST:    ${{vars.KOSLI_HOST}}    # https://app.kosli.com
   KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
 
@@ -212,7 +212,7 @@ jobs:
 
       - name: Add time vuln first seen for the repo
         run: |
-          koslic create flow ${KOSLI_FLOW} --use-empty-template
+          kosli create flow ${KOSLI_FLOW} --use-empty-template
           kosli begin trail ${KOSLI_TRAIL} # idempotent
           kosli get trail ${KOSLI_TRAIL} --output json > trail.json
           FIRST_SEEN_TS="$(jq '.created_at' trail.json)"
@@ -228,6 +228,8 @@ jobs:
           jq . ${VULN_FILENAME}
 
       - name: Attest snyk vuln to Kosli
+        env:
+          KOSLI_DRY_RUN: true
         run:
           kosli attest custom
             --annotate snyk_URL=${{matrix.vuln_url}}

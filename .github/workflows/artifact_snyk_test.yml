@@ -179,7 +179,7 @@ jobs:
     if: ${{needs.find-snyk-vulns.outputs.vulns != '[]'}}
     runs-on: ubuntu-latest
     env:
-      VULN_JSON: ${{matrix}}
+      VULN_JSON: ${{toJSON(matrix)}}
       VULN_FILENAME: vuln.json
       KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
       KOSLI_FLOW: ${{inputs.kosli_flow}}

@@ -73,28 +73,13 @@ env:
   KOSLI_TRAIL:     ${{inputs.kosli_trail}}
   KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
 
-  FAKING: false
-  DEBUG: true
-
 jobs:
-  debug:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Print inputs
-        run: |
-          echo "repo_name=${{inputs.repo_name}}"
-          echo "raw_snyk_policy_url=${{inputs.raw_snyk_policy_url}}"
-          echo "attest_to_kosli=${{inputs.attest_to_kosli}}"
-
-
   create-snyk-cat:
     runs-on: ubuntu-latest
-    needs: [debug]
     outputs:
       name: ${{steps.create.outputs.name}}
     steps:
       - uses: step-security/harden-runner@v2
-        if: ${{env.FAKING == 'false'}}
         with:
           egress-policy: audit
 
@@ -135,7 +120,6 @@ jobs:
       VULN_FILENAME: vulns.json
     steps:
       - uses: step-security/harden-runner@v2
-        if: ${{env.FAKING == 'false'}}
         with:
           egress-policy: audit
 
@@ -182,7 +166,6 @@ jobs:
           echo > ${SNYK_POLICY_FILENAME}
 
       - name: Run Snyk container test
-        if: ${{env.FAKING == 'false'}}
         env:
           SNYK_TOKEN: ${{secrets.snyk_token}}
         run:
@@ -190,11 +173,6 @@ jobs:
             --policy-path=${SNYK_POLICY_FILENAME}
             --sarif
             --sarif-file-output=${SNYK_SARIF_FILENAME} || true
-
-      - name: Use FAKE sarif file
-        if: ${{env.FAKING == 'true'}}
-        run:
-          cp ./debug/${{inputs.kosli_flow}}.sarif.json ${SNYK_SARIF_FILENAME}
 
       - name: Fail if the sarif file is not created
         run: |
@@ -210,7 +188,7 @@ jobs:
             > ${SNYK_POLICY_FILENAME}
 
       - name: Debug print policy file
-        if: ${{env.DEBUG == 'true'}}
+        if: ${{env.KOSLI_DEBUG == 'true'}}
         run:
           cat ${SNYK_POLICY_FILENAME}
 
@@ -253,7 +231,6 @@ jobs:
         include: ${{fromJSON(needs.find-snyk-vulns.outputs.vulns)}}
     steps:
       - uses: step-security/harden-runner@v2
-        if: ${{env.FAKING == 'false'}}
         with:
           egress-policy: audit
 
@@ -283,7 +260,7 @@ jobs:
             <<< "${VULN_JSON}" > ${VULN_FILENAME}
 
       - name: Debug print one vuln
-        if: ${{env.DEBUG == 'true'}}
+        if: ${{env.KOSLI_DEBUG == 'true'}}
         run:
           jq . ${VULN_FILENAME}
 
@@ -314,7 +291,6 @@ jobs:
       KOSLI_ATTESTATION_NAME: ${{inputs.kosli_attestation_name}}
     steps:
       - uses: step-security/harden-runner@v2
-        if: ${{env.FAKING == 'false'}}
         with:
           egress-policy: audit
 
@@ -353,7 +329,7 @@ jobs:
           echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
 
       - name: Debug print vulns
-        if: ${{env.DEBUG == 'true'}}
+        if: ${{env.KOSLI_DEBUG == 'true'}}
         run:
           jq . ${VULNS_FILENAME}
 

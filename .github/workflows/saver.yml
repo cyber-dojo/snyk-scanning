@@ -10,7 +10,8 @@ jobs:
   call-with-saver:
     uses: ./.github/workflows/artifact_snyk_test.yml
     with:
-      artifact_name: 244531986313.dkr.ecr.eu-central-1.amazonaws.com/saver:5d42c57@sha256:b2e822b4829bc7447f2622eb3621a1b10452fa503a98b7aa15ba714acef2abd9
+      # In the CLI docker references with both a tag and a digest are not supported
+      artifact_name: 244531986313.dkr.ecr.eu-central-1.amazonaws.com/saver:5d42c57
       raw_snyk_policy_url: https://raw.githubusercontent.com/cyber-dojo/saver/5d42c570fa37dc38b5f5652b1e38230efd18f4b6/.snyk
       repo_name: saver
       kosli_flow: saver-ci

@@ -280,7 +280,7 @@ jobs:
 
   attest-snyk-vulns:
     needs: [find-snyk-vulns, attest-individual-snyk-vulns]
-    if: always() && inputs.attest_to_kosli == 'true' && needs.find-snyk-vulns.result == 'success'
+    if: always() && inputs.attest_to_kosli && needs.find-snyk-vulns.result == 'success'
     outputs:
       vulns: ${{steps.set-vulns.outputs.vulns}}
     runs-on: ubuntu-latest

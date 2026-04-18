@@ -338,7 +338,7 @@ jobs:
           jq . ${VULNS_FILENAME}
 
       - name: Attest NO vulns
-        if: ${{ github.ref == 'refs/heads/main' && needs.attest-inner-snyk-vulns.result == "skipped" && (success() || failure()) }}
+        if: ${{ github.ref == 'refs/heads/main' && needs.attest-inner-snyk-vulns.result == 'skipped' && (success() || failure()) }}
         run:
           kosli attest generic
             --compliant=true
@@ -346,7 +346,7 @@ jobs:
             --name="${KOSLI_SLOT_NAME}"
 
       - name: Attest SOME vulns
-        if: ${{github.ref == 'refs/heads/main' && needs.attest-inner-snyk-vulns.result != "skipped" && (success() || failure()) }}
+        if: ${{github.ref == 'refs/heads/main' && needs.attest-inner-snyk-vulns.result != 'skipped' && (success() || failure()) }}
         env:
           EVALUATION_FILENAME: evaluation.json
         run: |

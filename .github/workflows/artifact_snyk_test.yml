@@ -280,7 +280,7 @@ jobs:
 
   attest-snyk-vulns:
     needs: [find-snyk-vulns, attest-individual-snyk-vulns]
-    if: always() && needs.find-snyk-vulns.result == 'success'
+    if: always() && inputs.attest_to_kosli == 'true' && needs.find-snyk-vulns.result == 'success'
     outputs:
       vulns: ${{steps.set-vulns.outputs.vulns}}
     runs-on: ubuntu-latest
@@ -307,7 +307,6 @@ jobs:
       #     fetch-depth: 1
 
       - name: Setup Kosli CLI
-        if: ${{ github.ref == 'refs/heads/main' && (success() || failure()) }}
         uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{ vars.KOSLI_CLI_VERSION }}
@@ -329,7 +328,7 @@ jobs:
           echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
 
       - name: Debug print vulns
-        if: ${{env.KOSLI_DEBUG == 'true'}}
+        if: env.KOSLI_DEBUG == 'true'
         run:
           jq . ${VULNS_FILENAME}
 
@@ -339,7 +338,7 @@ jobs:
           curl --fail-with-body "${URL}" > ${REGO_POLICY_FILENAME}
 
       - name: Attest NO vulns
-        if: ${{ github.ref == 'refs/heads/main' && needs.attest-individual-snyk-vulns.result == 'skipped' && (success() || failure()) }}
+        if: needs.attest-individual-snyk-vulns.result == 'skipped'
         run:
           kosli attest generic
             --compliant=true
@@ -348,7 +347,7 @@ jobs:
             --name="${KOSLI_ATTESTATION_NAME}"
 
       - name: Attest SOME vulns
-        if: ${{github.ref == 'refs/heads/main' && needs.attest-individual-snyk-vulns.result != 'skipped' && (success() || failure()) }}
+        if: needs.attest-individual-snyk-vulns.result != 'skipped'
         env:
           EVALUATION_FILENAME: evaluation.json
         run: |
@@ -360,6 +359,7 @@ jobs:
             --output=json \
             > ${EVALUATION_FILENAME}
 
+          # TODO: Should COMPLIANT=false fail the job?
           COMPLIANT="$(jq '.allow' ${EVALUATION_FILENAME})"
 
           kosli attest generic \

@@ -1,26 +1,25 @@
 # Debug workflow to work on 2nd half of artifact_snyk_test.yml 
-# when there are vulns 
+# when there are no vulns 
 
-name: Artifact Snyk Test on runner
+name: Artifact Snyk Test on saver
 
 on:
-  workflow_call:
-#  push:
+  push:
 
 jobs:
-  call-with-runner:
+  call-with-saver:
     uses: ./.github/workflows/artifact_snyk_test.yml
     with:
-      artifact_name: 244531986313.dkr.ecr.eu-central-1.amazonaws.com/runner:0d6ddbb@sha256:52de66b4e58f5ce2e2284fec2fc4207efe87a1944affb10dbb79e84d5e4c4ced
-      raw_snyk_policy_url: https://raw.githubusercontent.com/cyber-dojo/runner/0d6ddbb6c6bda393738bde557d2bdb85732e6bfa/.snyk
+      artifact_name: 
+      raw_snyk_policy_url: https://raw.githubusercontent.com/cyber-dojo/saver/...
       repo_name: runner
-      kosli_flow: scratch-debug-runner 
+      kosli_flow: scratch-debug-saver 
     secrets:
       snyk_token:      ${{secrets.SNYK_TOKEN}}
       kosli_api_token: ${{secrets.KOSLI_API_TOKEN}}
 
   print-vulns:
-    needs: [call-with-runner]
+    needs: [call-with-saver]
     runs-on: ubuntu-latest
     env:
       VULNS_JSON: ${{needs.call-with-runner.outputs.vulns_json}}

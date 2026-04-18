@@ -258,15 +258,12 @@ jobs:
       - name: Set vuln output
         id: set-vulns
         run: |
-          ls -al
+          echo "XXXXXXX"
+          jq --slurp . vuln-*.json
           VULNS="$(jq --compact-output --slurp . vuln-*.json)"
-          echo "vulns=${VULNS}" >> ${GITHUB_ENV}
+          echo "YYYYYYY"
+          jq . <<< "${VULNS}"
           echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
-            
-      - name: Debug print all vulns
-        if: ${{env.DEBUG == 'true'}}
-        run:
-          jq . <<< ${VULNS}
 
 
 

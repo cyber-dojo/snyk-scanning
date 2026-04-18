@@ -18,4 +18,12 @@ jobs:
       snyk_token:      ${{secrets.SNYK_TOKEN}}
       kosli_api_token: ${{secrets.KOSLI_API_TOKEN}}
 
-
+  print-vulns:
+    need: [call-with-runner]
+    runs-on: ubuntu-latest
+    env:
+      VULNS_JSON: ${{needs.call-with-runner.outputs.vulns_json}}
+    steps:
+      - name: Print json
+        run:
+          jq . <<< "${VULNS_JSON}"

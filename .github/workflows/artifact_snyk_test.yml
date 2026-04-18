@@ -64,6 +64,7 @@ env:
   KOSLI_ORG:     ${{vars.KOSLI_ORG}}     # cyber-dojo
 
   FAKING: true
+  DEBUG: true
 
 jobs:
   # TODO: inline this
@@ -148,7 +149,7 @@ jobs:
             > ${SNYK_POLICY_FILENAME}
 
       - name: Debug print policy file
-        if: ${{env.KOSLI_DEBUG == 'true'}}
+        if: ${{env.DEBUG == 'true'}}
         run:
           cat ${SNYK_POLICY_FILENAME}
 
@@ -201,10 +202,6 @@ jobs:
           ref: main
           fetch-depth: 1
 
-      # - name: Save vuln data to file
-      #   run:
-      #     echo "${VULN_JSON}" > "${VULN_FILENAME}"
-
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v3
         with:
@@ -222,6 +219,7 @@ jobs:
             <<< "${VULN_JSON}" > ${VULN_FILENAME}
 
       - name: Debug print one vuln
+        if: ${{env.DEBUG == 'true'}}
         run:
           jq . ${VULN_FILENAME}
 
@@ -251,7 +249,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           pattern: trail-*.json
-          merge-multiple: true
+          merge-multiple: false
 
       - name: Set vuln output
         id: set-vulns
@@ -262,7 +260,7 @@ jobs:
           echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
             
       - name: Debug print all vulns
-        if: ${{env.KOSLI_DEBUG == 'true'}}
+        if: ${{env.DEBUG == 'true'}}
         run:
           jq . <<< ${VULNS}
 

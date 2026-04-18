@@ -201,7 +201,9 @@ jobs:
         with:
           version: ${{vars.KOSLI_CLI_VERSION}}
 
-      # kosli begin trail has to have a git repo under it
+      # kosli begin trail:
+      #  - has to have a git repo under it
+      #  - does not auto-create the flow
       - uses: actions/checkout@v6
         with:
           repository: cyber-dojo/snyk-scanning
@@ -210,6 +212,7 @@ jobs:
 
       - name: Add time vuln first seen for the repo
         run: |
+          koslic create flow ${KOSLI_FLOW} --use-empty-template
           kosli begin trail ${KOSLI_TRAIL} # idempotent
           kosli get trail ${KOSLI_TRAIL} --output json > trail.json
           FIRST_SEEN_TS="$(jq '.created_at' trail.json)"

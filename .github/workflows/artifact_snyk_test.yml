@@ -13,7 +13,7 @@ on:
     outputs:
       vulns_json:
         description: "JSON array of vuln objects"
-        value: ${{jobs.attest-snyk-vulns.outputs.vulns}}
+        value: ${{jobs.collect-snyk-vulns.outputs.vulns}}
 
     secrets:
       snyk_token:
@@ -178,8 +178,6 @@ jobs:
     needs: [create-snyk-cat, find-snyk-vulns]
     if: ${{needs.find-snyk-vulns.outputs.vulns != '[]'}}
     runs-on: ubuntu-latest
-    outputs:              
-      ${{ matrix.full_id }}: ${{ steps.set-vulns.outputs.vulns }}
     env:
       VULN_JSON: ${{matrix}}
       VULN_FILENAME: vuln.json
@@ -210,7 +208,7 @@ jobs:
             ${VULN_FILENAME} > tmp.json \
             && mv tmp.json ${VULN_FILENAME}
 
-      - name: Debug Print vuln data
+      - name: Debug print one vuln
         if: ${{env.KOSLI_DEBUG == 'true'}}
         run:
           jq . ${VULN_FILENAME}
@@ -223,13 +221,35 @@ jobs:
             --name snyk
             --type ${{needs.create-snyk-cat.outputs.name}}
 
-      - name: Set workflow output
+      - name: Set matrix job output
+        uses: actions/upload-artifact@v4 
+        with:
+          name: trail-${{ matrix.trail_name }}.json
+          path: ${{ env.VULN_FILENAME }}
+
+
+  collect-snyk-vulns:
+    needs: [attest-snyk-vulns]
+    outputs:
+      vulns: ${{steps.set-vulns.outputs.vulns}}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: trail-*.json
+          merge-multiple: true
+
+      - name: Set vuln output
         id: set-vulns
         run: |
-          vulns="$(jq --compact-data . ${VULN_FILENAME})"
-          echo "vulns=${vulns}" >> ${GITHUB_OUTPUT}
-          
-
+          VULNS="$(jq --compact-output --slurp . trail-*.json)"
+          echo "vulns=${VULNS}" >> ${GITHUB_ENV}
+          echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
+            
+      - name: Debug print all vulns
+        if: ${{env.KOSLI_DEBUG == 'true'}}
+        run:
+          jq . <<< ${VULNS}
 
 
 

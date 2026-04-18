@@ -16,12 +16,6 @@
 # - show the gathered data and be confident you could attest with it
 # - ensure correct behaviour when there are no vulns (saver)
 
-# saver
-# 244531986313.dkr.ecr.eu-central-1.amazonaws.com/saver:5d42c57@sha256:b2e822b4829bc7447f2622eb3621a1b10452fa503a98b7aa15ba714acef2abd9
-
-# runner
-# 244531986313.dkr.ecr.eu-central-1.amazonaws.com/runner:0d6ddbb@sha256:52de66b4e58f5ce2e2284fec2fc4207efe87a1944affb10dbb79e84d5e4c4ced
-
 
 name: Artifact Snyk Test
 

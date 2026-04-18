@@ -132,7 +132,7 @@ jobs:
       - name: Use FAKE sarif file
         if: ${{env.FAKING == 'true'}}
         run:
-          copy ./debug/${{inputs.kosli_flow}}.sarif.json ${SNYK_SARIF_FILENAME}
+          cp ./debug/${{inputs.kosli_flow}}.sarif.json ${SNYK_SARIF_FILENAME}
 
       - name: Fail if the sarif file is not created
         run: |

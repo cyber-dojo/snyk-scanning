@@ -16,7 +16,7 @@ jobs:
       raw_snyk_policy_url: https://raw.githubusercontent.com/cyber-dojo/runner/0d6ddbb6c6bda393738bde557d2bdb85732e6bfa/.snyk
       repo_name: runner
       kosli_flow: runner-ci
-      kosli_trail: ${{ github.sha }}
+      kosli_trail: 0d6ddbb6c6bda393738bde557d2bdb85732e6bfa
       kosli_slot: runner.new-snyk-container-scan
     secrets:
       snyk_token:      ${{secrets.SNYK_TOKEN}}

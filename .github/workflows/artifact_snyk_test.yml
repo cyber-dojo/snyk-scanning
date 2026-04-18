@@ -179,7 +179,7 @@ jobs:
     if: ${{needs.find-snyk-vulns.outputs.vulns != '[]'}}
     runs-on: ubuntu-latest
     outputs:              
-       ${{ matrix.full_id }}: ${{ steps.set-vulns.outputs.vulns }}
+      ${{ matrix.full_id }}: ${{ steps.set-vulns.outputs.vulns }}
     env:
       VULN_JSON: ${{matrix}}
       VULN_FILENAME: vuln.json

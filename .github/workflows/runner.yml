@@ -16,7 +16,6 @@ jobs:
       repo_name: runner
       kosli_flow: runner-ci
       kosli_trail: ${{ github.sha }}
-      kosli_fingerprint: 52de66b4e58f5ce2e2284fec2fc4207efe87a1944affb10dbb79e84d5e4c4ced
       kosli_slot: runner.new-snyk-container-scan
     secrets:
       snyk_token:      ${{secrets.SNYK_TOKEN}}

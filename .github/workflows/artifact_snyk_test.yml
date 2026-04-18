@@ -124,6 +124,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [create-snyk-cat]
     outputs:
+      fingerprint: ${{steps.set-fingerprint.outputs.fingerprint}}
       vulns: ${{steps.set-vulns.outputs.vulns}}
     permissions:
       id-token: write
@@ -145,11 +146,24 @@ jobs:
           fetch-depth: 1
 
       - name: Load docker image from registry
-        if: ${{env.FAKING == 'false'}}
         uses: cyber-dojo/load-image-from-registry@main
         with:
           image_name: ${{inputs.artifact_name}}
           aws_rolename: ${{inputs.aws_rolename}}
+
+      - name: Setup Kosli CLI
+        uses: kosli-dev/setup-cli-action@v3
+        with:
+          version: ${{vars.KOSLI_CLI_VERSION}}
+
+      - name: Set output fingerprint
+        id: set-fingerprint
+        run: |
+          FINGERPRINT="$(kosli fingerprint ${{inputs.artifact_name}} \
+            --artifact-type=oci \
+            --debug=false
+          )"
+          echo "fingerprint=${FINGERPRINT}" >> ${GITHUB_OUTPUT}
 
       - name: Setup Snyk
         uses: snyk/actions/setup@master
@@ -296,6 +310,7 @@ jobs:
     env:
       POLICY_FILENAME: snyk-vuln-compliance.rego
       VULNS_FILENAME: vulns.json
+      KOSLI_FINGERPRINT: ${{needs.find-snyk-vulns.outputs.fingerprint}}
       KOSLI_SLOT: ${{inputs.kosli_slot}}
     steps:
       - uses: step-security/harden-runner@v2

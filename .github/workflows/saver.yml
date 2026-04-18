@@ -15,7 +15,6 @@ jobs:
       repo_name: saver
       kosli_flow: saver-ci
       kosli_trail: ${{ github.sha }}
-      kosli_fingerprint: b2e822b4829bc7447f2622eb3621a1b10452fa503a98b7aa15ba714acef2abd9
       kosli_slot: saver.new-snyk-container-scan
     secrets:
       snyk_token:      ${{secrets.SNYK_TOKEN}}

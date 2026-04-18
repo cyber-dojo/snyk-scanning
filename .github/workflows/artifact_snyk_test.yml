@@ -192,18 +192,6 @@ jobs:
         with:
           egress-policy: audit
 
-      - name: Save vuln data to file
-        run: |
-          ls -al
-          jq --compact-output . <<< "${VULN_JSON}" > "${VULN_FILENAME}"
-          echo "We got to here"
-          ls -al
-
-      - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v3
-        with:
-          version: ${{vars.KOSLI_CLI_VERSION}}
-
       # kosli begin trail:
       #  - has to have a git repo under it
       #  - does not auto-create the flow
@@ -212,6 +200,15 @@ jobs:
           repository: cyber-dojo/snyk-scanning
           ref: main
           fetch-depth: 1
+
+      - name: Save vuln data to file
+        run:
+          echo "${VULN_JSON}" > "${VULN_FILENAME}"
+
+      - name: Setup Kosli CLI
+        uses: kosli-dev/setup-cli-action@v3
+        with:
+          version: ${{vars.KOSLI_CLI_VERSION}}
 
       - name: Add time vuln first seen for the repo
         run: |

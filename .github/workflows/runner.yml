@@ -17,7 +17,7 @@ jobs:
       repo_name: runner
       kosli_flow: runner-ci
       kosli_trail: 0d6ddbb6c6bda393738bde557d2bdb85732e6bfa
-      kosli_slot: runner.new-snyk-container-scan
+      kosli_attestation_name: runner.new-snyk-container-scan
     secrets:
       snyk_token:      ${{secrets.SNYK_TOKEN}}
       kosli_api_token: ${{secrets.KOSLI_API_TOKEN}}

@@ -16,7 +16,7 @@ jobs:
       repo_name: saver
       kosli_flow: saver-ci
       kosli_trail: 5d42c570fa37dc38b5f5652b1e38230efd18f4b6
-      kosli_slot: saver.new-snyk-container-scan
+      kosli_attestation_name: saver.new-snyk-container-scan
     secrets:
       snyk_token:      ${{secrets.SNYK_TOKEN}}
       kosli_api_token: ${{secrets.KOSLI_API_TOKEN}}

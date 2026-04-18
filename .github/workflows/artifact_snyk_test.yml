@@ -39,8 +39,8 @@ on:
         description: "The Kosli trail to attest to"
         required: true
         type: string
-      kosli_slot:
-        description: "The Kosli slot to attest to"
+      kosli_attestation_name:
+        description: "The Kosli attestation slot to attest to"
         required: true
         type: string
       repo_name:
@@ -73,7 +73,7 @@ env:
   KOSLI_TRAIL:     ${{inputs.kosli_trail}}
   KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
 
-  FAKING: true
+  FAKING: false
   DEBUG: true
 
 jobs:
@@ -239,7 +239,7 @@ jobs:
           echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
 
 
-  attest-inner-snyk-vulns:
+  attest-individual-snyk-vulns:
     needs: [create-snyk-cat, find-snyk-vulns]
     if: ${{needs.find-snyk-vulns.outputs.vulns != '[]'}}
     runs-on: ubuntu-latest
@@ -302,27 +302,29 @@ jobs:
 
 
   attest-snyk-vulns:
-    needs: [find-snyk-vulns, attest-inner-snyk-vulns]
+    needs: [find-snyk-vulns, attest-individual-snyk-vulns]
     if: always() && needs.find-snyk-vulns.result == 'success'
     outputs:
       vulns: ${{steps.set-vulns.outputs.vulns}}
     runs-on: ubuntu-latest
     env:
-      POLICY_FILENAME: snyk-vuln-compliance.rego
+      REGO_POLICY_FILENAME: snyk-vuln-compliance.rego
       VULNS_FILENAME: vulns.json
       KOSLI_FINGERPRINT: ${{needs.find-snyk-vulns.outputs.fingerprint}}
-      KOSLI_SLOT: ${{inputs.kosli_slot}}
+      KOSLI_ATTESTATION_NAME: ${{inputs.kosli_attestation_name}}
     steps:
       - uses: step-security/harden-runner@v2
         if: ${{env.FAKING == 'false'}}
         with:
           egress-policy: audit
 
-      - uses: actions/checkout@v6
-        with:
-          repository: cyber-dojo/snyk-scanning
-          ref: main
-          fetch-depth: 1
+      # CANT DO THIS AS NEED CALLERS CONTEXT FOR attestations below...
+      # SO DONT NATIVELY HAVE THE rego file
+      # - uses: actions/checkout@v6
+      #   with:
+      #     repository: cyber-dojo/snyk-scanning
+      #     ref: main
+      #     fetch-depth: 1
 
       - name: Setup Kosli CLI
         if: ${{ github.ref == 'refs/heads/main' && (success() || failure()) }}
@@ -338,7 +340,7 @@ jobs:
       - name: Set vuln output
         id: set-vulns
         run: |
-          if [ "${{needs.attest-inner-snyk-vulns.result}}" = "skipped" ]; then
+          if [ "${{needs.attest-individual-snyk-vulns.result}}" = "skipped" ]; then
             VULNS=[]
           else
             VULNS="$(jq --compact-output --slurp . vuln-*.json)"
@@ -351,16 +353,25 @@ jobs:
         run:
           jq . ${VULNS_FILENAME}
 
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - name: Get the rego policy file
+        run: |
+          URL=https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/.snyk
+          curl --fail-with-body "${URL}" > ${REGO_POLICY_FILENAME}
+
       - name: Attest NO vulns
-        if: ${{ github.ref == 'refs/heads/main' && needs.attest-inner-snyk-vulns.result == 'skipped' && (success() || failure()) }}
+        if: ${{ github.ref == 'refs/heads/main' && needs.attest-individual-snyk-vulns.result == 'skipped' && (success() || failure()) }}
         run:
           kosli attest generic
             --compliant=true
-            --attachments="${POLICY_FILENAME}"
-            --name="${KOSLI_SLOT}"
+            --attachments="${REG_POLICY_FILENAME}"
+            --name="${KOSLI_ATTESTATION_NAME}"
 
       - name: Attest SOME vulns
-        if: ${{github.ref == 'refs/heads/main' && needs.attest-inner-snyk-vulns.result != 'skipped' && (success() || failure()) }}
+        if: ${{github.ref == 'refs/heads/main' && needs.attest-individual-snyk-vulns.result != 'skipped' && (success() || failure()) }}
         env:
           EVALUATION_FILENAME: evaluation.json
         run: |
@@ -368,7 +379,7 @@ jobs:
 
           kosli evaluate trails ${TRAIL_NAMES} \
             --flow snyk-vulns \
-            --policy="${POLICY_FILENAME}" \
+            --policy="${REGO_POLICY_FILENAME}" \
             --output=json \
             > ${EVALUATION_FILENAME}
 
@@ -376,6 +387,6 @@ jobs:
 
           kosli attest generic \
             --compliant="${COMPLIANT}" \
-            --attachments="${POLICY_FILENAME}" \
+            --attachments="${REGO_POLICY_FILENAME}" \
             --user-data=${VULNS_FILENAME} \
-            --name="${KOSLI_SLOT}"
+            --name="${KOSLI_ATTESTATION_NAME}"

@@ -42,7 +42,7 @@ on:
         default: ${{ github.event.repository.name }}
       snyk_version:
         description: "Version of snyk to run"
-        reqiured: false
+        required: false
         type: string
         default: "v1.1300.2"
       raw_snyk_policy_url:

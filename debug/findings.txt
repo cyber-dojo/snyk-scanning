@@ -28,6 +28,9 @@
    Return the result of snyk-container-test?
    That was run against an empty .snyk file.
    Run it against the original .snyk file?
+   Or treat the flag as not-attesting as relating only to the OUTER attest.
+   Still do the inner attestations. And use them in a kosli-evaluate
+   and return the result of that.
 
 6. Need to git-tag the workflows in snyk-scanning and for calls, do
        uses: ./.github/workflows/artifact_snyk_test.yml@v2

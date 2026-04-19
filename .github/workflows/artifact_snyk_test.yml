@@ -367,8 +367,10 @@ jobs:
           COMPLIANT="$(jq '.allow' ${EVALUATION_FILENAME})"
 
           ANNOTATE_FLAGS=()
+          i=0
           while IFS= read -r url; do
-            ANNOTATE_FLAGS+=(--annotate "vuln_url=${url}")
+            ANNOTATE_FLAGS+=(--annotate "vuln_url_${i}=${url}")
+            i=$((i+1))
           done < <(jq -r '.[].attestation_url' "${VULNS_FILENAME}")
 
           kosli attest generic \

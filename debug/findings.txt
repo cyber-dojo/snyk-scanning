@@ -1,6 +1,7 @@
 
 0. installing Kosli CLI from https://github.com/kosli-dev/cli/releases/download/v2.15.3/kosli_2.15.3_linux_amd64.tar.gz ...
    Unexpected HTTP response: 504
+   Got this several times.
 
 1. In the CLI docker references with both a tag and a digest are not supported
    You can't do a kosli-attest with an artifact whose name is
@@ -22,13 +23,26 @@
 
 5. If attest_to_kosli: false
    then the inner kosli-attest commands will still run.
-   What should this case do?
+   they should not.
+   But what should this case do?
    Return the result of snyk-container-test?
-   That was run against an empy .snyk file.
+   That was run against an empty .snyk file.
+   Run it against the original .snyk file?
 
-6. Need to tag the workflows in snyk-scanning and for calls, do
+6. Need to git-tag the workflows in snyk-scanning and for calls, do
        uses: ./.github/workflows/artifact_snyk_test.yml@v2
 
 7. Add decent github step summaries.
    Might be some nice options to print the individual vuln info.
+
+8. Use --name slots based on caller's scope?
+     - aws-beta-deployment (==build)
+     - aws-beta-live
+     - aws-prod-deployment
+     - aws-prod-live
+
+9. I would like to know which of the inner attestations 
+   caused a kosli-evaluate result of non-compliant.
+   Suppose I have 12 inner-attestations --annotate links 
+   and only one is actual causing the non-compliance?
 

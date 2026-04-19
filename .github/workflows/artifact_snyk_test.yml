@@ -260,26 +260,23 @@ jobs:
         run:
           jq . ${VULN_FILENAME}
 
-      # TODO: Use --name from
-      #  - aws-beta-deployment
-      #  - aws-prod-deployment
-      #  - aws-beta-live
-      #  - aws-prod-live
-      - name: Attest snyk vuln to Kosli
+      - name: Make snyk-vuln data attestation to Kosli
         run:
           kosli attest custom
             --annotate snyk_URL=${{matrix.vuln_url}}
-            --attestation-data ${VULN_FILENAME} 
+            --attestation-data ${VULN_FILENAME}
+            --compliant=true
             --name snyk
             --type ${{needs.create-snyk-cat.outputs.name}}
 
-      - name: Add attestation URL to vuln
+      - name: Get attestation URL ready for --annotate
         run: |
           ATTESTATION_URL="$(kosli get attestation snyk \
             --flow ${KOSLI_FLOW} \
             --trail ${KOSLI_TRAIL} \
             --output json \
             | jq -r 'last | .html_url')"
+
           jq --arg url "${ATTESTATION_URL}" \
             '. + {"attestation_url": $url}' \
             ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}

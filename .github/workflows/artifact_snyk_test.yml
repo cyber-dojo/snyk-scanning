@@ -1,10 +1,11 @@
-# This workflow is called from build workflows in other repos,
-# such as cyberdojo/.github/workflows/main.yml.
-# This has two consequences:
-# 1) The checkout action in the find-snyk-vulns job must specify
-#    its own repository explicitly (not rely on the default).
-# 2) The workflow cannot rely on GitHub env-vars that are only
-#    present at the repo level.
+# This workflow is called from:
+# o) build workflows, eg cyberdojo/saver/.github/workflows/main.yml.
+# o) deployment workflows, from the cyberdojo/aws-prod-co-promotion repo
+# o) this repos workflow to scan aws-beta and aws-prod Environments
+#
+# Relies on the caller's context having:
+# ${{env.KOSLI_ORG}}
+# ${{env.KOSLI_HOST}}
 
 name: Artifact Snyk Test
 
@@ -12,7 +13,7 @@ on:
   workflow_call:
     outputs:
       vulns_json:
-        description: "JSON array of vuln objects"
+        description: "JSON array of vuln objects for the artifact"
         value: ${{jobs.attest-snyk-vulns.outputs.vulns}}
 
     secrets:
@@ -183,21 +184,21 @@ jobs:
           fi
 
       - name: Get the real .snyk file
-        run:
-          curl --fail-with-body "${{inputs.raw_snyk_policy_url}}"
-            > ${SNYK_POLICY_FILENAME}
+        run: |
+          URL="${{inputs.raw_snyk_policy_url}}"
+          curl --fail-with-body "${URL}" > "${SNYK_POLICY_FILENAME}"
 
       - name: Debug print policy file
-        if: ${{env.KOSLI_DEBUG == 'true'}}
+        if: env.KOSLI_DEBUG == 'true'
         run:
-          cat ${SNYK_POLICY_FILENAME}
+          cat "${SNYK_POLICY_FILENAME}"
 
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v3
         with:
           version: ${{vars.KOSLI_CLI_VERSION}}
 
-      - name: Combine all data
+      - name: Combine all data ready for evaluation
         run: |
           ./bin/combine_snyk.py \
             ${{inputs.snyk_version}} \
@@ -219,7 +220,7 @@ jobs:
 
   attest-individual-snyk-vulns:
     needs: [create-snyk-cat, find-snyk-vulns]
-    if: ${{needs.find-snyk-vulns.outputs.vulns != '[]'}}
+    if: needs.find-snyk-vulns.outputs.vulns != '[]'
     runs-on: ubuntu-latest
     env:
       VULN_JSON: ${{toJSON(matrix)}}
@@ -255,10 +256,15 @@ jobs:
             <<< "${VULN_JSON}" > ${VULN_FILENAME}
 
       - name: Debug print one vuln
-        if: ${{env.KOSLI_DEBUG == 'true'}}
+        if: env.KOSLI_DEBUG == 'true'
         run:
           jq . ${VULN_FILENAME}
 
+      # TODO: Use --name from
+      #  - aws-beta-deployment
+      #  - aws-prod-deployment
+      #  - aws-beta-live
+      #  - aws-prod-live
       - name: Attest snyk vuln to Kosli
         run:
           kosli attest custom
@@ -267,7 +273,18 @@ jobs:
             --name snyk
             --type ${{needs.create-snyk-cat.outputs.name}}
 
-      - uses: actions/upload-artifact@v4 
+      - name: Add attestation URL to vuln
+        run: |
+          ATTESTATION_URL="$(kosli get attestation snyk \
+            --flow ${KOSLI_FLOW} \
+            --trail ${KOSLI_TRAIL} \
+            --output json \
+            | jq -r 'last | .html_url')"
+          jq --arg url "${ATTESTATION_URL}" \
+            '. + {"attestation_url": $url}' \
+            ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}
+
+      - uses: actions/upload-artifact@v4
         with:
           name: ${{env.VULN_FILENAME}}
           path: ${{env.VULN_FILENAME}}
@@ -349,8 +366,14 @@ jobs:
           # TODO: Should COMPLIANT=false fail the job?
           COMPLIANT="$(jq '.allow' ${EVALUATION_FILENAME})"
 
+          ANNOTATE_FLAGS=()
+          while IFS= read -r url; do
+            ANNOTATE_FLAGS+=(--annotate "vuln_url=${url}")
+          done < <(jq -r '.[].attestation_url' "${VULNS_FILENAME}")
+
           kosli attest generic \
             --compliant="${COMPLIANT}" \
             --attachments="${REGO_POLICY_FILENAME}" \
             --user-data=${VULNS_FILENAME} \
-            --name="${KOSLI_ATTESTATION_NAME}"
+            --name="${KOSLI_ATTESTATION_NAME}" \
+            "${ANNOTATE_FLAGS[@]}"

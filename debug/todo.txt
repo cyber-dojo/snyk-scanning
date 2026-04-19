@@ -4,8 +4,6 @@ artifact_snyk_test.yml's
   If false, don't do attestations, return null
      ?do the snyk-container-test and return its exit-status?
   If true, do attestations, return [] or [trail-names]
-- Need to pass kosli_slot_name as an input
-  This is for the attestation to the "callers" context
 
 - what to put into the violations list of strings?
   This comes from the rego file used in the kosli-evaluate-trails 
@@ -27,7 +25,7 @@ artifact_snyk_test.yml's
   in its trail. I have the flow-name, trail-name, but not the ?attestation_id
   However, the URL without the ?attestation_id is probably good enough for now.
   
-
+Add github summary prints
 
 Revive tests of artifacts.py
 

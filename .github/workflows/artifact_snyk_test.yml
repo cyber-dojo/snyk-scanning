@@ -284,7 +284,7 @@ jobs:
             '. + {"attestation_url": $url}' \
             ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{env.VULN_FILENAME}}
           path: ${{env.VULN_FILENAME}}
@@ -315,7 +315,7 @@ jobs:
         with:
           version: ${{ vars.KOSLI_CLI_VERSION }}
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           pattern: vuln-*.json
           merge-multiple: true
@@ -369,7 +369,8 @@ jobs:
           ANNOTATE_FLAGS=()
           i=0
           while IFS= read -r url; do
-            ANNOTATE_FLAGS+=(--annotate "vuln_url_${i}=${url}")
+            printf -v key "vuln_url_%03d" "${i}"
+            ANNOTATE_FLAGS+=(--annotate "${key}=${url}")
             i=$((i+1))
           done < <(jq -r '.[].attestation_url' "${VULNS_FILENAME}")
 

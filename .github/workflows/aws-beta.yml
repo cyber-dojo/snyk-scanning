@@ -3,8 +3,8 @@ name: Live Snyk Test aws-beta
 on:
   workflow_dispatch:
   push:
-  #schedule: # At 08:00 every day
-  #  - cron: '0 8 * * *'
+  #schedule: # At 06:00 every day
+  #  - cron: '0 6 * * *'
 
 jobs:
   scan-aws-beta:

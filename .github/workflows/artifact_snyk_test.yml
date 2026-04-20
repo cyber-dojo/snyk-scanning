@@ -362,19 +362,9 @@ jobs:
 
       - name: Attest SOME vulns
         if: needs.attest-individual-snyk-vulns.result != 'skipped'
-        env:
-          EVALUATION_FILENAME: evaluation.json
         run: |
-          TRAIL_NAMES="$(jq --raw-output '[.[].trail_name] | join(" ")' "${VULNS_FILENAME}")"
-
-          kosli evaluate trails ${TRAIL_NAMES} \
-            --flow snyk-vulns \
-            --policy="${REGO_POLICY_FILENAME}" \
-            --output=json \
-            > ${EVALUATION_FILENAME}
-
           # TODO: Should COMPLIANT=false fail the job?
-          COMPLIANT="$(jq '.allow' ${EVALUATION_FILENAME})"
+          COMPLIANT="$(jq 'map(.evaluation.allow) | all' "${VULNS_FILENAME}")"
 
           ANNOTATE_FLAGS=()
           i=0

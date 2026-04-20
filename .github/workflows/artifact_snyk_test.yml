@@ -398,9 +398,9 @@ jobs:
 
       - name: Write job summary (header)
         run: |
-          ATTESTATION_URL="$(kosli get attestation "${KOSLI_ATTESTATION_NAME}" \
+          ATTESTATION_URL="$(kosli get attestation "${KOSLI_ATTESTATION_NAME#*.}" \
             --flow ${KOSLI_FLOW} \
-            --trail ${KOSLI_TRAIL} \
+            --fingerprint ${KOSLI_FINGERPRINT} \
             --output json \
             | jq -r 'last | .html_url')"
 

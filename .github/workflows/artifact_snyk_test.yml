@@ -267,7 +267,6 @@ jobs:
           kosli attest custom
             --annotate snyk_URL=${{matrix.vuln_url}}
             --attestation-data ${VULN_FILENAME}
-            --compliant=true
             --name snyk
             --type ${{needs.create-snyk-cat.outputs.name}}
 

@@ -44,6 +44,11 @@ on:
         description: "The Kosli attestation slot to attest to"
         required: true
         type: string
+      kosli_env:
+        description: "The name of the environment the artifact is deployed to in its workflow"
+        required: false
+        type: string
+        default: aws-beta
       repo_name:
         description: "Artifact repo"
         required: false
@@ -290,9 +295,10 @@ jobs:
 
       - name: Evaluate trail and add to vuln data
         run: |
+          # Curl files - the checkout is in the caller's context
           curl --fail-with-body "${REGO_POLICY_URL}" > ${REGO_POLICY_FILENAME}
 
-          REGO_PARAMS_FILENAME=rego.params.aws-beta.json
+          REGO_PARAMS_FILENAME=rego.params.${{inputs.kosli_env}}.json
           REGO_PARAMS_URL="https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/${REGO_PARAMS_FILENAME}"
           curl --fail-with-body "${REGO_PARAMS_URL}" > ${REGO_PARAMS_FILENAME}
 

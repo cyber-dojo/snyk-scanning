@@ -72,7 +72,8 @@ env:
   KOSLI_ORG:       ${{vars.KOSLI_ORG}}     # cyber-dojo
   KOSLI_FLOW:      ${{inputs.kosli_flow}}
   KOSLI_TRAIL:     ${{inputs.kosli_trail}}
-  KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
+  KOSLI_API_TOKEN:        ${{secrets.kosli_api_token}}
+  REGO_POLICY_FILENAME:   snyk-vuln-compliance.rego
 
 jobs:
   create-snyk-cat:
@@ -271,7 +272,6 @@ jobs:
 
       - name: Evaluate trail and add to vuln data
         run: |
-          REGO_POLICY_FILENAME=snyk-vuln-compliance.rego
           URL=https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/snyk-vuln-compliance.rego
           curl --fail-with-body "${URL}" > ${REGO_POLICY_FILENAME}
 
@@ -309,7 +309,6 @@ jobs:
       vulns: ${{steps.set-vulns.outputs.vulns}}
     runs-on: ubuntu-latest
     env:
-      REGO_POLICY_FILENAME: snyk-vuln-compliance.rego
       VULNS_FILENAME: vulns.json
       KOSLI_FINGERPRINT: ${{needs.find-snyk-vulns.outputs.fingerprint}}
       KOSLI_ATTESTATION_NAME: ${{inputs.kosli_attestation_name}}

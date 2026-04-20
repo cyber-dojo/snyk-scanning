@@ -405,6 +405,7 @@ jobs:
         if: needs.attest-individual-snyk-vulns.result != 'skipped'
         run: |
           {
+            echo "$(jq 'length' "${VULNS_FILENAME}") found"
             echo "| | Severity | Vulnerability attestation |"
             echo "|---|---|:---|"
             jq -r '.[] | "| \(if .evaluation.allow then "✅" else "❌" end) | \(.severity) | [\(.full_id)](\(.attestation_url)) |"' \

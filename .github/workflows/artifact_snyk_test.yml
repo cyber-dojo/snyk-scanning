@@ -305,6 +305,15 @@ jobs:
             '. + {"attestation_url": $url}' \
             ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}
 
+      # upload-artifact produces an "Artifacts produced during runtime" section
+      # in the GitHub step summary. We would like to avoid this because the
+      # upload/download is an implementation detail, not something the user
+      # needs to see. Switching to actions/cache would remove it, but there
+      # is no glob-restore equivalent: each entry must be restored by its exact
+      # key. The workaround is to use the GitHub cache REST API directly in a
+      # shell step -- save with POST /caches in the matrix job and restore with
+      # GET /caches?key=vuln- in the final job -- but this is considerably more
+      # complex. Leaving as-is for now.
       - uses: actions/upload-artifact@v7
         with:
           name: ${{env.VULN_FILENAME}}

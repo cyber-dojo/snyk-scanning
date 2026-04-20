@@ -10,8 +10,8 @@ jobs:
   scan-aws-beta:
     uses: ./.github/workflows/env_snyk_test.yml
     with:
-      kosli_env:  aws-beta
-      kosli_flow: snyk-vulns-aws-beta
+      kosli_env: aws-prod
+      kosli_flow: snyk-vulns-aws-prod
     secrets:
-      snyk_token:      ${{secrets.SNYK_TOKEN}}
+      snyk_token: ${{secrets.SNYK_TOKEN}}
       kosli_api_token: ${{secrets.KOSLI_API_TOKEN}}

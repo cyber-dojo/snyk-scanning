@@ -1,0 +1,9 @@
+{
+    "max_days_by_severity":
+    {
+        "critical": 0,
+        "high":     7,
+        "medium":   30,
+        "low":      90
+    }
+}

@@ -321,7 +321,8 @@ jobs:
       # key. The workaround is to use the GitHub cache REST API directly in a
       # shell step -- save with POST /caches in the matrix job and restore with
       # GET /caches?key=vuln- in the final job -- but this is considerably more
-      # complex. Leaving as-is for now.
+      # complex. Leaving as-is for now since for cyber-dojo at least, a lot of 
+      # the time artifacts will have no vulns (except for runner).
       - uses: actions/upload-artifact@v7
         with:
           name: ${{env.VULN_FILENAME}}

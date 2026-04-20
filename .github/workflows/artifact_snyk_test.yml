@@ -341,7 +341,6 @@ jobs:
           merge-multiple: true
 
       - name: Set vuln output
-        id: set-vulns
         run: |
           if [ "${{needs.attest-individual-snyk-vulns.result}}" = "skipped" ]; then
             VULNS=[]
@@ -349,7 +348,6 @@ jobs:
             VULNS="$(jq --compact-output --slurp . vuln-*.json)"
           fi
           echo "${VULNS}" > "${VULNS_FILENAME}"
-          echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
 
       - name: Debug print vulns
         if: env.KOSLI_DEBUG == 'true'
@@ -402,3 +400,8 @@ jobs:
           echo "|---|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
           jq -r '.[] | "| \(.severity) | [\(.full_id)](\(.vuln_url)) | \(.first_seen) | \(.ignore_expires) | \(if .evaluation.allow then "pass" else "FAIL" end) |"' \
             "${VULNS_FILENAME}" >> $GITHUB_STEP_SUMMARY
+
+      - name: Set output vulns
+        id: set-vulns
+        run:
+          echo "vulns=$(jq --compact-output . ${VULNS_FILENAME})" >> ${GITHUB_OUTPUT}

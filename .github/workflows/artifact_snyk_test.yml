@@ -151,7 +151,10 @@ jobs:
       - name: Set output fingerprint
         id: set-fingerprint
         run: |
-          FINGERPRINT="$(kosli fingerprint ${{inputs.artifact_name}} \
+          # strip the digest if present; kosli fingerprint does not support tag+digest
+          ARTIFACT="${{inputs.artifact_name}}"
+          ARTIFACT="${ARTIFACT%%@sha256:*}"
+          FINGERPRINT="$(kosli fingerprint "${ARTIFACT}" \
             --artifact-type=oci \
             --debug=false
           )"

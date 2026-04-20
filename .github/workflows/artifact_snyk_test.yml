@@ -366,7 +366,6 @@ jobs:
           kosli attest generic
             --compliant=true
             --attachments="${REG_POLICY_FILENAME}"
-            --user-data=${VULNS_FILENAME}
             --name="${KOSLI_ATTESTATION_NAME}"
 
       - name: Attest SOME vulns
@@ -387,6 +386,5 @@ jobs:
           kosli attest generic \
             --compliant="${COMPLIANT}" \
             --attachments="${REGO_POLICY_FILENAME}" \
-            --user-data=${VULNS_FILENAME} \
             --name="${KOSLI_ATTESTATION_NAME}" \
             "${ANNOTATE_FLAGS[@]}"

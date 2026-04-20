@@ -23,14 +23,16 @@
 
 5. If attest_to_kosli: false
    then the inner kosli-attest commands will still run.
-   they should not.
-   But what should this case do?
+   Should they?
+   What should this case do?
    Return the result of snyk-container-test?
    That was run against an empty .snyk file.
    Run it against the original .snyk file?
    Or treat the flag as not-attesting as relating only to the OUTER attest.
    Still do the inner attestations. And use them in a kosli-evaluate
-   and return the result of that.
+   and return the result of that. In this case it is VITAL that these
+   inner attestations are trail-level and we dont do an attestation 
+   connecting to the fingerprint.   
 
 6. Need to git-tag the workflows in snyk-scanning and for calls, do
        uses: ./.github/workflows/artifact_snyk_test.yml@v2

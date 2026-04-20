@@ -391,9 +391,9 @@ jobs:
         run: |
           {
             echo '## <img src="https://app.kosli.com/static/images/nav-kosli-logo-new-collapsed.svg" height="20"> Snyk container vulnerabilities by Kosli'
-            echo "# Artifact: ${{inputs.artifact_name}}"
-            echo "# Fingerprint: ${KOSLI_FINGERPRINT}"
-            echo "# Snyk: ${{inputs.snyk_version}}"
+            echo "### Artifact: ${{inputs.artifact_name}}"
+            echo "### Fingerprint: ${KOSLI_FINGERPRINT}"
+            echo "### Snyk: ${{inputs.snyk_version}}"
           } >> $GITHUB_STEP_SUMMARY
 
       - name: Write job summary (no vulns)

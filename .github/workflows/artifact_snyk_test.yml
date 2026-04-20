@@ -379,7 +379,7 @@ jobs:
       - name: Currently we have to (re)do this attestation for the env live-scans
         run: |
           # runner.snyk-scan => runner
-          ARTIFACT_SLOT_NAME="${KOSLI_ATTESTATION_NAME%%.*}" 
+          ARTIFACT_SLOT_NAME="${KOSLI_ATTESTATION_NAME%%.*}"
           kosli attest artifact ${{inputs.artifact_name}} \
             --name="${ARTIFACT_SLOT_NAME}"
 
@@ -414,14 +414,17 @@ jobs:
 
       - name: Write job summary (header)
         run: |
+          # We are doing a get attestation with FLOW+FINGERPRINT
           unset KOSLI_TRAIL
+
           # runner.snyk-scan ==> snyk-scan
-          ATTESTATION_SLOT_NAME="${KOSLI_ATTESTATION_NAME#*.}
-          ATTESTATION_URL="$(kosli get attestation "${ATTESTATION_SLOT_NAME}" \
-            --flow ${KOSLI_FLOW} \
-            --fingerprint ${KOSLI_FINGERPRINT} \
+          ATTESTATION_SLOT_NAME="${KOSLI_ATTESTATION_NAME#*.}"
+
+          kosli get attestation "${ATTESTATION_SLOT_NAME}" \
             --output json \
-            | jq -r 'first | .html_url')"
+            > attestation.json
+
+          ATTESTATION_URL="$(jq --raw-output 'first | .html_url' attestation.json)"
 
           COUNT="$(jq 'length' "${VULNS_FILENAME}")"
           if [ "$(jq 'map(.evaluation.allow) | all' "${VULNS_FILENAME}")" = "true" ]; then

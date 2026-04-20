@@ -190,6 +190,11 @@ jobs:
             exit 43
           fi
 
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{env.SNYK_SARIF_FILENAME}}
+          path: ${{env.SNYK_SARIF_FILENAME}}
+
       - name: Get the real .snyk file
         run: |
           URL="${{inputs.raw_snyk_policy_url}}"
@@ -328,6 +333,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VULNS_FILENAME: vulns.json
+      SNYK_SARIF_FILENAME: snyk.container.test.json
       KOSLI_FINGERPRINT: ${{needs.find-snyk-vulns.outputs.fingerprint}}
       KOSLI_ATTESTATION_NAME: ${{inputs.kosli_attestation_name}}
     steps:
@@ -348,6 +354,10 @@ jobs:
         with:
           pattern: vuln-*.json
           merge-multiple: true
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{env.SNYK_SARIF_FILENAME}}
 
       - name: Set vuln output
         run: |
@@ -372,7 +382,7 @@ jobs:
         run:
           kosli attest generic
             --compliant=true
-            --attachments="${REGO_POLICY_FILENAME}"
+            --attachments="${REGO_POLICY_FILENAME},${SNYK_SARIF_FILENAME}"
             --name="${KOSLI_ATTESTATION_NAME}"
 
       - name: Attest SOME vulns
@@ -392,7 +402,7 @@ jobs:
 
           kosli attest generic \
             --compliant="${COMPLIANT}" \
-            --attachments="${REGO_POLICY_FILENAME}" \
+            --attachments="${REGO_POLICY_FILENAME},${SNYK_SARIF_FILENAME}" \
             --name="${KOSLI_ATTESTATION_NAME}" \
             "${ANNOTATE_FLAGS[@]}"
 

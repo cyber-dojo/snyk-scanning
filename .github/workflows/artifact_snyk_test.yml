@@ -398,32 +398,42 @@ jobs:
 
       - name: Write job summary (header)
         run: |
+          ATTESTATION_URL="$(kosli get attestation "${KOSLI_ATTESTATION_NAME}" \
+            --flow ${KOSLI_FLOW} \
+            --trail ${KOSLI_TRAIL} \
+            --output json \
+            | jq -r 'last | .html_url')"
+
+          COUNT="$(jq 'length' "${VULNS_FILENAME}")"
+          if [ "$(jq 'map(.evaluation.allow) | all' "${VULNS_FILENAME}")" = "true" ]; then
+            STATUS="✅"
+          else
+            STATUS="❌"
+          fi
+
           {
             echo '## <img src="https://app.kosli.com/static/images/nav-kosli-logo-new-collapsed.svg" height="20"> Snyk container vulnerabilities by Kosli'
             # HTML table avoids Markdown's mandatory header row, which renders
             # as a visible blank row when headers are empty.
             echo "<table>"
+            echo "<tr><td><b>Status</b></td><td>${STATUS} ${COUNT} found</td></tr>"
             echo "<tr><td><b>Artifact</b></td><td>${{inputs.artifact_name}}</td></tr>"
             echo "<tr><td><b>Fingerprint</b></td><td>${KOSLI_FINGERPRINT}</td></tr>"
             echo "<tr><td><b>Snyk</b></td><td>${{inputs.snyk_version}}</td></tr>"
+            echo "<tr><td><b>Attestation</b></td><td><a href=\"${ATTESTATION_URL}\">${ATTESTATION_URL}</a></td></tr>"
             echo "</table>"
           } >> $GITHUB_STEP_SUMMARY
 
-      - name: Write job summary (no vulns)
-        if: needs.attest-individual-snyk-vulns.result == 'skipped'
-        run:
-          echo "None found" >> $GITHUB_STEP_SUMMARY
-
-      - name: Write job summary (some vulns)
-        if: needs.attest-individual-snyk-vulns.result != 'skipped'
-        run: |
-          {
-            echo "$(jq 'length' "${VULNS_FILENAME}") found"
-            echo "| | Severity | Vulnerability attestation |"
-            echo "|---|---|:---|"
-            jq -r '.[] | "| \(if .evaluation.allow then "✅" else "❌" end) | \(.severity) | [\(.full_id)](\(.attestation_url)) |"' \
-              "${VULNS_FILENAME}"
-          } >> $GITHUB_STEP_SUMMARY
+      # - name: Write job summary (some vulns)
+      #   if: needs.attest-individual-snyk-vulns.result != 'skipped'
+      #   run: |
+      #     {
+      #       echo "$(jq 'length' "${VULNS_FILENAME}") found"
+      #       echo "| | Severity | Vulnerability attestation |"
+      #       echo "|---|---|:---|"
+      #       jq -r '.[] | "| \(if .evaluation.allow then "✅" else "❌" end) | \(.severity) | [\(.full_id)](\(.attestation_url)) |"' \
+      #         "${VULNS_FILENAME}"
+      #     } >> $GITHUB_STEP_SUMMARY
 
       - name: Set output vulns
         id: set-vulns

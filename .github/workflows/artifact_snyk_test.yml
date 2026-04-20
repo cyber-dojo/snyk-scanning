@@ -395,11 +395,13 @@ jobs:
       - name: Write job summary (some vulns)
         if: needs.attest-individual-snyk-vulns.result != 'skipped'
         run: |
-          echo "## Snyk vulnerabilities" >> $GITHUB_STEP_SUMMARY
-          echo "| Severity | Vulnerability | First seen | Ignore expires | Compliant |" >> $GITHUB_STEP_SUMMARY
-          echo "|---|---|---|---|---|" >> $GITHUB_STEP_SUMMARY
-          jq -r '.[] | "| \(.severity) | [\(.full_id)](\(.vuln_url)) | \(.first_seen) | \(.ignore_expires) | \(if .evaluation.allow then "pass" else "FAIL" end) |"' \
-            "${VULNS_FILENAME}" >> $GITHUB_STEP_SUMMARY
+          {
+            echo "## Snyk vulnerabilities"
+            echo "| Severity | Vulnerability | First seen | Ignore expires | Compliant |"
+            echo "|---|---|---|---|---|"
+            jq -r '.[] | "| \(.severity) | [\(.full_id)](\(.vuln_url)) | \(.first_seen) | \(.ignore_expires) | \(if .evaluation.allow then "pass" else "FAIL" end) |"' \
+              "${VULNS_FILENAME}"
+          } >> $GITHUB_STEP_SUMMARY
 
       - name: Set output vulns
         id: set-vulns

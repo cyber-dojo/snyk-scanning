@@ -132,11 +132,16 @@ jobs:
           ref: main
           fetch-depth: 1
 
-      - name: Load docker image from registry
-        uses: cyber-dojo/load-image-from-registry@main
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
         with:
-          image_name: ${{inputs.artifact_name}}
-          aws_rolename: ${{inputs.aws_rolename}}
+          role-to-assume: arn:aws:iam::244531986313:role/${{inputs.aws_rolename}}
+          aws-region: eu-central-1
+          role-duration-seconds: 2400
+          role-session-name: ${{github.event.repository.name}}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v3

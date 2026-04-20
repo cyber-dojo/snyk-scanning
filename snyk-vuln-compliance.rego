@@ -2,12 +2,7 @@ package policy
 
 import rego.v1
 
-max_days_by_severity := {
-    "critical": 3,
-    "high":     7,
-    "medium":   30,
-    "low":      90,
-}
+max_days_by_severity := data.params.max_days_by_severity
 
 default allow = false
 

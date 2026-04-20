@@ -292,9 +292,14 @@ jobs:
         run: |
           curl --fail-with-body "${REGO_POLICY_URL}" > ${REGO_POLICY_FILENAME}
 
+          REGO_PARAMS_FILENAME=rego.params.aws-beta.json
+          REGO_PARAMS_URL="https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/${REGO_PARAMS_FILENAME}"
+          curl --fail-with-body "${REGO_PARAMS_URL}" > ${REGO_PARAMS_FILENAME}
+
           EVALUATION="$(kosli evaluate trail ${KOSLI_TRAIL} \
             --flow ${KOSLI_FLOW} \
-            --policy="${REGO_POLICY_FILENAME}" \
+            --policy "${REGO_POLICY_FILENAME}" \
+            --params "@${REGO_PARAMS_FILENAME}" \
             --output=json)"
 
           jq --argjson eval "${EVALUATION}" \
@@ -449,17 +454,6 @@ jobs:
             echo "<tr><td><b>Attestation</b></td><td><a href=\"${ATTESTATION_URL}\">${ATTESTATION_URL}</a></td></tr>"
             echo "</table>"
           } >> $GITHUB_STEP_SUMMARY
-
-      # - name: Write job summary (some vulns)
-      #   if: needs.attest-individual-snyk-vulns.result != 'skipped'
-      #   run: |
-      #     {
-      #       echo "$(jq 'length' "${VULNS_FILENAME}") found"
-      #       echo "| | Severity | Vulnerability attestation |"
-      #       echo "|---|---|:---|"
-      #       jq -r '.[] | "| \(if .evaluation.allow then "✅" else "❌" end) | \(.severity) | [\(.full_id)](\(.attestation_url)) |"' \
-      #         "${VULNS_FILENAME}"
-      #     } >> $GITHUB_STEP_SUMMARY
 
       - name: Set output vulns
         id: set-vulns

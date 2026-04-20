@@ -151,7 +151,7 @@ jobs:
       - name: Set output fingerprint
         id: set-fingerprint
         run: |
-          # strip the digest if present; kosli fingerprint does not support tag+digest
+          # strip the digest if present; kosli fingerprint does not yet support tag+digest
           ARTIFACT="${{inputs.artifact_name}}"
           ARTIFACT="${ARTIFACT%%@sha256:*}"
           FINGERPRINT="$(kosli fingerprint "${ARTIFACT}" \
@@ -438,7 +438,7 @@ jobs:
           fi
 
           {
-            echo '## <img src="https://app.kosli.com/static/images/nav-kosli-logo-new-collapsed.svg" height="20">${{inputs.repo_name}} - Snyk container vulnerabilities by Kosli'
+            echo '## <img src="https://app.kosli.com/static/images/nav-kosli-logo-new-collapsed.svg" height="20"> ${{inputs.repo_name}} - Snyk container vulnerabilities by Kosli'
             # HTML table avoids Markdown's mandatory header row, which renders
             # as a visible blank row when headers are empty.
             echo "<table>"

@@ -377,9 +377,11 @@ jobs:
           curl --fail-with-body "${REGO_POLICY_URL}" > ${REGO_POLICY_FILENAME}
 
       - name: Currently we have to (re)do this attestation for the env live-scans
-        run:
-          kosli attest artifact ${{inputs.artifact_name}}
-            --name="${KOSLI_ATTESTATION_NAME%%.*}"
+        run: |
+          # runner.snyk-scan => runner
+          ARTIFACT_SLOT_NAME="${KOSLI_ATTESTATION_NAME%%.*}" 
+          kosli attest artifact ${{inputs.artifact_name}} \
+            --name="${ARTIFACT_SLOT_NAME}"
 
       - name: Attest NO vulns
         if: needs.attest-individual-snyk-vulns.result == 'skipped'
@@ -413,7 +415,9 @@ jobs:
       - name: Write job summary (header)
         run: |
           unset KOSLI_TRAIL
-          ATTESTATION_URL="$(kosli get attestation "${KOSLI_ATTESTATION_NAME#*.}" \
+          # runner.snyk-scan ==> snyk-scan
+          ATTESTATION_SLOT_NAME="${KOSLI_ATTESTATION_NAME#*.}
+          ATTESTATION_URL="$(kosli get attestation "${ATTESTATION_SLOT_NAME}" \
             --flow ${KOSLI_FLOW} \
             --fingerprint ${KOSLI_FINGERPRINT} \
             --output json \

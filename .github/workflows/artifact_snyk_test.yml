@@ -372,7 +372,7 @@ jobs:
         run:
           kosli attest generic
             --compliant=true
-            --attachments="${REG_POLICY_FILENAME}"
+            --attachments="${REGO_POLICY_FILENAME}"
             --name="${KOSLI_ATTESTATION_NAME}"
 
       - name: Attest SOME vulns

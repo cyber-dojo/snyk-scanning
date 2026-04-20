@@ -390,7 +390,7 @@ jobs:
       - name: Write job summary (no vulns)
         if: needs.attest-individual-snyk-vulns.result == 'skipped'
         run:
-          echo "## Snyk vulnerabilities: none found" >> $GITHUB_STEP_SUMMARY
+          echo "## Snyk vulnerabilities - none found" >> $GITHUB_STEP_SUMMARY
 
       - name: Write job summary (some vulns)
         if: needs.attest-individual-snyk-vulns.result != 'skipped'

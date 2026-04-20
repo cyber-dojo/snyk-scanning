@@ -269,6 +269,21 @@ jobs:
             --name snyk
             --type ${{needs.create-snyk-cat.outputs.name}}
 
+      - name: Evaluate trail and add to vuln data
+        run: |
+          REGO_POLICY_FILENAME=snyk-vuln-compliance.rego
+          URL=https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/snyk-vuln-compliance.rego
+          curl --fail-with-body "${URL}" > ${REGO_POLICY_FILENAME}
+
+          EVALUATION="$(kosli evaluate trail ${KOSLI_TRAIL} \
+            --flow ${KOSLI_FLOW} \
+            --policy="${REGO_POLICY_FILENAME}" \
+            --output=json)"
+
+          jq --argjson eval "${EVALUATION}" \
+            '. + {"evaluation": $eval}' \
+            ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}
+
       - name: Get attestation URL ready for --annotate
         run: |
           ATTESTATION_URL="$(kosli get attestation snyk \

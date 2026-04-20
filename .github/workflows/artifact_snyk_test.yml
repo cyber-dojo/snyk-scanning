@@ -75,6 +75,7 @@ env:
   KOSLI_API_TOKEN:        ${{secrets.kosli_api_token}}
   REGO_POLICY_FILENAME:   snyk-vuln-compliance.rego
   REGO_POLICY_URL:        https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/snyk-vuln-compliance.rego
+  SNYK_SARIF_FILENAME:    snyk.container.test.json
 
 jobs:
   create-snyk-cat:
@@ -118,7 +119,6 @@ jobs:
       id-token: write
       contents: write
     env:
-      SNYK_SARIF_FILENAME: snyk.container.test.json
       SNYK_POLICY_FILENAME: .snyk
       VULN_FILENAME: vulns.json
     steps:
@@ -333,7 +333,6 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VULNS_FILENAME: vulns.json
-      SNYK_SARIF_FILENAME: snyk.container.test.json
       KOSLI_FINGERPRINT: ${{needs.find-snyk-vulns.outputs.fingerprint}}
       KOSLI_ATTESTATION_NAME: ${{inputs.kosli_attestation_name}}
     steps:

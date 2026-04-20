@@ -376,6 +376,11 @@ jobs:
         run: |
           curl --fail-with-body "${REGO_POLICY_URL}" > ${REGO_POLICY_FILENAME}
 
+      - name: Currently we have to (re)do this attestation for the env live-scans
+        run:
+          kosli attest artifact ${{inputs.artifact_name}}
+            --name="${KOSLI_ATTESTATION_NAME%%.*}"
+
       - name: Attest NO vulns
         if: needs.attest-individual-snyk-vulns.result == 'skipped'
         run:

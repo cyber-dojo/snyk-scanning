@@ -378,11 +378,12 @@ jobs:
 
           ANNOTATE_FLAGS=()
           i=0
-          while IFS= read -r url; do
-            printf -v key "vuln_url_%03d" "${i}"
+          while IFS=$'\t' read -r allow url; do
+            if [ "${allow}" = "true" ]; then status=pass; else status=fail; fi
+            printf -v key "vuln_url_%s_%03d" "${status}" "${i}"
             ANNOTATE_FLAGS+=(--annotate "${key}=${url}")
             i=$((i+1))
-          done < <(jq -r '.[].attestation_url' "${VULNS_FILENAME}")
+          done < <(jq -r '.[] | [(.evaluation.allow | tostring), .attestation_url] | @tsv' "${VULNS_FILENAME}")
 
           kosli attest generic \
             --compliant="${COMPLIANT}" \

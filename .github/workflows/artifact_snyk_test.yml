@@ -396,9 +396,9 @@ jobs:
         if: needs.attest-individual-snyk-vulns.result != 'skipped'
         run: |
           {
-            echo "## Snyk vulnerabilities"
-            echo "| Compliant? | Severity | Vulnerability |"
-            echo "|---|---|---|"
+            echo "## Snyk container scan"
+            echo "| | Severity | Vulnerability attestation |"
+            echo "|---|---|:---|"
             jq -r '.[] | "| \(if .evaluation.allow then "✅" else "❌" end) | \(.severity) | [\(.full_id)](\(.attestation_url)) |"' \
               "${VULNS_FILENAME}"
           } >> $GITHUB_STEP_SUMMARY

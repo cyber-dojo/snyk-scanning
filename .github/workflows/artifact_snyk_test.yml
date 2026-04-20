@@ -387,19 +387,24 @@ jobs:
             --name="${KOSLI_ATTESTATION_NAME}" \
             "${ANNOTATE_FLAGS[@]}"
 
-      - name: Write job summary (no vulns)
-        if: needs.attest-individual-snyk-vulns.result == 'skipped'
+      - name: Write job summary (header)
         run: |
           {
             echo '## <img src="https://app.kosli.com/static/images/nav-kosli-logo-new-collapsed.svg" height="20"> Snyk container vulnerabilities by Kosli'
-            echo "None found"
+            echo "## Artifact: ${{inputs.artifact_name}}"
+            echo "## Fingerprint: ${KOSLI_FINGERPRINT}"
+            echo "## Snyk: ${{inputs.snyk_version}}"
           } >> $GITHUB_STEP_SUMMARY
+
+      - name: Write job summary (no vulns)
+        if: needs.attest-individual-snyk-vulns.result == 'skipped'
+        run:
+          echo "None found" >> $GITHUB_STEP_SUMMARY
 
       - name: Write job summary (some vulns)
         if: needs.attest-individual-snyk-vulns.result != 'skipped'
         run: |
           {
-            echo '## <img src="https://app.kosli.com/static/images/nav-kosli-logo-new-collapsed.svg" height="20"> Snyk container vulnerabilities by Kosli'
             echo "| | Severity | Vulnerability attestation |"
             echo "|---|---|:---|"
             jq -r '.[] | "| \(if .evaluation.allow then "✅" else "❌" end) | \(.severity) | [\(.full_id)](\(.attestation_url)) |"' \

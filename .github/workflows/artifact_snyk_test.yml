@@ -299,7 +299,7 @@ jobs:
             --flow ${KOSLI_FLOW} \
             --trail ${KOSLI_TRAIL} \
             --output json \
-            | jq -r 'last | .html_url')"
+            | jq -r 'first | .html_url')"
 
           jq --arg url "${ATTESTATION_URL}" \
             '. + {"attestation_url": $url}' \
@@ -403,7 +403,7 @@ jobs:
             --flow ${KOSLI_FLOW} \
             --fingerprint ${KOSLI_FINGERPRINT} \
             --output json \
-            | jq -r 'last | .html_url')"
+            | jq -r 'first | .html_url')"
 
           COUNT="$(jq 'length' "${VULNS_FILENAME}")"
           if [ "$(jq 'map(.evaluation.allow) | all' "${VULNS_FILENAME}")" = "true" ]; then

@@ -389,8 +389,11 @@ jobs:
 
       - name: Write job summary (no vulns)
         if: needs.attest-individual-snyk-vulns.result == 'skipped'
-        run:
-          echo "## Snyk vulnerabilities - none found" >> $GITHUB_STEP_SUMMARY
+        run: |
+          {
+            echo '## <img src="https://app.kosli.com/static/images/nav-kosli-logo-new-collapsed.svg" height="20"> Snyk container vulnerabilities by Kosli'
+            echo "None found"
+          } >> $GITHUB_STEP_SUMMARY
 
       - name: Write job summary (some vulns)
         if: needs.attest-individual-snyk-vulns.result != 'skipped'

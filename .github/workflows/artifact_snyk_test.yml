@@ -391,9 +391,13 @@ jobs:
         run: |
           {
             echo '## <img src="https://app.kosli.com/static/images/nav-kosli-logo-new-collapsed.svg" height="20"> Snyk container vulnerabilities by Kosli'
-            echo "| Artifact | Fingerprint | Snyk |"
-            echo "|:---|:---|:---|"
-            echo "| ${{inputs.artifact_name}} | ${KOSLI_FINGERPRINT} | ${{inputs.snyk_version}} |"
+            # HTML table avoids Markdown's mandatory header row, which renders
+            # as a visible blank row when headers are empty.
+            echo "<table>"
+            echo "<tr><td><b>Artifact</b></td><td>${{inputs.artifact_name}}</td></tr>"
+            echo "<tr><td><b>Fingerprint</b></td><td>${KOSLI_FINGERPRINT}</td></tr>"
+            echo "<tr><td><b>Snyk</b></td><td>${{inputs.snyk_version}}</td></tr>"
+            echo "</table>"
           } >> $GITHUB_STEP_SUMMARY
 
       - name: Write job summary (no vulns)

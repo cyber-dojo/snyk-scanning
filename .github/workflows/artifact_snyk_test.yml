@@ -397,9 +397,9 @@ jobs:
         run: |
           {
             echo "## Snyk vulnerabilities"
-            echo "| Severity | Vulnerability | First seen | Ignore expires | Compliant |"
-            echo "|---|---|---|---|---|"
-            jq -r '.[] | "| \(.severity) | [\(.full_id)](\(.vuln_url)) | \(.first_seen) | \(.ignore_expires) | \(if .evaluation.allow then "pass" else "FAIL" end) |"' \
+            echo "| Severity | Compliant? | Vulnerability |"
+            echo "|---|---|---|"
+            jq -r '.[] | "| \(.severity) | \(if .evaluation.allow then "pass" else "FAIL" end) | [\(.full_id)](\(.vuln_url)) |"' \
               "${VULNS_FILENAME}"
           } >> $GITHUB_STEP_SUMMARY
 

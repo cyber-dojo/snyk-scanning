@@ -71,8 +71,9 @@ jobs:
       raw_snyk_policy_url: ${{matrix.raw_snyk_policy_url}}
       repo_name: ${{matrix.repo_name}}
       kosli_flow: ${{inputs.kosli_flow}}
-      kosli_trail: ${{matrix.repo_name}}-${{matrix.severity}}-${{matrix.full_id}}
+      kosli_trail: ${{matrix.repo_name}}-${{matrix.artifact_fingerprint}}
       kosli_attestation_name: ${{matrix.repo_name}}.snyk-container-scan
     secrets:
       snyk_token:      ${{secrets.snyk_token}}
       kosli_api_token: ${{secrets.kosli_api_token}}
+

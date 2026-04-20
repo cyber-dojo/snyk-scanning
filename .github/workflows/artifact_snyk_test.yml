@@ -398,6 +398,7 @@ jobs:
 
       - name: Write job summary (header)
         run: |
+          unset KOSLI_TRAIL
           ATTESTATION_URL="$(kosli get attestation "${KOSLI_ATTESTATION_NAME#*.}" \
             --flow ${KOSLI_FLOW} \
             --fingerprint ${KOSLI_FINGERPRINT} \

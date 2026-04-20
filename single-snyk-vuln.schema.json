@@ -36,6 +36,10 @@
       "type": "number",
       "description": "Unix timestamp when this vulnerability was first seen in the repo"
     },
+    "first_seen": {
+      "type": "string",
+      "description": "Human-readable UTC datetime when this vulnerability was first seen in the repo"
+    },
     "trail_name": {
       "type": "string",
       "description": "Where this vuln data is attested to"
@@ -50,6 +54,7 @@
     "ignore_expires",
     "ignore_expires_ts",
     "first_seen_ts",
+    "first_seen",
     "trail_name"
   ]
 }

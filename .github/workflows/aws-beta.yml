@@ -7,20 +7,20 @@ on:
   #  - cron: '0 6 * * *'
 
 env:
-  KOSLI_DEBUG:     ${{vars.KOSLI_DEBUG}}   # false
-  KOSLI_DRY_RUN:   ${{vars.KOSLI_DRY_RUN}} # false
-  KOSLI_HOST:      ${{vars.KOSLI_HOST}}    # https://app.kosli.com
-  KOSLI_ORG:       ${{vars.KOSLI_ORG}}     # cyber-dojo
+  KOSLI_DEBUG: ${{vars.KOSLI_DEBUG}}     # false
+  KOSLI_DRY_RUN: ${{vars.KOSLI_DRY_RUN}} # false
+  KOSLI_HOST: ${{vars.KOSLI_HOST}}       # https://app.kosli.com
+  KOSLI_ORG: ${{vars.KOSLI_ORG}}         # cyber-dojo
 
   KOSLI_ENV: aws-beta
   KOSLI_FLOW: snyk-vulns-aws-beta
 
 jobs:
-  setup:
+  setup-flow:
     runs-on: ubuntu-latest
     outputs:
-      kosli_env: ${{ steps.set-outputs.outputs.kosli_env }}
-      kosli_flow: ${{ steps.set-outputs.outputs.kosli_flow }}
+      kosli_env: ${{steps.set-outputs.outputs.kosli_env}}
+      kosli_flow: ${{steps.set-outputs.outputs.kosli_flow}}
     env:
       KOSLI_API_TOKEN: ${{ secrets.KOSLI_API_TOKEN }}
     steps:
@@ -38,12 +38,18 @@ jobs:
           kosli create flow ${KOSLI_FLOW}
             --description "Snyk vulns in ${KOSLI_ENV} artifacts"
 
+      - run: |
+          path=$(echo "${{github.workflow_ref}}" | sed 's|.*/.github|/.github|' | sed 's|@.*||')
+          URL="${{github.server_url}}/${{github.repository}}/blob/${{github.ref_name}}${path}"
+          echo "WORKFLOW_URL=${URL}" >> "$GITHUB_ENV"
+
       - name: Tag the Flow
         run:
           kosli tag flow ${KOSLI_FLOW}
             --set kind=run
             --set ci=github
-            --set repo_url="${{ github.server_url }}/${{ github.repository_owner }}/${{github.event.repository.name}}"
+            --set workflow_url="${WORKFLOW_URL}"
+            --unset repo_url
 
       - name: Set outputs
         id: set-outputs
@@ -53,11 +59,11 @@ jobs:
 
 
   scan-aws-beta:
-    needs: [setup]
+    needs: [setup-flow]
     uses: ./.github/workflows/env_snyk_test.yml
     with:
-      kosli_env: ${{needs.setup.outputs.kosli_env}}
-      kosli_flow: ${{needs.setup.outputs.kosli_flow}}
+      kosli_env: ${{needs.setup-flow.outputs.kosli_env}}
+      kosli_flow: ${{needs.setup-flow.outputs.kosli_flow}}
     secrets:
       snyk_token: ${{secrets.SNYK_TOKEN}}
       kosli_api_token: ${{secrets.KOSLI_API_TOKEN}}

@@ -15,6 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     env:
       KOSLI_FLOW: snyk-vulns-aws-beta
+    outputs:
+      kosli_env: ${{ steps.set-outputs.outputs.kosli_env }}
+      kosli_flow: ${{ steps.set-outputs.outputs.kosli_flow }}
     steps:
       - uses: step-security/harden-runner@v2
         with:
@@ -37,13 +40,19 @@ jobs:
             --set ci=github
             --set repo_url="${{ github.server_url }}/${{ github.repository_owner }}/${{github.event.repository.name}}"
 
+      - name: Set outputs
+        id: set-outputs
+        run: |
+          echo "kosli_env=${KOSLI_ENV}" >> $GITHUB_OUTPUT
+          echo "kosli_flow=${KOSLI_FLOW}" >> $GITHUB_OUTPUT
+
 
   scan-aws-beta:
     needs: [setup]
     uses: ./.github/workflows/env_snyk_test.yml
     with:
-      kosli_env: ${{env.KOSLI_ENV}}
-      kosli_flow: ${{env.KOSLI_FLOW}}
+      kosli_env: ${{needs.setup.outputs.kosli_env}}
+      kosli_flow: ${{needs.setup.outputs.kosli_flow}}
     secrets:
       snyk_token: ${{secrets.SNYK_TOKEN}}
       kosli_api_token: ${{secrets.KOSLI_API_TOKEN}}

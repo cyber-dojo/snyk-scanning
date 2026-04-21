@@ -49,7 +49,6 @@ jobs:
             --set kind=run
             --set ci=github
             --set workflow_url="${WORKFLOW_URL}"
-            --unset repo_url
 
       - name: Set outputs
         id: set-outputs

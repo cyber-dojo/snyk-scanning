@@ -37,6 +37,7 @@ jobs:
         run:
           kosli create flow ${KOSLI_FLOW}
             --description "Snyk vulns in ${KOSLI_ENV} artifacts"
+            --use-empty-template
 
       - run: |
           path=$(echo "${{github.workflow_ref}}" | sed 's|.*/.github|/.github|' | sed 's|@.*||')

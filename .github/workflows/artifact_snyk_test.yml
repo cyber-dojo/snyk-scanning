@@ -281,7 +281,8 @@ jobs:
 
       - name: Add time vuln first seen in the repo
         run: |
-          kosli create flow ${KOSLI_FLOW}
+          kosli create flow ${KOSLI_FLOW} --use-empty-template
+
           kosli begin trail ${KOSLI_TRAIL} # idempotent
           kosli get trail ${KOSLI_TRAIL} --debug=false --output=json > trail.json
 

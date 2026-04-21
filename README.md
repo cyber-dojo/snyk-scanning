@@ -8,7 +8,7 @@ The Snyk scan runs without the `.snyk` policy file, so all vulnerabilities are v
 regardless of any ignore entries. The `.snyk` file is only applied during compliance
 evaluation.
 
-A vulnerability found in a running artifact is evaluated as follows:
+Each individual vulnerability found in a running artifact is evaluated as follows:
 
 - If it has an `ignore` entry in the artifact's `.snyk` file, it is honoured and treated as
   compliant — unless that ignore entry has an expiry date which has passed, in which case it
@@ -19,7 +19,7 @@ A vulnerability found in a running artifact is evaluated as follows:
 
 The top-level generic artifact-level attestation is controlled by the `attest_to_kosli` input, which defaults to `true` when the caller's workflow is on `main`.
 
-The inner trail-level attestations (one per Snyk vulnerability) always run and are the inputs
+The inner trail-level attestations (one per Snyk vulnerability) always take place and are the inputs
 to the `kosli evaluate trail` call used to determine the overall compliance.
 
 ## Workflows
@@ -35,9 +35,7 @@ Triggered daily at 06:00 UTC or manually via `workflow_dispatch`. Calls
 | `aws-prod.yml` | `snyk-vulns-aws-prod` |
 
 Each flow holds one trail per artifact currently running in the environment. Trail names have
-the form `{repo_name}-{artifact_fingerprint}`. Each trail contains one `generic` attestation
-named `{repo_name}.snyk-container-scan` with the sarif output, Rego policy file, Rego params
-file, and `.snyk` policy file attached.
+the form `{repo_name}-{artifact_fingerprint}`. Each trail contains one `generic` artifact-level attestation named `{repo_name}.snyk-container-scan` with the sarif output, Rego policy file, Rego params file, and `.snyk` policy file attached.
 
 ## Rego compliance params
 
@@ -96,27 +94,22 @@ jobs:
 ```
 
 Runs a Snyk container test against a single artifact, evaluates the results against a Rego
-compliance policy, and records trail-level attestations in Kosli. Attaches the sarif output,
-the Rego policy file, the Rego params file, and the `.snyk` policy file to the attestation.
-
-The Snyk scan is run with an empty `.snyk` policy file so no vulnerabilities are hidden. The
-real `.snyk` file from the git commit that built the artifact is used during compliance
-evaluation, so `ignore` entries are applied at that stage.
+compliance policy, and makes an artifact-level attestations in Kosli. Attaches the sarif output, the Rego policy file, the Rego params file, and the `.snyk` policy file to the attestation.
 
 **Inputs**
 
 | Name | Required | Default | Description |
 |---|---|---|---|
+| `aws_rolename` | no | `gh_actions_services` | IAM role for ECR login |
 | `artifact_name` | yes | | OCI artifact to scan (image name with tag or digest) |
 | `kosli_flow` | yes | | Kosli flow to attest to |
-| `kosli_attestation_name` | yes | | Kosli attestation name |
 | `kosli_trail` | no | `${{ github.sha }}` | Kosli trail to attest to |
+| `kosli_attestation_name` | yes | | Kosli attestation name |
 | `kosli_env` | no | `aws-beta` | Environment the artifact is deployed in |
 | `repo_name` | no | repository name | Repo the artifact was built in |
-| `aws_rolename` | no | `gh_actions_services` | IAM role for ECR login |
 | `snyk_version` | no | `v1.1300.2` | Version of Snyk CLI to use |
 | `raw_snyk_policy_url` | no | `.snyk` at `${{ github.sha }}` | URL of the `.snyk` policy file for the artifact's commit |
-| `attest_to_kosli` | no | `true` on main | Whether to record the top-level generic attestation |
+| `attest_to_kosli` | no | `true` on main | Whether to record the generic artifact-level attestation |
 
 **Secrets**
 

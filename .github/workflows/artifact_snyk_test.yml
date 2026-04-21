@@ -444,7 +444,7 @@ jobs:
 
           kosli attest generic \
             --compliant "${COMPLIANT}" \
-            --attachments "${REGO_POLICY_FILENAME} \
+            --attachments "${REGO_POLICY_FILENAME}" \
             --attachments "${REGO_PARAMS_FILENAME}" \
             --attachments "${SNYK_SARIF_FILENAME}" \
             --name "${KOSLI_ATTESTATION_NAME}" \

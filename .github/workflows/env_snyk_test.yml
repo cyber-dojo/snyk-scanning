@@ -5,6 +5,7 @@ on:
     secrets:
       snyk_token:
         required: true
+
       kosli_api_token:
         required: true
 
@@ -13,6 +14,7 @@ on:
         description: "Name of Kosli environment to find artifact running in"
         required: true
         type: string
+
       kosli_flow:
         description: "Name of Kosli flow to attest evidence in"
         required: true
@@ -76,6 +78,6 @@ jobs:
       kosli_attestation_name: ${{matrix.repo_name}}.snyk-container-scan
       kosli_env: ${{inputs.kosli_env}}
     secrets:
-      snyk_token:      ${{secrets.snyk_token}}
+      snyk_token: ${{secrets.snyk_token}}
       kosli_api_token: ${{secrets.kosli_api_token}}
 

@@ -282,8 +282,9 @@ jobs:
       - name: Add time vuln first seen in the repo
         run: |
           kosli create flow ${KOSLI_FLOW}
-          # Force trail to have --empty-template regardless of flow
-          kosli begin trail ${KOSLI_TRAIL} --template-file <(echo "version: 1") # idempotent
+          # Force trail to have empty template regardless of flow history
+          echo "version: 1" > /tmp/empty-template.yml
+          kosli begin trail ${KOSLI_TRAIL} --template-file /tmp/empty-template.yml # idempotent
           kosli get trail ${KOSLI_TRAIL} --debug=false --output=json > trail.json
 
           FIRST_SEEN_TS="$(jq '.created_at' trail.json)"
@@ -439,9 +440,13 @@ jobs:
             i=$((i+1))
           done < <(jq --raw-output '.[] | [(.evaluation.allow | tostring), .attestation_url] | @tsv' "${VULNS_FILENAME}")
 
+          REGO_PARAMS_FILENAME=rego.params.${{inputs.kosli_env}}.json
+
           kosli attest generic \
             --compliant "${COMPLIANT}" \
-            --attachments "${REGO_POLICY_FILENAME},${SNYK_SARIF_FILENAME}" \
+            --attachments "${REGO_POLICY_FILENAME} \
+            --attachments "${REGO_PARAMS_FILENAME}" \
+            --attachments "${SNYK_SARIF_FILENAME}" \
             --name "${KOSLI_ATTESTATION_NAME}" \
             "${ANNOTATE_FLAGS[@]}"
 

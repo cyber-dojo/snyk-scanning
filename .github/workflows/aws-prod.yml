@@ -2,9 +2,8 @@ name: Live Snyk Test aws-prod
 
 on:
   workflow_dispatch:
-  push:
-  #schedule: # At 06:00 every day
-  #  - cron: '0 6 * * *'
+  schedule: # At 06:00 every day
+    - cron: '0 6 * * *'
 
 env:
   KOSLI_DEBUG: ${{vars.KOSLI_DEBUG}}     # false
@@ -58,7 +57,7 @@ jobs:
           echo "kosli_flow=${KOSLI_FLOW}" >> $GITHUB_OUTPUT
 
 
-  scan-aws-beta:
+  scan-aws-prod:
     needs: [setup-flow]
     uses: ./.github/workflows/env_snyk_test.yml
     with:

@@ -36,7 +36,7 @@ jobs:
       - name: Create Flow
         run:
           kosli create flow ${KOSLI_FLOW}
-            --description "Snyk vulns in ${KOSLI_ENV} by repo"
+            --description "Snyk vulns in ${KOSLI_ENV} artifacts"
 
       - name: Tag the Flow
         run:

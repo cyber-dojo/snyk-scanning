@@ -327,7 +327,6 @@ jobs:
             --params "@${REGO_PARAMS_FILENAME}" \
             --debug=false \
             --output=json > evaluation.json
-          KOSLI_EVALUATION=$?
           set -e
 
           jq --slurpfile eval evaluation.json \

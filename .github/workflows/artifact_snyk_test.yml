@@ -36,9 +36,8 @@ on:
 
       kosli_flow:
         description: "The Kosli flow to attest to"
-        required: false
+        required: true
         type: string
-        default: ""
 
       kosli_trail:
         description: "The Kosli trail to attest to"
@@ -86,7 +85,7 @@ env:
   KOSLI_DRY_RUN:   ${{vars.KOSLI_DRY_RUN}} # false
   KOSLI_HOST:      ${{vars.KOSLI_HOST}}    # https://app.kosli.com
   KOSLI_ORG:       ${{vars.KOSLI_ORG}}     # cyber-dojo
-  KOSLI_FLOW:      ${{inputs.kosli_flow || env.KOSLI_FLOW}}
+  KOSLI_FLOW:      ${{inputs.kosli_flow}}
   KOSLI_TRAIL:     ${{inputs.kosli_trail}}
   KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
 

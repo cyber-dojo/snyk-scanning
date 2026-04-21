@@ -2,7 +2,7 @@ name: Live Snyk Test aws-prod
 
 on:
   workflow_dispatch:
-  push:
+  #push:
   #schedule: # At 06:00 every day
   #  - cron: '0 6 * * *'
 

@@ -411,6 +411,11 @@ jobs:
         run: |
           curl --fail-with-body "${REGO_POLICY_URL}" > ${REGO_POLICY_FILENAME}
 
+      - name: Force trail to have empty template regardless of flow history
+        run: |
+          echo "version: 1" > /tmp/empty-template.yml
+          kosli begin trail ${KOSLI_TRAIL} --template-file /tmp/empty-template.yml # idempotent
+
       - name: Currently we have to (re)do this attestation for the env live-scans
         run: |
           # runner.snyk-scan => runner

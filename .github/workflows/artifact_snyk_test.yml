@@ -90,6 +90,7 @@ env:
   KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
 
   SNYK_SARIF_FILENAME:  snyk.container.test.json
+  SNYK_POLICY_FILENAME: .snyk
   REGO_POLICY_FILENAME: snyk-vuln-compliance.rego
   REGO_POLICY_URL:      https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/snyk-vuln-compliance.rego
 
@@ -135,7 +136,6 @@ jobs:
       id-token: write
       contents: write
     env:
-      SNYK_POLICY_FILENAME: .snyk
       VULN_FILENAME: vulns.json
     steps:
       - uses: step-security/harden-runner@v2
@@ -168,7 +168,7 @@ jobs:
         id: set-fingerprint
         run: |
           # Strip the digest if present
-          # kosli-fingerprint does not yet support tag+digest
+          # kosli-fingerprint does not yet support tag+digest
 
           ARTIFACT="${{inputs.artifact_name}}"
           ARTIFACT="${ARTIFACT%%@sha256:*}"
@@ -407,9 +407,10 @@ jobs:
         run:
           jq . ${VULNS_FILENAME}
 
-      - name: Get the rego policy file
+      - name: Get the rego files
         run: |
           curl --fail-with-body "${REGO_POLICY_URL}" > ${REGO_POLICY_FILENAME}
+          curl --fail-with-body "${{inputs.raw_snyk_policy_url}}" > ${SNYK_POLICY_FILENAME}
 
       - name: Force trail to have empty template regardless of flow history
         run: |
@@ -428,7 +429,10 @@ jobs:
         run:
           kosli attest generic
             --compliant=true
-            --attachments "${REGO_POLICY_FILENAME},${SNYK_SARIF_FILENAME}"
+            --attachments "${REGO_POLICY_FILENAME}"
+            --attachments "${REGO_PARAMS_FILENAME}"
+            --attachments "${SNYK_SARIF_FILENAME}"
+            --attachments "${SNYK_POLICY_FILENAME}"
             --name "${KOSLI_ATTESTATION_NAME}"
 
       - name: Attest SOME vulns
@@ -452,6 +456,7 @@ jobs:
             --attachments "${REGO_POLICY_FILENAME}" \
             --attachments "${REGO_PARAMS_FILENAME}" \
             --attachments "${SNYK_SARIF_FILENAME}" \
+            --attachments "${SNYK_POLICY_FILENAME}" \
             --name "${KOSLI_ATTESTATION_NAME}" \
             "${ANNOTATE_FLAGS[@]}"
 

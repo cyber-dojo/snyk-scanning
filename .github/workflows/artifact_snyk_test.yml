@@ -281,9 +281,9 @@ jobs:
 
       - name: Add time vuln first seen in the repo
         run: |
-          kosli create flow ${KOSLI_FLOW} --use-empty-template
-
-          kosli begin trail ${KOSLI_TRAIL} # idempotent
+          kosli create flow ${KOSLI_FLOW}
+          # Force trail to have --empty-template regardless of flow
+          kosli begin trail ${KOSLI_TRAIL} --template-file <(echo "version: 1") # idempotent
           kosli get trail ${KOSLI_TRAIL} --debug=false --output=json > trail.json
 
           FIRST_SEEN_TS="$(jq '.created_at' trail.json)"

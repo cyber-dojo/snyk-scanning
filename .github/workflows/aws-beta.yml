@@ -6,12 +6,44 @@ on:
   #schedule: # At 06:00 every day
   #  - cron: '0 6 * * *'
 
+env:
+  KOSLI_ENV: aws-beta
+  KOSLI_FLOW: snyk-vulns-aws-beta
+
 jobs:
+  setup:
+    runs-on: ubuntu-latest
+    env:
+      KOSLI_FLOW: snyk-vulns-aws-beta
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - name: Setup Kosli CLI
+        uses: kosli-dev/setup-cli-action@v3
+        with:
+          version: ${{vars.KOSLI_CLI_VERSION}}
+
+      - name: Create Flow
+        run:
+          kosli create flow ${KOSLI_FLOW}
+            --description "Snyk vulns in ${KOSLI_ENV} by repo"
+
+      - name: Tag the Flow
+        run:
+          kosli tag flow ${KOSLI_FLOW}
+            --set kind=run
+            --set ci=github
+            --set repo_url="${{ github.server_url }}/${{ github.repository_owner }}/${{github.event.repository.name}}"
+
+
   scan-aws-beta:
+    needs: [setup]
     uses: ./.github/workflows/env_snyk_test.yml
     with:
-      kosli_env: aws-beta
-      kosli_flow: snyk-vulns-aws-beta
+      kosli_env: ${{env.KOSLI_ENV}}
+      kosli_flow: ${{env.KOSLI_FLOW}}
     secrets:
       snyk_token: ${{secrets.SNYK_TOKEN}}
       kosli_api_token: ${{secrets.KOSLI_API_TOKEN}}

@@ -68,6 +68,7 @@ jobs:
     uses: ./.github/workflows/artifact_snyk_test.yml
     with:
       artifact_name: ${{matrix.artifact_name}}
+      aws_rolename: gh_actions_snyk_scanning
       raw_snyk_policy_url: ${{matrix.raw_snyk_policy_url}}
       repo_name: ${{matrix.repo_name}}
       kosli_flow: ${{inputs.kosli_flow}}

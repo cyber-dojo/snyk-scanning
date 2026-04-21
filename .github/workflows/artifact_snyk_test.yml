@@ -23,64 +23,76 @@ on:
         required: true
 
     inputs:
-      aws_rolename:
-        description: "Rolename for permission to download artifact"
-        required: false
-        type: string
-        default: "gh_actions_snyk_scanning"
       artifact_name:
         description: "Artifact name"
         required: true
         type: string
+
+      aws_rolename:
+        description: "Rolename to configure artifact download credentials"
+        required: false
+        type: string
+        default: gh_actions_services
+
       kosli_flow:
         description: "The Kosli flow to attest to"
-        required: true
+        required: false
         type: string
+        default: ""
+
       kosli_trail:
         description: "The Kosli trail to attest to"
-        required: true
+        required: false
         type: string
+        default: ${{github.sha}}
+
       kosli_attestation_name:
-        description: "The Kosli attestation slot to attest to"
+        description: "The Kosli attestation name"
         required: true
         type: string
+
+      attest_to_kosli:
+        description: "Whether to make the attestation"
+        required: false
+        type: boolean
+        default: ${{github.ref == 'refs/heads/main'}}
+
       kosli_env:
-        description: "The name of the environment the artifact is deployed to in its workflow"
+        description: "The name of the environment the artifact is in or will be deployed to"
         required: false
         type: string
         default: aws-beta
+
       repo_name:
-        description: "Artifact repo"
+        description: "Repo the artifact was built in"
         required: false
         type: string
-        default: ${{ github.event.repository.name }}
+        default: ${{github.event.repository.name}}
+
       snyk_version:
         description: "Version of snyk to run"
         required: false
         type: string
-        default: "v1.1300.2"
+        default: v1.1300.2
+
       raw_snyk_policy_url:
         description: "URL of snyk policy file (in commit for artifact)"
         required: false
         type: string
         default: https://raw.githubusercontent.com/${{ github.repository }}/${{ github.sha }}/.snyk
-      attest_to_kosli:
-        description: "Whether to make attestations for each vuln"
-        required: false
-        type: boolean
-        default: ${{ github.ref == 'refs/heads/main' }}
 
 env:
   KOSLI_DEBUG:     ${{vars.KOSLI_DEBUG}}   # false
   KOSLI_DRY_RUN:   ${{vars.KOSLI_DRY_RUN}} # false
   KOSLI_HOST:      ${{vars.KOSLI_HOST}}    # https://app.kosli.com
   KOSLI_ORG:       ${{vars.KOSLI_ORG}}     # cyber-dojo
-  KOSLI_FLOW:      ${{inputs.kosli_flow}}
+  KOSLI_FLOW:      ${{inputs.kosli_flow || env.KOSLI_FLOW}}
   KOSLI_TRAIL:     ${{inputs.kosli_trail}}
-  KOSLI_API_TOKEN:        ${{secrets.kosli_api_token}}
-  REGO_POLICY_FILENAME:   snyk-vuln-compliance.rego
-  REGO_POLICY_URL:        https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/snyk-vuln-compliance.rego
-  SNYK_SARIF_FILENAME:    snyk.container.test.json
+  KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
+
+  SNYK_SARIF_FILENAME:  snyk.container.test.json
+  REGO_POLICY_FILENAME: snyk-vuln-compliance.rego
+  REGO_POLICY_URL:      https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/snyk-vuln-compliance.rego
 
 jobs:
   create-snyk-cat:
@@ -156,12 +168,15 @@ jobs:
       - name: Set output fingerprint
         id: set-fingerprint
         run: |
-          # strip the digest if present; kosli fingerprint does not yet support tag+digest
+          # Strip the digest if present
+          # kosli-fingerprint does not yet support tag+digest
+
           ARTIFACT="${{inputs.artifact_name}}"
           ARTIFACT="${ARTIFACT%%@sha256:*}"
+
           FINGERPRINT="$(kosli fingerprint "${ARTIFACT}" \
             --artifact-type=oci \
-            --debug=false
+            --debug=false \
           )"
           echo "fingerprint=${FINGERPRINT}" >> ${GITHUB_OUTPUT}
 
@@ -177,11 +192,11 @@ jobs:
             exit 42
           fi
 
-      - name: Set empty .snyk policy file
+      - name: Create empty .snyk policy file
         run:
           echo > ${SNYK_POLICY_FILENAME}
 
-      - name: Run Snyk container test
+      - name: Run Snyk container test with empty .snyk policy file
         env:
           SNYK_TOKEN: ${{secrets.snyk_token}}
         run:
@@ -218,7 +233,7 @@ jobs:
         with:
           version: ${{vars.KOSLI_CLI_VERSION}}
 
-      - name: Combine all data ready for evaluation
+      - name: Combine all data ready for individual data attestations
         run: |
           ./bin/combine_snyk.py \
             ${{inputs.snyk_version}} \
@@ -228,6 +243,7 @@ jobs:
               > ${VULN_FILENAME}
 
       - name: Debug print vulns
+        if: env.KOSLI_DEBUG == 'true'
         run:
           jq . "${VULN_FILENAME}"
 
@@ -245,7 +261,7 @@ jobs:
     env:
       VULN_JSON: ${{toJSON(matrix)}}
       VULN_FILENAME: vuln-${{matrix.trail_name}}.json
-      KOSLI_FLOW: snyk-vulns
+      KOSLI_FLOW: snyk-vulns-${{inputs.kosli_env}}
       KOSLI_TRAIL: ${{matrix.trail_name}}
     strategy:
       matrix:
@@ -266,9 +282,10 @@ jobs:
 
       - name: Add time vuln first seen in the repo
         run: |
-          kosli create flow ${KOSLI_FLOW} --use-empty-template
+          kosli create flow ${KOSLI_FLOW}
           kosli begin trail ${KOSLI_TRAIL} # idempotent
-          kosli get trail ${KOSLI_TRAIL} --output json > trail.json
+          kosli get trail ${KOSLI_TRAIL} --debug=false --output=json > trail.json
+
           FIRST_SEEN_TS="$(jq '.created_at' trail.json)"
           FIRST_SEEN="$(python3 -c "from datetime import datetime, timezone; print(str(datetime.fromtimestamp(${FIRST_SEEN_TS}, tz=timezone.utc)))")"
 
@@ -306,6 +323,7 @@ jobs:
             --flow ${KOSLI_FLOW} \
             --policy "${REGO_POLICY_FILENAME}" \
             --params "@${REGO_PARAMS_FILENAME}" \
+            --debug=false \
             --output=json)"
 
           jq --argjson eval "${EVALUATION}" \
@@ -318,6 +336,7 @@ jobs:
             --flow ${KOSLI_FLOW} \
             --trail ${KOSLI_TRAIL} \
             --output json \
+            --debug=false \
             | jq -r 'first | .html_url')"
 
           jq --arg url "${ATTESTATION_URL}" \
@@ -362,7 +381,7 @@ jobs:
       - name: Setup Kosli CLI
         uses: kosli-dev/setup-cli-action@v3
         with:
-          version: ${{ vars.KOSLI_CLI_VERSION }}
+          version: ${{vars.KOSLI_CLI_VERSION}}
 
       - uses: actions/download-artifact@v8
         with:
@@ -403,13 +422,12 @@ jobs:
         run:
           kosli attest generic
             --compliant=true
-            --attachments="${REGO_POLICY_FILENAME},${SNYK_SARIF_FILENAME}"
-            --name="${KOSLI_ATTESTATION_NAME}"
+            --attachments "${REGO_POLICY_FILENAME},${SNYK_SARIF_FILENAME}"
+            --name "${KOSLI_ATTESTATION_NAME}"
 
       - name: Attest SOME vulns
         if: needs.attest-individual-snyk-vulns.result != 'skipped'
         run: |
-          # TODO: Should COMPLIANT=false fail the job?
           COMPLIANT="$(jq 'map(.evaluation.allow) | all' "${VULNS_FILENAME}")"
 
           ANNOTATE_FLAGS=()
@@ -419,12 +437,12 @@ jobs:
             printf -v key "vuln_url_%s_%03d" "${status}" "${i}"
             ANNOTATE_FLAGS+=(--annotate "${key}=${url}")
             i=$((i+1))
-          done < <(jq -r '.[] | [(.evaluation.allow | tostring), .attestation_url] | @tsv' "${VULNS_FILENAME}")
+          done < <(jq --raw-output '.[] | [(.evaluation.allow | tostring), .attestation_url] | @tsv' "${VULNS_FILENAME}")
 
           kosli attest generic \
-            --compliant="${COMPLIANT}" \
-            --attachments="${REGO_POLICY_FILENAME},${SNYK_SARIF_FILENAME}" \
-            --name="${KOSLI_ATTESTATION_NAME}" \
+            --compliant "${COMPLIANT}" \
+            --attachments "${REGO_POLICY_FILENAME},${SNYK_SARIF_FILENAME}" \
+            --name "${KOSLI_ATTESTATION_NAME}" \
             "${ANNOTATE_FLAGS[@]}"
 
       - name: Write job summary (header)
@@ -437,6 +455,7 @@ jobs:
 
           kosli get attestation "${ATTESTATION_SLOT_NAME}" \
             --output json \
+            --debug=false \
             > attestation.json
 
           ATTESTATION_URL="$(jq --raw-output 'first | .html_url' attestation.json)"

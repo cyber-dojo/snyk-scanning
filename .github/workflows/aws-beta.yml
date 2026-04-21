@@ -13,8 +13,6 @@ env:
 jobs:
   setup:
     runs-on: ubuntu-latest
-    env:
-      KOSLI_FLOW: snyk-vulns-aws-beta
     outputs:
       kosli_env: ${{ steps.set-outputs.outputs.kosli_env }}
       kosli_flow: ${{ steps.set-outputs.outputs.kosli_flow }}

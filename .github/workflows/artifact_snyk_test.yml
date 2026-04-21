@@ -320,15 +320,18 @@ jobs:
           REGO_PARAMS_URL="https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/${REGO_PARAMS_FILENAME}"
           curl --fail-with-body "${REGO_PARAMS_URL}" > ${REGO_PARAMS_FILENAME}
 
-          EVALUATION="$(kosli evaluate trail ${KOSLI_TRAIL} \
+          set +e
+          kosli evaluate trail ${KOSLI_TRAIL} \
             --flow ${KOSLI_FLOW} \
             --policy "${REGO_POLICY_FILENAME}" \
             --params "@${REGO_PARAMS_FILENAME}" \
             --debug=false \
-            --output=json)"
+            --output=json > evaluation.json
+          KOSLI_EVALUATION=$?
+          set -e
 
-          jq --argjson eval "${EVALUATION}" \
-            '. + {"evaluation": $eval}' \
+          jq --slurpfile eval evaluation.json \
+            '. + {"evaluation": $eval[0]}' \
             ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}
 
       - name: Get attestation URL ready for --annotate

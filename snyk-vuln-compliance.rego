@@ -13,7 +13,7 @@ violations contains msg if {
     now_secs := time.now_ns() / 1000000000
     age_days := (now_secs - vuln.first_seen_ts) / 86400
     max := max_days_by_severity[vuln.severity]
-    age_days > max
+    age_days >= max  # >= so that critical (max=0) is non-compliant on day zero
     msg := sprintf(
         "trail '%v': %v severity vuln age %d days exceeds %d day limit for severity %v",
         [trail.name, vuln.id, age_days, max, vuln.severity],

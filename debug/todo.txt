@@ -1,9 +1,7 @@
 
 # TODO: Delete aws_rolename from build workflows
 # TODO: ~25 Add more outputs? evaluation json? snyk-exit-code? url for attestation
-# TODO: Delete snyk-vulns flow from Kosli orgs
 # TODO: ~191 Get exit code of synk-container-scan
-# TODO: ~417 Make COMPLIANT=false fail the job
 
 If artifact_name is supplied with a digest, then check it matches kosli-fingerprint
 

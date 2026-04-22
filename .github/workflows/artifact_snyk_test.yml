@@ -441,6 +441,7 @@ jobs:
         if: needs.attest-individual-snyk-vulns.result != 'skipped'
         run: |
           COMPLIANT="$(jq 'map(.evaluation.allow) | all' "${VULNS_FILENAME}")"
+          echo "COMPLIANT=${COMPLIANT}" >> "${GITHUB_ENV}"
 
           ANNOTATE_FLAGS=()
           i=0
@@ -475,15 +476,14 @@ jobs:
             --debug=false \
             > attestation.json
 
-          ATTESTATION_URL="$(jq --raw-output 'first | .html_url' attestation.json)"
-
-          COUNT="$(jq 'length' "${VULNS_FILENAME}")"
-          if [ "$(jq 'map(.evaluation.allow) | all' "${VULNS_FILENAME}")" = "true" ]; then
+          if [ "${COMPLIANT}" = "true" ]; then
             STATUS="✅"
           else
             STATUS="❌"
           fi
-
+          COUNT="$(jq 'length' "${VULNS_FILENAME}")"
+          ATTESTATION_URL="$(jq --raw-output 'first | .html_url' attestation.json)"
+          
           {
             echo '## <img src="https://app.kosli.com/static/images/nav-kosli-logo-new-collapsed.svg" height="20"> ${{inputs.repo_name}} - Snyk container vulnerabilities by Kosli'
             # HTML table avoids Markdown's mandatory header row, which renders
@@ -501,3 +501,7 @@ jobs:
         id: set-vulns
         run:
           echo "vulns=$(jq --compact-output . ${VULNS_FILENAME})" >> ${GITHUB_OUTPUT}
+
+      - name: Fail if not compliant
+        run:
+          if [ "${COMPLIANT}" != "true" ]; then exit 1; fi

@@ -1,7 +1,4 @@
 
-0. installing Kosli CLI from https://github.com/kosli-dev/cli/releases/download/v2.15.3/kosli_2.15.3_linux_amd64.tar.gz ...
-   Unexpected HTTP response: 504
-   Got this several times.
 
 1. In the CLI docker references with both a tag and a digest are not supported
    You can't do a kosli-attest with an artifact whose name is
@@ -18,10 +15,7 @@
    - has to have a git repo under it
    - does not auto-create the flow
 
-4. Should failed compliance cause non-zero exit code from the workflow?
-   I think yes.
-
-5. If attest_to_kosli: false
+4. If attest_to_kosli: false
    then the inner kosli-attest commands will still run.
    Should they?
    What should this case do?
@@ -34,20 +28,19 @@
    inner attestations are trail-level and we dont do an attestation 
    connecting to the fingerprint.   
 
-6. Need to git-tag the workflows in snyk-scanning and for calls, do
-       uses: ./.github/workflows/artifact_snyk_test.yml@v2
-
-7. Add decent github step summaries.
+5. github step summaries.
    Might be some nice options to print the individual vuln info.
 
-8. Use --name slots based on caller's scope?
-     - aws-beta-deployment (==build)
-     - aws-beta-live
-     - aws-prod-deployment
-     - aws-prod-live
-
-9. I would like to know which of the inner attestations 
+6. I would like to know which of the inner attestations 
    caused a kosli-evaluate result of non-compliant.
    Suppose I have 12 inner-attestations --annotate links 
    and only one is actual causing the non-compliance?
+   This is why I have used N x kosli-evaluate-trail 
+   instead of 1 x kosli-evaluate-trails
+
+7. Really want kosli-attest to have --output=json option which 
+   includes the url of the just created attestation.
+   Stumbled on this several times.
+
+8. Had to do kosli-attest-artifact and again that felt wrong.
 

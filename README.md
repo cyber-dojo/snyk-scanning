@@ -2,11 +2,14 @@ A repo holding CI workflows to run Snyk container tests on the Docker images run
 [aws-beta](https://app.kosli.com/cyber-dojo/environments/aws-beta/events/) and
 [aws-prod](https://app.kosli.com/cyber-dojo/environments/aws-prod/events/) runtime environments.
 
-## TL;DR
+## The main problems
+1. A snyk container scan produces a sarif output file, with ignored vulnreabilities from the .snyk policy file already filtered out. We'd prefer a complete picture of all the vulnerabilities.
+2. The `kosli attest snyk` command creates a non-compliant attestation for _any_ new attestation not in the .snyk file. There are fairly frequent bursts of new low-severity vulnerabilities and we would like to control whether these block the main development workflow.
 
-The Snyk scan runs without the `.snyk` policy file, so all vulnerabilities are visible
-regardless of any ignore entries. The `.snyk` file is only applied during compliance
-evaluation.
+## TL;DR of the solution
+
+The Snyk scan runs _without_ the `.snyk` policy file, so _all_ vulnerabilities are visible
+regardless of any `.snyk` file ignore entries. The `.snyk` file is only applied during compliance evaluation.
 
 Each individual vulnerability found in a running artifact is evaluated as follows:
 
@@ -15,12 +18,11 @@ Each individual vulnerability found in a running artifact is evaluated as follow
   becomes non-compliant immediately.
 - If it has no `ignore` entry, compliance depends on how long that vulnerability has been
   present in the artifact running in the given environment. The allowed number of days before
-  non-compliance is set per severity in `rego.params.{env}.json`.
+  non-compliance is set per severity in `rego.params.{env}.json`. See below.
 
 The top-level generic artifact-level attestation is controlled by the `attest_to_kosli` input, which defaults to `true` when the caller's workflow is on `main`.
 
-The inner trail-level attestations (one per Snyk vulnerability) always take place and are the inputs
-to the `kosli evaluate trail` call used to determine the overall compliance.
+The inner trail-level attestations (one per Snyk vulnerability) _always_ take place and are the inputs to the `kosli evaluate trail` calls used to determine the overall compliance.
 
 ## Workflows
 
@@ -101,11 +103,11 @@ compliance policy, and makes an artifact-level attestations in Kosli. Attaches t
 | Name | Required | Default | Description |
 |---|---|---|---|
 | `aws_rolename` | no | `gh_actions_services` | IAM role for ECR login |
-| `artifact_name` | yes | | OCI artifact to scan (image name with tag or digest) |
+| `artifact_name` | yes | | OCI artifact to scan (image name with tag) |
 | `kosli_flow` | yes | | Kosli flow to attest to |
 | `kosli_trail` | no | `${{ github.sha }}` | Kosli trail to attest to |
 | `kosli_attestation_name` | yes | | Kosli attestation name |
-| `kosli_env` | no | `aws-beta` | Environment the artifact is deployed in |
+| `kosli_env` | no | `aws-beta` | Environment the artifact is deployed-in/deploying-to |
 | `repo_name` | no | repository name | Repo the artifact was built in |
 | `snyk_version` | no | `v1.1300.2` | Version of Snyk CLI to use |
 | `raw_snyk_policy_url` | no | `.snyk` at `${{ github.sha }}` | URL of the `.snyk` policy file for the artifact's commit |

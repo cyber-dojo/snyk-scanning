@@ -11,9 +11,11 @@ violations contains msg if {
     some trail in input.trails
     vuln := trail.compliance_status.attestations_statuses["snyk"].attestation_data
     now_secs := time.now_ns() / 1000000000
-    age_days := (now_secs - vuln.first_seen_ts) / 86400
+    seconds_per_day := 60 * 60 * 24
+    age_days := (now_secs - vuln.first_seen_ts) / seconds_per_day
     max := max_days_by_severity[vuln.severity]
-    age_days >= max  # >= so that critical (max=0) is non-compliant on day zero
+    # Use >= so that critical (max=0) is non-compliant on day zero
+    age_days >= max  
     msg := sprintf(
         "trail '%v': %v severity vuln age %d days exceeds %d day limit for severity %v",
         [trail.name, vuln.id, age_days, max, vuln.severity],

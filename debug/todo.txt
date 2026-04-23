@@ -9,7 +9,9 @@ Revive tests of artifacts.py
 
 Revive tests of combine_snyk.py
 
-Add tests of .rego file using kosli-evaluate-input
+Make now a field in the input json and use that in the rego.
+
+Add tests of .rego file using kosli-evaluate-input (pass in now)
 
 Dead bin/dead folder
 

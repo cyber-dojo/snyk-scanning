@@ -89,11 +89,14 @@ env:
   KOSLI_TRAIL:     ${{inputs.kosli_trail}}
   KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
 
-  SNYK_SARIF_FILENAME:  snyk.container.test.json
   SNYK_POLICY_FILENAME: .snyk
+  SNYK_SARIF_FILENAME:  snyk.container.test.json
+
   REGO_POLICY_FILENAME: snyk-vuln-compliance.rego
   REGO_POLICY_URL:      https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/snyk-vuln-compliance.rego
+
   REGO_PARAMS_FILENAME: rego.params.${{inputs.kosli_env}}.json
+  REGO_PARAMS_URL:      https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/rego.params.${{inputs.kosli_env}}.json
 
 jobs:
   create-snyk-cat:
@@ -283,7 +286,7 @@ jobs:
       - name: Add time vuln first seen in the repo
         run: |
           kosli create flow ${KOSLI_FLOW}
-          # Force trail to have empty template regardless of flow history
+          # Ensure trail has empty template regardless of flow history
           echo "version: 1" > /tmp/empty-template.yml
           kosli begin trail ${KOSLI_TRAIL} --template-file /tmp/empty-template.yml # idempotent
           kosli get trail ${KOSLI_TRAIL} --debug=false --output=json > trail.json
@@ -316,9 +319,6 @@ jobs:
         run: |
           # Curl files - the checkout is in the caller's context
           curl --fail-with-body "${REGO_POLICY_URL}" > ${REGO_POLICY_FILENAME}
-
-          REGO_PARAMS_FILENAME=rego.params.${{inputs.kosli_env}}.json
-          REGO_PARAMS_URL="https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/${REGO_PARAMS_FILENAME}"
           curl --fail-with-body "${REGO_PARAMS_URL}" > ${REGO_PARAMS_FILENAME}
 
           set +e
@@ -414,7 +414,7 @@ jobs:
         run: |
           curl --fail-with-body "${REGO_POLICY_URL}" > ${REGO_POLICY_FILENAME}
           curl --fail-with-body "${{inputs.raw_snyk_policy_url}}" > ${SNYK_POLICY_FILENAME}
-          curl --fail-with-body "https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/${REGO_PARAMS_FILENAME}" > ${REGO_PARAMS_FILENAME}
+          curl --fail-with-body "${REGO_PARAMS_URL}" > ${REGO_PARAMS_FILENAME}
 
       - name: Force trail to have empty template regardless of flow history
         run: |

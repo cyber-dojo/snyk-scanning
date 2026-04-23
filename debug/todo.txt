@@ -9,6 +9,8 @@ Revive tests of artifacts.py
 
 Revive tests of combine_snyk.py
 
+Add tests of .rego file using kosli-evaluate-input
+
 Dead bin/dead folder
 
 Tidy docs/

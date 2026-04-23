@@ -93,6 +93,7 @@ env:
   SNYK_POLICY_FILENAME: .snyk
   REGO_POLICY_FILENAME: snyk-vuln-compliance.rego
   REGO_POLICY_URL:      https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/snyk-vuln-compliance.rego
+  REGO_PARAMS_FILENAME: rego.params.${{inputs.kosli_env}}.json
 
 jobs:
   create-snyk-cat:
@@ -413,6 +414,7 @@ jobs:
         run: |
           curl --fail-with-body "${REGO_POLICY_URL}" > ${REGO_POLICY_FILENAME}
           curl --fail-with-body "${{inputs.raw_snyk_policy_url}}" > ${SNYK_POLICY_FILENAME}
+          curl --fail-with-body "https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/${REGO_PARAMS_FILENAME}" > ${REGO_PARAMS_FILENAME}
 
       - name: Force trail to have empty template regardless of flow history
         run: |
@@ -453,8 +455,6 @@ jobs:
             ANNOTATE_FLAGS+=(--annotate "${key}=${url}")
             i=$((i+1))
           done < <(jq --raw-output '.[] | [(.evaluation.allow | tostring), .attestation_url] | @tsv' "${VULNS_FILENAME}")
-
-          REGO_PARAMS_FILENAME=rego.params.${{inputs.kosli_env}}.json
 
           kosli attest generic \
             --compliant "${COMPLIANT}" \

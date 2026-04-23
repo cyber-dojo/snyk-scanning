@@ -2,8 +2,8 @@ name: Live Snyk Test aws-beta
 
 on:
   workflow_dispatch:
-  schedule: # At 06:00 every day
-    - cron: '0 6 * * *'
+  schedule: # At 01:00 UTC every day; cron delays of a few hours are not unusual in high load
+    - cron: '0 1 * * *'
 
 env:
   KOSLI_DEBUG: ${{vars.KOSLI_DEBUG}}     # false

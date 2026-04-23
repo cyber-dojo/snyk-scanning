@@ -428,13 +428,15 @@ jobs:
 
       - name: Attest NO vulns
         if: needs.attest-individual-snyk-vulns.result == 'skipped'
-        run:
-          kosli attest generic
-            --compliant=true
-            --attachments "${REGO_POLICY_FILENAME}"
-            --attachments "${REGO_PARAMS_FILENAME}"
-            --attachments "${SNYK_SARIF_FILENAME}"
-            --attachments "${SNYK_POLICY_FILENAME}"
+        run: |
+          COMPLIANT=true
+          echo "COMPLIANT=${COMPLIANT}" >> "${GITHUB_ENV}"
+          kosli attest generic \
+            --compliant "${COMPLIANT}" \
+            --attachments "${REGO_POLICY_FILENAME}" \
+            --attachments "${REGO_PARAMS_FILENAME}" \
+            --attachments "${SNYK_SARIF_FILENAME}" \
+            --attachments "${SNYK_POLICY_FILENAME}" \
             --name "${KOSLI_ATTESTATION_NAME}"
 
       - name: Attest SOME vulns

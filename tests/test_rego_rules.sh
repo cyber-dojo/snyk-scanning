@@ -33,12 +33,6 @@ test_allow_vuln_with_active_ignore()
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # No ignore => age within limit => compliant
 
-test_allow_no_trails()
-{
-  evaluate_rego '{"trails":[]}' "${PARAMS_BETA}"
-  assert_allow
-}
-
 test_allow_medium_vuln_within_age_limit()
 {
   # 29 days old: below the 30-day medium threshold
@@ -126,7 +120,7 @@ test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input()
     --argjson now_ts        "${NOW_TS}" \
     --argjson first_seen_ts "${first_seen_ts}" \
     '{
-      trails: [{
+      trail: {
         name: "test-trail",
         compliance_status: {
           attestations_statuses: {
@@ -143,7 +137,7 @@ test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input()
             }
           }
         }
-      }]
+      }
     }')
   evaluate_rego "${input}" "${PARAMS_BETA}"
   assert_deny
@@ -181,7 +175,7 @@ make_input()
     --argjson ignore_expires_ts     "${ignore_expires_ts}" \
     --arg     ignore_expires        "${ignore_expires}" \
     '{
-      trails: [{
+      trail: {
         name: $trail_name,
         compliance_status: {
           attestations_statuses: {
@@ -198,7 +192,7 @@ make_input()
             }
           }
         }
-      }]
+      }
     }'
 }
 

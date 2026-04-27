@@ -38,17 +38,14 @@ trail_is_compliant(trail) if {
 }
 
 allow if {
-    every trail in input.trails {
-        trail_is_compliant(trail)
-    }
+    trail_is_compliant(input.trail)
 }
 
 # Violations provide diagnostics only -- they do not drive the allow decision.
 
 # rule-1: no ignore entry and vulnerability age exceeds the threshold for its severity
 violations contains msg if {
-    some trail in input.trails
-    vuln := trail.compliance_status.attestations_statuses["snyk"].attestation_data
+    vuln := input.trail.compliance_status.attestations_statuses["snyk"].attestation_data
     vuln.ignore_expires_exists == false
     seconds_per_day := 60 * 60 * 24
     age_days := (vuln.now_ts - vuln.first_seen_ts) / seconds_per_day
@@ -56,17 +53,16 @@ violations contains msg if {
     age_days >= max
     msg := sprintf(
         "trail '%v': %v severity vuln age %d days exceeds %d day limit for severity %v",
-        [trail.name, vuln.full_id, age_days, max, vuln.severity],
+        [input.trail.name, vuln.full_id, age_days, max, vuln.severity],
     )
 }
 
 # rule-2: vulnerability has an ignore entry whose expiry is in the past
 violations contains msg if {
-    some trail in input.trails
-    vuln := trail.compliance_status.attestations_statuses["snyk"].attestation_data
+    vuln := input.trail.compliance_status.attestations_statuses["snyk"].attestation_data
     ignore_has_expired(vuln)
     msg := sprintf(
         "trail '%v': %v snyk ignore entry expired at %v",
-        [trail.name, vuln.full_id, vuln.ignore_expires],
+        [input.trail.name, vuln.full_id, vuln.ignore_expires],
     )
 }

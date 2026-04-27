@@ -1,0 +1,12 @@
+[
+  {
+    "artifact_name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/creator:1234567@sha256:cafebabe00000000cafebabe00000000cafebabe00000000cafebabe00000000",
+    "artifact_fingerprint": "cafebabe00000000cafebabe00000000cafebabe00000000cafebabe00000000",
+    "flow_name": "creator-ci",
+    "git_commit": "deadbeef0000000000000000000000000000cafe",
+    "repo_name": "creator",
+    "snapshot_index": 42,
+    "snapshot_artifact_url": "https://app.kosli.com/cyber-dojo/environments/aws-beta/snapshots/42?fingerprint=cafebabe00000000cafebabe00000000cafebabe00000000cafebabe00000000",
+    "raw_snyk_policy_url": "https://gitlab.com/cyber-dojo/creator/-/raw/deadbeef0000000000000000000000000000cafe/.snyk"
+  }
+]

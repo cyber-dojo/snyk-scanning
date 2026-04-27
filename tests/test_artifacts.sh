@@ -2,41 +2,44 @@
 
 readonly my_dir="$(cd "$(dirname "${0}")" && pwd)"
 
-export KOSLI_HOST=https://app.kosli.com
-export KOSLI_ORG=cyber-dojo
-export KOSLI_API_TOKEN=dummy-read-only
-
-test_SUCCESS_json_artifacts_written_to_stdout() { :; }
-
-xtest___SUCCESS_no_artifacts()
+test_github_commit_url_gives_raw_githubusercontent_snyk_policy_url()
 {
-  local -r filename="0.json"
-  get_artifacts "${filename}"
+  get_artifacts "github-artifact.snapshot.json"
   assert_status_equals 0
-  assert_stdout_equals "$(cat "${my_dir}/expected/${filename}")"
+  assert_stdout_equals "$(cat "${my_dir}/artifacts/expected/github-artifact.json")"
   assert_stderr_equals ""
 }
 
-test___SUCCESS_aws_beta()
+test_gitlab_commit_url_gives_gitlab_raw_snyk_policy_url()
 {
-  local -r filename="aws-beta.json"
-  get_artifacts "${filename}"
+  get_artifacts "gitlab-artifact.snapshot.json"
   assert_status_equals 0
-  assert_stdout_equals "$(cat "${my_dir}/expected/${filename}")"
+  assert_stdout_equals "$(cat "${my_dir}/artifacts/expected/gitlab-artifact.json")"
   assert_stderr_equals ""
 }
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-xtest_FAILURE_with_diagnostic_on_stderr() { :; }
-
-xtest___FAILURE_unknown_ci_system()
+test_exited_artifact_is_excluded()
 {
-  local -r filename="unknown-ci-system"
-  get_artifacts "${filename}.json"
+  get_artifacts "exited-artifact.snapshot.json"
+  assert_status_equals 0
+  assert_stdout_equals "$(cat "${my_dir}/artifacts/expected/exited-artifact.json")"
+  assert_stderr_equals ""
+}
+
+test_non_build_flow_is_excluded()
+{
+  get_artifacts "non-build-flow.snapshot.json"
+  assert_status_equals 0
+  assert_stdout_equals "$(cat "${my_dir}/artifacts/expected/non-build-flow.json")"
+  assert_stderr_equals ""
+}
+
+test_unknown_ci_system()
+{
+  get_artifacts "unknown-ci-system.snapshot.json"
   assert_status_not_equals 0
   assert_stdout_equals ""
-  assert_stderr_equals "$(cat "${my_dir}/expected/${filename}.txt")"
+  assert_stderr_equals "$(cat "${my_dir}/artifacts/expected/unknown-ci-system.txt")"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -44,12 +47,11 @@ xtest___FAILURE_unknown_ci_system()
 get_artifacts()
 {
   local -r filename="${1}"
-  cat ${my_dir}/get-snapshot/${filename} | python3 ${my_dir}/../bin/artifacts.py >${stdoutF} 2>${stderrF}
-  status=$?
-  echo ${status} >${statusF}
+  cat "${my_dir}/artifacts/${filename}" \
+    | python3 "${my_dir}/../bin/artifacts.py" >${stdoutF} 2>${stderrF}
+  echo $? >${statusF}
 }
 
 echo "::${0##*/}"
 . ${my_dir}/shunit2_helpers.sh
 . ${my_dir}/shunit2
-

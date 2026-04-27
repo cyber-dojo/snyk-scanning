@@ -145,6 +145,45 @@ test_deny_vuln_with_expired_ignore()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Demonstrate OPA undefined-field footgun: wrong field name in input silently
+# makes a violation rule body fail, producing compliant when it should be denied.
+# See docs/rego-undefined-field-in-violations.md
+
+test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input()
+{
+  # 30 days old: should be denied, but not_full_id instead of full_id in the
+  # input means vuln.full_id is undefined in the rego, violations stays empty,
+  # and allow is true.
+  local -r first_seen_ts=$((NOW_TS - 30 * SECONDS_PER_DAY))
+  local input
+  input=$(jq -n \
+    --argjson now_ts        "${NOW_TS}" \
+    --argjson first_seen_ts "${first_seen_ts}" \
+    '{
+      trails: [{
+        name: "test-trail",
+        compliance_status: {
+          attestations_statuses: {
+            snyk: {
+              attestation_data: {
+                not_full_id:           "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
+                now_ts:                $now_ts,
+                first_seen_ts:         $first_seen_ts,
+                severity:              "medium",
+                ignore_expires_exists: false,
+                ignore_expires_ts:     0,
+                ignore_expires:        ""
+              }
+            }
+          }
+        }
+      }]
+    }')
+  evaluate_rego "${input}" "${PARAMS_BETA}"
+  assert_status_equals 1
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 echo "::${0##*/}"
 . ${my_dir}/shunit2_helpers.sh

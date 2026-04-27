@@ -1,0 +1,4 @@
+ignore:
+  SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804:
+    - '*':
+        expires: 2099-01-01 00:00:00+00:00

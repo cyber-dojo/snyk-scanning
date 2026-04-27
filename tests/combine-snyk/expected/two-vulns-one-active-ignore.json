@@ -1,0 +1,26 @@
+[
+  {
+    "now_ts": 1748736000,
+    "now": "2025-06-01 00:00:00+00:00",
+    "version": "1.0.0",
+    "full_id": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
+    "severity": "medium",
+    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
+    "ignore_expires": "2099-01-01 00:00:00+00:00",
+    "ignore_expires_ts": 4070908800.0,
+    "ignore_expires_exists": true,
+    "trail_name": "test-repo-medium-SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804"
+  },
+  {
+    "now_ts": 1748736000,
+    "now": "2025-06-01 00:00:00+00:00",
+    "version": "1.0.0",
+    "full_id": "SNYK-GOLANG-GITHUBCOMOPENCONTAINERSSELINUXGOSELINUX-13843568",
+    "severity": "high",
+    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMOPENCONTAINERSSELINUXGOSELINUX-13843568",
+    "ignore_expires": "",
+    "ignore_expires_ts": 0,
+    "ignore_expires_exists": false,
+    "trail_name": "test-repo-high-SNYK-GOLANG-GITHUBCOMOPENCONTAINERSSELINUXGOSELINUX-13843568"
+  }
+]

@@ -1,0 +1,21 @@
+{
+  "version": "2.1.0",
+  "runs": [
+    {
+      "tool": {
+        "driver": {
+          "name": "Snyk Container",
+          "rules": [
+            {
+              "id": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
+              "shortDescription": {
+                "text": "Medium severity - Improper Verification of Cryptographic Signature vulnerability in golang.org/x/crypto/ssh/agent"
+              }
+            }
+          ]
+        }
+      },
+      "results": []
+    }
+  ]
+}

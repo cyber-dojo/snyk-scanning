@@ -10,56 +10,6 @@ readonly PARAMS_PROD="${rego_dir}/rego.params.aws-prod.json"
 readonly NOW_TS=1748736000
 readonly SECONDS_PER_DAY=86400
 
-evaluate_rego()
-{
-  local -r input_json="${1}"
-  local -r params_file="${2}"
-  echo "${input_json}" | kosli evaluate input \
-    --policy "${rego_dir}/snyk-vuln-compliance.rego" \
-    --params "@${params_file}" \
-    --output json \
-    >${stdoutF} 2>${stderrF}
-  echo $? >${statusF}
-}
-
-make_input()
-{
-  local -r trail_name="${1}"
-  local -r severity="${2}"
-  local -r first_seen_ts="${3}"
-  local -r ignore_expires_exists="${4}"
-  local -r ignore_expires_ts="${5}"
-  local -r ignore_expires="${6}"
-  jq -n \
-    --arg     trail_name            "${trail_name}" \
-    --arg     severity              "${severity}" \
-    --argjson now_ts                "${NOW_TS}" \
-    --argjson first_seen_ts         "${first_seen_ts}" \
-    --argjson ignore_expires_exists "${ignore_expires_exists}" \
-    --argjson ignore_expires_ts     "${ignore_expires_ts}" \
-    --arg     ignore_expires        "${ignore_expires}" \
-    '{
-      trails: [{
-        name: $trail_name,
-        compliance_status: {
-          attestations_statuses: {
-            snyk: {
-              attestation_data: {
-                full_id:               "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
-                now_ts:                $now_ts,
-                first_seen_ts:         $first_seen_ts,
-                severity:              $severity,
-                ignore_expires_exists: $ignore_expires_exists,
-                ignore_expires_ts:     $ignore_expires_ts,
-                ignore_expires:        $ignore_expires
-              }
-            }
-          }
-        }
-      }]
-    }'
-}
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Active ignore => compliant regardless of age
 
@@ -195,6 +145,56 @@ test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+evaluate_rego()
+{
+  local -r input_json="${1}"
+  local -r params_file="${2}"
+  echo "${input_json}" | kosli evaluate input \
+    --policy "${rego_dir}/snyk-vuln-compliance.rego" \
+    --params "@${params_file}" \
+    --output json \
+    >${stdoutF} 2>${stderrF}
+  echo $? >${statusF}
+}
+
+make_input()
+{
+  local -r trail_name="${1}"
+  local -r severity="${2}"
+  local -r first_seen_ts="${3}"
+  local -r ignore_expires_exists="${4}"
+  local -r ignore_expires_ts="${5}"
+  local -r ignore_expires="${6}"
+  jq -n \
+    --arg     trail_name            "${trail_name}" \
+    --arg     severity              "${severity}" \
+    --argjson now_ts                "${NOW_TS}" \
+    --argjson first_seen_ts         "${first_seen_ts}" \
+    --argjson ignore_expires_exists "${ignore_expires_exists}" \
+    --argjson ignore_expires_ts     "${ignore_expires_ts}" \
+    --arg     ignore_expires        "${ignore_expires}" \
+    '{
+      trails: [{
+        name: $trail_name,
+        compliance_status: {
+          attestations_statuses: {
+            snyk: {
+              attestation_data: {
+                full_id:               "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
+                now_ts:                $now_ts,
+                first_seen_ts:         $first_seen_ts,
+                severity:              $severity,
+                ignore_expires_exists: $ignore_expires_exists,
+                ignore_expires_ts:     $ignore_expires_ts,
+                ignore_expires:        $ignore_expires
+              }
+            }
+          }
+        }
+      }]
+    }'
+}
 
 assert_allow()
 {

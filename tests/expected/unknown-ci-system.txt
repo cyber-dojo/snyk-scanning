@@ -1,1 +1,0 @@
-ERROR: Unknown CI system https://gitunknown.com/cyber-dojo/custom-start-points/commit/5b75832b1c5ec598478a9a3965f15e25059cb605

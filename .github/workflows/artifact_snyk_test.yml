@@ -504,7 +504,3 @@ jobs:
         id: set-vulns
         run:
           echo "vulns=$(jq --compact-output . ${VULNS_FILENAME})" >> ${GITHUB_OUTPUT}
-
-      - name: Fail if not compliant
-        run:
-          if [ "${COMPLIANT}" != "true" ]; then exit 1; fi

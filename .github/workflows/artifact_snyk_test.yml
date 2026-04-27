@@ -239,6 +239,7 @@ jobs:
       - name: Combine all data ready for individual data attestations
         run: |
           ./bin/combine_snyk.py \
+            $(date +%s) \
             ${{inputs.snyk_version}} \
             ${{inputs.repo_name}} \
             ${SNYK_SARIF_FILENAME} \

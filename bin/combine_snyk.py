@@ -3,13 +3,16 @@
 import sys
 import json
 import yaml
+from datetime import datetime, timezone
 
 
 if __name__ == "__main__":  # pragma: no cover
-    snyk_version = sys.argv[1]
-    repo_name = sys.argv[2]
-    sarif_filename = sys.argv[3]
-    snyk_policy_filename = sys.argv[4]
+    now_ts = int(sys.argv[1])
+    now = str(datetime.fromtimestamp(now_ts, tz=timezone.utc))
+    snyk_version = sys.argv[2]
+    repo_name = sys.argv[3]
+    sarif_filename = sys.argv[4]
+    snyk_policy_filename = sys.argv[5]
 
     # Extract ids and severities of each vulnerability in sarif file
     with open(sarif_filename) as sarif_file:
@@ -29,6 +32,8 @@ if __name__ == "__main__":  # pragma: no cover
             trail_name = f"{repo_name}-{severity}-{full_id}"
 
             vulns[full_id] = {
+                'now_ts': now_ts,
+                'now': now,
                 'version': snyk_version,
                 'full_id': full_id,
                 'severity': severity,

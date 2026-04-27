@@ -60,47 +60,28 @@ make_input()
     }'
 }
 
-assert_allow()
-{
-  local -r allow="$(jq '.allow' "${stdoutF}")"
-  assertEquals "allow:$(dump_sss)" "true" "${allow}"
-  local -r violations="$(jq '.violations' "${stdoutF}")"
-  assertEquals "violations:$(dump_sss)" "null" "${violations}"
-}
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Active ignore => compliant regardless of age
 
-assert_deny()
+test_allow_vuln_with_active_ignore()
 {
-  local -r allow="$(jq '.allow' "${stdoutF}")"
-  assertEquals "allow:$(dump_sss)" "false" "${allow}"
-}
-
-assert_violations_null()
-{
-  local -r violations="$(jq '.violations' "${stdoutF}")"
-  assertEquals "violations:$(dump_sss)" "null" "${violations}"
-}
-
-assert_violation_message()
-{
-  local -r expected="${1}"
-  local found
-  found="$(jq --arg s "${expected}" '.violations[] | select(. == $s)' "${stdoutF}")"
-  if [ -z "${found}" ]; then
-    dump_sss
-    fail "expected violations to include '${expected}'"
-  fi
+  # 35 days old (over the 30-day medium limit) but has an active ignore -- age does not matter
+  local -r first_seen_ts=$((NOW_TS - 35 * SECONDS_PER_DAY))
+  local -r ignore_expires_ts=$((NOW_TS + SECONDS_PER_DAY))
+  local input
+  input=$(make_input "test-trail" "medium" "${first_seen_ts}" true "${ignore_expires_ts}" "2025-06-01 00:00:00+00:00")
+  evaluate_rego "${input}" "${PARAMS_BETA}"
+  assert_allow
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# No ignore => age within limit => compliant
 
 test_allow_no_trails()
 {
   evaluate_rego '{"trails":[]}' "${PARAMS_BETA}"
   assert_allow
 }
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Rule-1: age check
 
 test_allow_medium_vuln_within_age_limit()
 {
@@ -112,6 +93,34 @@ test_allow_medium_vuln_within_age_limit()
   assert_allow
 }
 
+test_allow_critical_vuln_within_age_limit_on_beta()
+{
+  # 2 days old: below the 3-day critical threshold on aws-beta
+  local -r first_seen_ts=$((NOW_TS - 2 * SECONDS_PER_DAY))
+  local input
+  input=$(make_input "test-trail" "critical" "${first_seen_ts}" false 0 "")
+  evaluate_rego "${input}" "${PARAMS_BETA}"
+  assert_allow
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Expired ignore => non-compliant regardless of age
+
+test_deny_vuln_with_expired_ignore()
+{
+  # 5 days old (within the 30-day medium limit) but ignore has expired -- age does not matter
+  local -r first_seen_ts=$((NOW_TS - 5 * SECONDS_PER_DAY))
+  local -r ignore_expires_ts=$((NOW_TS - SECONDS_PER_DAY))
+  local input
+  input=$(make_input "test-trail" "medium" "${first_seen_ts}" true "${ignore_expires_ts}" "2025-05-30 00:00:00+00:00")
+  evaluate_rego "${input}" "${PARAMS_BETA}"
+  assert_deny
+  assert_violation_message "trail 'test-trail': SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804 snyk ignore entry expired at 2025-05-30 00:00:00+00:00"
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# No ignore, age exceeded => non-compliant
+
 test_deny_medium_vuln_at_age_limit()
 {
   # 30 days old: at the 30-day medium threshold (>= means non-compliant)
@@ -121,16 +130,6 @@ test_deny_medium_vuln_at_age_limit()
   evaluate_rego "${input}" "${PARAMS_BETA}"
   assert_deny
   assert_violation_message "trail 'test-trail': SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804 severity vuln age 30 days exceeds 30 day limit for severity medium"
-}
-
-test_allow_critical_vuln_within_age_limit_on_beta()
-{
-  # 2 days old: below the 3-day critical threshold on aws-beta
-  local -r first_seen_ts=$((NOW_TS - 2 * SECONDS_PER_DAY))
-  local input
-  input=$(make_input "test-trail" "critical" "${first_seen_ts}" false 0 "")
-  evaluate_rego "${input}" "${PARAMS_BETA}"
-  assert_allow
 }
 
 test_deny_critical_vuln_at_age_limit_on_beta()
@@ -152,32 +151,6 @@ test_deny_critical_vuln_on_prod_day_zero()
   evaluate_rego "${input}" "${PARAMS_PROD}"
   assert_deny
   assert_violation_message "trail 'test-trail': SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804 severity vuln age 0 days exceeds 0 day limit for severity critical"
-}
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Rule-2: expired ignore check
-
-test_allow_vuln_with_active_ignore()
-{
-  # Ignore entry exists but has not yet expired
-  local -r first_seen_ts=$((NOW_TS - 5 * SECONDS_PER_DAY))
-  local -r ignore_expires_ts=$((NOW_TS + SECONDS_PER_DAY))
-  local input
-  input=$(make_input "test-trail" "medium" "${first_seen_ts}" true "${ignore_expires_ts}" "2025-06-01 00:00:00+00:00")
-  evaluate_rego "${input}" "${PARAMS_BETA}"
-  assert_allow
-}
-
-test_deny_vuln_with_expired_ignore()
-{
-  # Ignore entry exists and has expired
-  local -r first_seen_ts=$((NOW_TS - 5 * SECONDS_PER_DAY))
-  local -r ignore_expires_ts=$((NOW_TS - SECONDS_PER_DAY))
-  local input
-  input=$(make_input "test-trail" "medium" "${first_seen_ts}" true "${ignore_expires_ts}" "2025-05-30 00:00:00+00:00")
-  evaluate_rego "${input}" "${PARAMS_BETA}"
-  assert_deny
-  assert_violation_message "trail 'test-trail': SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804 snyk ignore entry expired at 2025-05-30 00:00:00+00:00"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -219,6 +192,39 @@ test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input()
   evaluate_rego "${input}" "${PARAMS_BETA}"
   assert_deny
   assert_violations_null
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+assert_allow()
+{
+  local -r allow="$(jq '.allow' "${stdoutF}")"
+  assertEquals "allow:$(dump_sss)" "true" "${allow}"
+  local -r violations="$(jq '.violations' "${stdoutF}")"
+  assertEquals "violations:$(dump_sss)" "null" "${violations}"
+}
+
+assert_deny()
+{
+  local -r allow="$(jq '.allow' "${stdoutF}")"
+  assertEquals "allow:$(dump_sss)" "false" "${allow}"
+}
+
+assert_violations_null()
+{
+  local -r violations="$(jq '.violations' "${stdoutF}")"
+  assertEquals "violations:$(dump_sss)" "null" "${violations}"
+}
+
+assert_violation_message()
+{
+  local -r expected="${1}"
+  local found
+  found="$(jq --arg s "${expected}" '.violations[] | select(. == $s)' "${stdoutF}")"
+  if [ -z "${found}" ]; then
+    dump_sss
+    fail "expected violations to include '${expected}'"
+  fi
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -11,17 +11,30 @@ ignore_has_expired(vuln) if {
     vuln.ignore_expires_ts < vuln.now_ts
 }
 
+ignore_is_active(vuln) if {
+    vuln.ignore_expires_exists == true
+    vuln.ignore_expires_ts >= vuln.now_ts
+}
+
 # allow is driven by a positive assertion (every trail must be compliant) rather
 # than by the absence of violations. This ensures that if some error occurs while
 # generating a diagnostic string, it can only lose a message -- it cannot silently
 # produce a compliant result. See https://github.com/open-policy-agent/opa/issues/1857
+
+# Case 1: no ignore entry -- age determines compliance
 trail_is_compliant(trail) if {
     vuln := trail.compliance_status.attestations_statuses["snyk"].attestation_data
+    vuln.ignore_expires_exists == false
     seconds_per_day := 60 * 60 * 24
     age_days := (vuln.now_ts - vuln.first_seen_ts) / seconds_per_day
     # Use < so that critical (max=0) is non-compliant on day zero
     age_days < max_days_by_severity[vuln.severity]
-    not ignore_has_expired(vuln)
+}
+
+# Case 2: active (not yet expired) ignore entry -- compliant regardless of age
+trail_is_compliant(trail) if {
+    vuln := trail.compliance_status.attestations_statuses["snyk"].attestation_data
+    ignore_is_active(vuln)
 }
 
 allow if {
@@ -32,10 +45,11 @@ allow if {
 
 # Violations provide diagnostics only -- they do not drive the allow decision.
 
-# rule-1: vulnerability age exceeds the threshold for its severity
+# rule-1: no ignore entry and vulnerability age exceeds the threshold for its severity
 violations contains msg if {
     some trail in input.trails
     vuln := trail.compliance_status.attestations_statuses["snyk"].attestation_data
+    vuln.ignore_expires_exists == false
     seconds_per_day := 60 * 60 * 24
     age_days := (vuln.now_ts - vuln.first_seen_ts) / seconds_per_day
     max := max_days_by_severity[vuln.severity]

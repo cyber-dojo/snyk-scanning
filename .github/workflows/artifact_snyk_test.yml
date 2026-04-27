@@ -331,6 +331,8 @@ jobs:
             --output=json > evaluation.json
           set -e
 
+          jq . evaluation.json
+
           jq --slurpfile eval evaluation.json \
             '. + {"evaluation": $eval[0]}' \
             ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}

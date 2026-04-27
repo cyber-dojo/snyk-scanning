@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+# Tests for snyk-vuln-compliance.rego covering the four compliance cases:
+#   Active ignore => compliant regardless of age
+#   No ignore => age within limit => compliant
+#   Expired ignore => non-compliant regardless of age
+#   No ignore, age exceeded => non-compliant
+
 readonly my_dir="$(cd "$(dirname "${0}")" && pwd)"
 readonly rego_dir="$(cd "${my_dir}/.." && pwd)"
 

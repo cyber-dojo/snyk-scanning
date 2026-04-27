@@ -331,8 +331,6 @@ jobs:
             --output=json > evaluation.json
           set -e
 
-          jq . evaluation.json
-
           jq --slurpfile eval evaluation.json \
             '. + {"evaluation": $eval[0]}' \
             ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}
@@ -349,6 +347,11 @@ jobs:
           jq --arg url "${ATTESTATION_URL}" \
             '. + {"attestation_url": $url}' \
             ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}
+
+      - name: Debug print evaluation.json
+        if: env.KOSLI_DEBUG == 'true'
+        run:
+          jq . evaluation.json
 
       # upload-artifact produces an "Artifacts produced during runtime" section
       # in the GitHub step summary. We would like to avoid this because the

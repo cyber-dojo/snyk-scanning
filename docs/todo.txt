@@ -1,25 +1,8 @@
 
-# TODO: Delete aws_rolename from build workflows
 # TODO: ~25 Add more outputs? evaluation json? snyk-exit-code? url for attestation
 # TODO: ~191 Get exit code of synk-container-scan
 
 If artifact_name is supplied with a digest, then check it matches kosli-fingerprint
-
-Revive tests of artifacts.py
-
-Revive tests of combine_snyk.py
-
-Make now a field in the input json and use that in the rego.
-
-Add tests of .rego file using kosli-evaluate-input (pass in now)
-
-Dead bin/dead folder
-
-Tidy docs/
-
-Tidy fake_data/
-
-Tidy test/
 
 bin/combine_snyk.py has a comment
     # else:

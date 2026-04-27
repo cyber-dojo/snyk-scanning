@@ -1,6 +1,9 @@
 
+0. Very easy to say compliant when it was in fact non-compliant.
+   See rego-undefined-field-inviolations.md
+   I feel the safest option is to assume non-compliance and prove compliance.
 
-1. In the CLI docker references with both a tag and a digest are not supported
+1. The CLI does not support docker image names with both a tag and a digest
    You can't do a kosli-attest with an artifact whose name is
    cyber-dojo/saver:5d42c57@sha256:DIGEST
    You have to use

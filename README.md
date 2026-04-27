@@ -28,7 +28,7 @@ The inner trail-level attestations (one per Snyk vulnerability) _always_ take pl
 
 ### `aws-beta.yml` / `aws-prod.yml`
 
-Triggered daily at 06:00 UTC or manually via `workflow_dispatch`. Calls
+Triggered daily at 01:00 UTC or manually via `workflow_dispatch`. Calls
 `env_snyk_test.yml` for the target environment.
 
 | Workflow | Kosli flow |
@@ -73,6 +73,8 @@ Called by `aws-beta.yml` and `aws-prod.yml`. Queries Kosli for the artifacts cur
 
 Called by `env_snyk_test.yml` to scan artifacts running in an environment.
 
+Also called by deployment workflows in the `cyber-dojo/aws-prod-co-promotion` repo.
+For example, [aws-prod-co-promotion/.github/workflows/promote_one.yml](https://github.com/cyber-dojo/aws-prod-co-promotion/blob/1a3f516ca3da64bb329c5447dddc8c58751ec82b/.github/workflows/promote_one.yml#L115):
 
 Also called directly by build workflows in other repos to scan a newly built artifact.
 For example, [nginx/.github/workflows/main.yml](https://github.com/cyber-dojo/nginx/blob/b1ce55beb190397c80d3ba0536f6b97bb5f468f6/.github/workflows/main.yml#L102):

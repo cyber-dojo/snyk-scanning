@@ -17,6 +17,7 @@ evaluate_rego()
   echo "${input_json}" | kosli evaluate input \
     --policy "${rego_dir}/snyk-vuln-compliance.rego" \
     --params "@${params_file}" \
+    --output json \
     >${stdoutF} 2>${stderrF}
   echo $? >${statusF}
 }
@@ -59,12 +60,43 @@ make_input()
     }'
 }
 
+assert_allow()
+{
+  local -r allow="$(jq '.allow' "${stdoutF}")"
+  assertEquals "allow:$(dump_sss)" "true" "${allow}"
+  local -r violations="$(jq '.violations' "${stdoutF}")"
+  assertEquals "violations:$(dump_sss)" "null" "${violations}"
+}
+
+assert_deny()
+{
+  local -r allow="$(jq '.allow' "${stdoutF}")"
+  assertEquals "allow:$(dump_sss)" "false" "${allow}"
+}
+
+assert_violations_null()
+{
+  local -r violations="$(jq '.violations' "${stdoutF}")"
+  assertEquals "violations:$(dump_sss)" "null" "${violations}"
+}
+
+assert_violation_message()
+{
+  local -r expected="${1}"
+  local found
+  found="$(jq --arg s "${expected}" '.violations[] | select(. == $s)' "${stdoutF}")"
+  if [ -z "${found}" ]; then
+    dump_sss
+    fail "expected violations to include '${expected}'"
+  fi
+}
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 test_allow_no_trails()
 {
   evaluate_rego '{"trails":[]}' "${PARAMS_BETA}"
-  assert_status_equals 0
+  assert_allow
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -77,7 +109,7 @@ test_allow_medium_vuln_within_age_limit()
   local input
   input=$(make_input "test-trail" "medium" "${first_seen_ts}" false 0 "")
   evaluate_rego "${input}" "${PARAMS_BETA}"
-  assert_status_equals 0
+  assert_allow
 }
 
 test_deny_medium_vuln_at_age_limit()
@@ -87,7 +119,8 @@ test_deny_medium_vuln_at_age_limit()
   local input
   input=$(make_input "test-trail" "medium" "${first_seen_ts}" false 0 "")
   evaluate_rego "${input}" "${PARAMS_BETA}"
-  assert_status_equals 1
+  assert_deny
+  assert_violation_message "trail 'test-trail': SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804 severity vuln age 30 days exceeds 30 day limit for severity medium"
 }
 
 test_allow_critical_vuln_within_age_limit_on_beta()
@@ -97,7 +130,7 @@ test_allow_critical_vuln_within_age_limit_on_beta()
   local input
   input=$(make_input "test-trail" "critical" "${first_seen_ts}" false 0 "")
   evaluate_rego "${input}" "${PARAMS_BETA}"
-  assert_status_equals 0
+  assert_allow
 }
 
 test_deny_critical_vuln_at_age_limit_on_beta()
@@ -107,7 +140,8 @@ test_deny_critical_vuln_at_age_limit_on_beta()
   local input
   input=$(make_input "test-trail" "critical" "${first_seen_ts}" false 0 "")
   evaluate_rego "${input}" "${PARAMS_BETA}"
-  assert_status_equals 1
+  assert_deny
+  assert_violation_message "trail 'test-trail': SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804 severity vuln age 3 days exceeds 3 day limit for severity critical"
 }
 
 test_deny_critical_vuln_on_prod_day_zero()
@@ -116,7 +150,8 @@ test_deny_critical_vuln_on_prod_day_zero()
   local input
   input=$(make_input "test-trail" "critical" "${NOW_TS}" false 0 "")
   evaluate_rego "${input}" "${PARAMS_PROD}"
-  assert_status_equals 1
+  assert_deny
+  assert_violation_message "trail 'test-trail': SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804 severity vuln age 0 days exceeds 0 day limit for severity critical"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -130,7 +165,7 @@ test_allow_vuln_with_active_ignore()
   local input
   input=$(make_input "test-trail" "medium" "${first_seen_ts}" true "${ignore_expires_ts}" "2025-06-01 00:00:00+00:00")
   evaluate_rego "${input}" "${PARAMS_BETA}"
-  assert_status_equals 0
+  assert_allow
 }
 
 test_deny_vuln_with_expired_ignore()
@@ -141,7 +176,8 @@ test_deny_vuln_with_expired_ignore()
   local input
   input=$(make_input "test-trail" "medium" "${first_seen_ts}" true "${ignore_expires_ts}" "2025-05-30 00:00:00+00:00")
   evaluate_rego "${input}" "${PARAMS_BETA}"
-  assert_status_equals 1
+  assert_deny
+  assert_violation_message "trail 'test-trail': SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804 snyk ignore entry expired at 2025-05-30 00:00:00+00:00"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -152,8 +188,9 @@ test_deny_vuln_with_expired_ignore()
 test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input()
 {
   # 30 days old: should be denied, but not_full_id instead of full_id in the
-  # input means vuln.full_id is undefined in the rego, violations stays empty,
-  # and allow is true.
+  # input means vuln.full_id is undefined in the rego, violations stays null
+  # (no diagnostic). allow is still correctly false because trail_is_compliant
+  # does not reference full_id.
   local -r first_seen_ts=$((NOW_TS - 30 * SECONDS_PER_DAY))
   local input
   input=$(jq -n \
@@ -180,7 +217,8 @@ test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input()
       }]
     }')
   evaluate_rego "${input}" "${PARAMS_BETA}"
-  assert_status_equals 1
+  assert_deny
+  assert_violations_null
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

@@ -322,14 +322,13 @@ jobs:
           curl --fail-with-body "${REGO_POLICY_URL}" > ${REGO_POLICY_FILENAME}
           curl --fail-with-body "${REGO_PARAMS_URL}" > ${REGO_PARAMS_FILENAME}
 
-          set +e
           kosli evaluate trail ${KOSLI_TRAIL} \
             --flow ${KOSLI_FLOW} \
             --policy "${REGO_POLICY_FILENAME}" \
             --params "@${REGO_PARAMS_FILENAME}" \
             --debug=false \
+            --no-assert \
             --output=json > evaluation.json
-          set -e
 
           jq --slurpfile eval evaluation.json \
             '. + {"evaluation": $eval[0]}' \

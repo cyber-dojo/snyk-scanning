@@ -295,13 +295,9 @@ jobs:
           FIRST_SEEN_TS="$(jq '.created_at' trail.json)"
           FIRST_SEEN="$(python3 -c "from datetime import datetime, timezone; print(str(datetime.fromtimestamp(${FIRST_SEEN_TS}, tz=timezone.utc)))")"
 
-          jq --argjson val "${FIRST_SEEN_TS}" \
-            '. + {"first_seen_ts": $val}' \
+          jq --argjson ts_val "${FIRST_SEEN_TS}" --arg str_val "${FIRST_SEEN}" \
+            '. + {"first_seen_ts": $ts_val, "first_seen": $str_val}' \
             <<< "${VULN_JSON}" > ${VULN_FILENAME}
-
-          jq --arg val "${FIRST_SEEN}" \
-            '. + {"first_seen": $val}' \
-            ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}
 
       - name: Debug print one vuln
         if: env.KOSLI_DEBUG == 'true'

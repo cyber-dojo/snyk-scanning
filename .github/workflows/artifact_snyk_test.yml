@@ -154,6 +154,7 @@ jobs:
           fetch-depth: 1
 
       - name: Configure AWS credentials
+        if: contains(inputs.artifact_name, '.amazonaws.com')
         uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::244531986313:role/${{inputs.aws_rolename}}
@@ -162,6 +163,7 @@ jobs:
           role-session-name: ${{github.event.repository.name}}
 
       - name: Login to Amazon ECR
+        if: contains(inputs.artifact_name, '.amazonaws.com')
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Setup Kosli CLI

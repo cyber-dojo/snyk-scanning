@@ -13,6 +13,7 @@ if __name__ == "__main__":  # pragma: no cover
     repo_name = sys.argv[3]
     sarif_filename = sys.argv[4]
     snyk_policy_filename = sys.argv[5]
+    stale_filename = sys.argv[6]
 
     # Extract ids and severities of each vulnerability in sarif file
     with open(sarif_filename) as sarif_file:
@@ -48,6 +49,7 @@ if __name__ == "__main__":  # pragma: no cover
     with open(snyk_policy_filename) as snyk_file:
         snyk_data = yaml.safe_load(snyk_file)
 
+    stale_ids = []
     if snyk_data:
         ignore = snyk_data.get('ignore', {})
         for id in ignore:
@@ -57,8 +59,11 @@ if __name__ == "__main__":  # pragma: no cover
                 vuln['ignore_expires'] = expires
                 vuln['ignore_expires_ts'] = expires.timestamp()
                 vuln['ignore_expires_exists'] = True
-            # else:
-            #   .snyk has ignore entry for vuln that artifact does not have
+            else:
+                stale_ids.append(id)
+
+    with open(stale_filename, 'w') as stale_file:
+        stale_file.write(json.dumps(stale_ids))
 
     print(json.dumps(list(vulns.values()), default=str))
 

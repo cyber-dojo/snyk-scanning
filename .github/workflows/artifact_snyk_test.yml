@@ -140,7 +140,8 @@ jobs:
       id-token: write
       contents: write
     env:
-      VULN_FILENAME: vulns.json
+      VULNS_FILENAME: vulns.json
+      STALE_VULNS_FILENAME: stale_vulns.json
     steps:
       - uses: step-security/harden-runner@v2
         with:
@@ -244,17 +245,31 @@ jobs:
             ${{inputs.repo_name}} \
             ${SNYK_SARIF_FILENAME} \
             ${SNYK_POLICY_FILENAME} \
-              > ${VULN_FILENAME}
+            ${STALE_VULNS_FILENAME} \
+              > ${VULNS_FILENAME}
+
+      - name: Write stale .snyk entries to job summary
+        run: |
+          COUNT="$(jq 'length' "${STALE_VULNS_FILENAME}")"
+          {
+            echo "<table>"
+            echo "<tr><td><b>Stale</b></td><td>${COUNT} found</td></tr>"
+            echo "<tr><td><b>Artifact</b></td><td>${{inputs.artifact_name}}</td></tr>"
+            echo "<tr><td><b>Fingerprint</b></td><td>${{steps.set-fingerprint.outputs.fingerprint}}</td></tr>"
+            echo "<tr><td><b>Snyk</b></td><td>${{inputs.snyk_version}}</td></tr>"
+            jq -r '.[] | "<tr><td></td><td>\(.)</td></tr>"' "${STALE_VULNS_FILENAME}"
+            echo "</table>"
+          } >> $GITHUB_STEP_SUMMARY
 
       - name: Debug print vulns
         if: env.KOSLI_DEBUG == 'true'
         run:
-          jq . "${VULN_FILENAME}"
+          jq . "${VULNS_FILENAME}"
 
       - name: Set output vulns
         id: set-vulns
         run: |
-          VULNS="$(jq --compact-output . ${VULN_FILENAME})"
+          VULNS="$(jq --compact-output . ${VULNS_FILENAME})"
           echo "vulns=${VULNS}" >> ${GITHUB_OUTPUT}
 
 

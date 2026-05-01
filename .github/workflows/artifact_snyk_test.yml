@@ -180,6 +180,12 @@ jobs:
           ARTIFACT="${{inputs.artifact_name}}"
           ARTIFACT="${ARTIFACT%%@sha256:*}"
 
+          echo "ARTIFACT=:${ARTIFACT}:"
+
+          kosli fingerprint "${ARTIFACT}" \
+            --artifact-type=oci \
+            --debug=false
+
           FINGERPRINT="$(kosli fingerprint "${ARTIFACT}" \
             --artifact-type=oci \
             --debug=false \

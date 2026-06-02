@@ -5,6 +5,10 @@ When you receive a Slack alert from the check-expiry-and-notify workflow,
 check the GitHub step summary (linked in the message) to see which vulns
 are approaching expiry and which mechanism applies.
 
+After fixing, you can re-run the live env-scan to verify:
+- [Live Snyk Test aws-beta](https://github.com/cyber-dojo/snyk-scanning/actions/workflows/aws-beta.yml)
+- [Live Snyk Test aws-prod](https://github.com/cyber-dojo/snyk-scanning/actions/workflows/aws-prod.yml)
+
 
 Mechanism: rego_limit
 ----------------------

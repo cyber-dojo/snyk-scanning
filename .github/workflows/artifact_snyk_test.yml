@@ -431,7 +431,8 @@ jobs:
           fi
           curl --fail-with-body "${REGO_PARAMS_URL}" > ${REGO_PARAMS_FILENAME}
 
-      - name: Currently we have to (re)do this attestation for the env live-scans
+      - name: Attest the artifact in the env live-scans
+        if: github.repository == 'cyber-dojo/snyk-scanning'
         run: |
           # runner.snyk-scan => runner
           ARTIFACT_SLOT_NAME="${KOSLI_ATTESTATION_NAME%%.*}"

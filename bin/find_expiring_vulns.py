@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read vuln-*.json files and print as JSON those still within their compliance window, sorted by days_remaining ascending."""
+"""Read vuln-*.json files and print them as JSON sorted by days_remaining ascending, including vulns already non-compliant (zero or negative days_remaining)."""
 
 import argparse
 import glob
@@ -19,15 +19,17 @@ def extract_artifact_name(trail_name):
 
 
 def dot_snyk_result(data, env, now_ts):
-    """Return a result dict if the .snyk ignore entry has a future expiry, else None."""
+    """Return a result dict for a vuln whose .snyk ignore entry has an expiry date, else None.
+
+    days_remaining is the days until the ignore expires: positive while the ignore
+    is still active, zero or negative once it has already expired (non-compliant).
+    """
     if not data.get("ignore_expires_exists"):
         return None
     if data.get("ignore_forever"):
         # No expiry date -- suppressed forever, so it never appears in an expiry report.
         return None
     secs_remaining = data["ignore_expires_ts"] - now_ts
-    if secs_remaining <= 0:
-        return None
     return {
         "env": env,
         "trail_name": data["trail_name"],
@@ -44,17 +46,17 @@ def dot_snyk_result(data, env, now_ts):
 
 
 def rego_result(data, env, now_ts, max_days):
-    """Return a result dict if the vuln is still within its rego age limit, else None."""
+    """Return a result dict for a vuln tracked by the rego age limit (no .snyk ignore), else None.
+
+    days_remaining is limit - age_days: positive while still within the age limit,
+    zero or negative once the age has reached or exceeded the limit (non-compliant).
+    """
     if data.get("ignore_expires_exists"):
         return None
     severity = data["severity"]
     limit = max_days.get(severity, 0)
-    if limit <= 0:
-        return None
     age_days = (now_ts - data["first_seen_ts"]) / 86400
     days_remaining = limit - age_days
-    if days_remaining <= 0:
-        return None
     return {
         "env": env,
         "trail_name": data["trail_name"],
@@ -109,7 +111,7 @@ example output (2 vulns, sorted by days_remaining ascending):
 def main():
     """Parse args, read vuln JSON files from this run, print sorted JSON to stdout."""
     parser = argparse.ArgumentParser(
-        description="Read vuln-*.json files and print as JSON those still within their compliance window, sorted by days_remaining ascending.",
+        description="Read vuln-*.json files and print them as JSON sorted by days_remaining ascending, including vulns already non-compliant (zero or negative days_remaining).",
         epilog=_EXAMPLE,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )

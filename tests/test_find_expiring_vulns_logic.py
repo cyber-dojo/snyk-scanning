@@ -51,13 +51,15 @@ class TestDotSnykResult(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_c7f2a303(self):
-        """Returns None when the .snyk ignore entry has already expired."""
+        """Returns a result with negative days_remaining when the .snyk ignore has already expired."""
         data = {**_high_vuln_no_ignore(),
                 "ignore_expires_exists": True,
-                "ignore_expires_ts": NOW_TS - 1,
-                "ignore_expires": "2025-05-31 23:59:59+00:00"}
+                "ignore_expires_ts": NOW_TS - 2 * 86400,
+                "ignore_expires": "2025-05-30 00:00:00+00:00"}
         result = find_expiring_vulns.dot_snyk_result(data, "aws-prod", NOW_TS)
-        self.assertIsNone(result)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["mechanism"], "dot_snyk_expiry")
+        self.assertAlmostEqual(result["days_remaining"], -2.0, places=5)
 
     def test_c7f2a308(self):
         """Returns None when the .snyk ignore entry has no expiry (suppressed forever)."""
@@ -93,18 +95,25 @@ class TestRegoResult(unittest.TestCase):
         self.assertIsNone(result)
 
     def test_c7f2a306(self):
-        """Returns None when the severity limit is zero (critical in aws-prod)."""
-        data = {**_high_vuln_no_ignore(first_seen_ts=NOW_TS),
+        """Returns a result with negative days_remaining for a zero-limit severity (critical in aws-prod)."""
+        data = {**_high_vuln_no_ignore(first_seen_ts=NOW_TS - 3 * 86400),
                 "severity": "critical",
                 "trail_name": "creator-critical-SNYK-GOLANG-NETHTTP-3321444"}
         result = find_expiring_vulns.rego_result(data, "aws-prod", NOW_TS, PROD_MAX_DAYS)
-        self.assertIsNone(result)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["mechanism"], "rego_limit")
+        self.assertAlmostEqual(result["days_remaining"], -3.0, places=5)
+        self.assertEqual(result["limit_days"], 0)
 
     def test_c7f2a307(self):
-        """Returns None when the vuln age has exceeded the severity limit."""
+        """Returns a result with negative days_remaining when the vuln age has exceeded the severity limit."""
         data = _high_vuln_no_ignore(first_seen_ts=NOW_TS - 3 * 86400)
         result = find_expiring_vulns.rego_result(data, "aws-prod", NOW_TS, PROD_MAX_DAYS)
-        self.assertIsNone(result)
+        self.assertIsNotNone(result)
+        self.assertEqual(result["mechanism"], "rego_limit")
+        self.assertAlmostEqual(result["days_remaining"], -1.0, places=5)
+        self.assertAlmostEqual(result["age_days"], 3.0, places=5)
+        self.assertEqual(result["limit_days"], 2)
 
 
 if __name__ == "__main__":

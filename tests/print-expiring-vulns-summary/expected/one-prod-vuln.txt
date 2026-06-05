@@ -1,7 +1,5 @@
 ## aws-prod (Snyk vulns tracked: Count=1)
 
-Maximum .snyk ignore expiry: 2025-07-01T00:00:00.000Z (30 days from today)
-
 ### Critical (Count=0)
 
 No vulnerabilities.

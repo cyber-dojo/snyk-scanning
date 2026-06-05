@@ -4,7 +4,6 @@
 import argparse
 import json
 import sys
-from datetime import date, timedelta
 
 
 SEVERITY_ORDER = ["critical", "high", "medium", "low"]
@@ -13,15 +12,6 @@ SEVERITY_ORDER = ["critical", "high", "medium", "low"]
 def mechanism_label(mechanism):
     """Return a short display label for the mechanism."""
     return "rego" if mechanism == "rego_limit" else ".snyk"
-
-
-def max_expiry_line(env, today_str):
-    """Return a formatted string showing the maximum pasteable .snyk expiry date for env."""
-    with open(f"rego.params.{env}.json") as f:
-        params = json.load(f)
-    max_days = params["max_ignore_expiry_days"]
-    max_date = date.fromisoformat(today_str) + timedelta(days=max_days)
-    return f"Maximum .snyk ignore expiry: {max_date}T00:00:00.000Z ({max_days} days from today)"
 
 
 def format_severity_table(severity, vulns):
@@ -45,12 +35,9 @@ def format_severity_table(severity, vulns):
     return lines
 
 
-def format_env_section(env_label, vulns, expiry_line):
+def format_env_section(env_label, vulns):
     """Return a list of Markdown lines for one environment's section."""
     lines = [f"## {env_label} (Snyk vulns tracked: Count={len(vulns)})", ""]
-    if vulns:
-        lines.append(expiry_line)
-        lines.append("")
     for severity in SEVERITY_ORDER:
         lines.extend(format_severity_table(severity, vulns))
     return lines
@@ -60,8 +47,6 @@ _EXAMPLE = """
 example output:
 
   ## aws-beta (Snyk vulns tracked: Count=2)
-
-  Maximum .snyk ignore expiry: 2026-06-11T00:00:00.000Z (30 days from today)
 
   ### Critical (Count=0)
 
@@ -94,12 +79,10 @@ def main():
     )
     parser.add_argument("--env",   required=True, help="Environment name, e.g. aws-beta")
     parser.add_argument("--vulns", required=True, help="JSON array of vuln objects as output by find_expiring_vulns.py")
-    parser.add_argument("--today", default=date.today().isoformat(),
-                        help="Today's date as YYYY-MM-DD (default: system date)")
     args = parser.parse_args()
 
     vulns = json.loads(args.vulns)
-    lines = format_env_section(args.env, vulns, max_expiry_line(args.env, args.today))
+    lines = format_env_section(args.env, vulns)
     print("\n".join(lines).rstrip("\n"))
 
 

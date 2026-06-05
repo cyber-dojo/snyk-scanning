@@ -11,12 +11,10 @@ readonly rego_dir="$(cd "${my_dir}/.." && pwd)"
 
 readonly PARAMS_BETA="${rego_dir}/rego.params.aws-beta.json"
 readonly PARAMS_PROD="${rego_dir}/rego.params.aws-prod.json"
-readonly PARAMS_MISSING_IGNORE_EXPIRY="${my_dir}/rego.params.missing-ignore-expiry-days.json"
 
 readonly MEDIUM_LIMIT_BETA="$(jq '.max_days_by_severity.medium' "${PARAMS_BETA}")"
 readonly CRITICAL_LIMIT_BETA="$(jq '.max_days_by_severity.critical' "${PARAMS_BETA}")"
 readonly CRITICAL_LIMIT_PROD="$(jq '.max_days_by_severity.critical' "${PARAMS_PROD}")"
-readonly MAX_IGNORE_EXPIRY_DAYS="$(jq '.max_ignore_expiry_days' "${PARAMS_BETA}")"
 
 # Fixed point in time for all tests: 2025-05-31 00:00:00 UTC
 readonly NOW_TS=1748736000
@@ -88,45 +86,17 @@ test_deny_vuln_with_expired_ignore()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Ignore expiry too far ahead => non-compliant regardless of age
+# Ignore with a far-future expiry => compliant (there is no cap on how far ahead)
 
-test_deny_vuln_with_ignore_expiry_too_far_ahead()
+test_allow_vuln_with_far_future_ignore()
 {
-  # 5 days old but ignore expires one day beyond the max_ignore_expiry_days limit
+  # 5 days old, ignore expiry is a year ahead -- compliant, there is no expiry cap
   local -r first_seen_ts=$((NOW_TS - 5 * SECONDS_PER_DAY))
-  local -r ignore_expires_ts=$((NOW_TS + (MAX_IGNORE_EXPIRY_DAYS + 1) * SECONDS_PER_DAY))
+  local -r ignore_expires_ts=$((NOW_TS + 365 * SECONDS_PER_DAY))
   local input
-  input=$(make_input "test-trail" "medium" "${first_seen_ts}" true "${ignore_expires_ts}" "2026-07-01 00:00:00+00:00")
-  evaluate_rego "${input}" "${PARAMS_BETA}"
-  assert_deny
-  assert_violation_message "trail 'test-trail': SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804 snyk ignore entry expiry 2026-07-01 00:00:00+00:00 is more than ${MAX_IGNORE_EXPIRY_DAYS} days ahead"
-}
-
-test_allow_vuln_with_ignore_expiry_at_limit()
-{
-  # 5 days old, ignore expires exactly at the max_ignore_expiry_days limit -- compliant
-  local -r first_seen_ts=$((NOW_TS - 5 * SECONDS_PER_DAY))
-  local -r ignore_expires_ts=$((NOW_TS + MAX_IGNORE_EXPIRY_DAYS * SECONDS_PER_DAY))
-  local input
-  input=$(make_input "test-trail" "medium" "${first_seen_ts}" true "${ignore_expires_ts}" "2025-06-30 00:00:00+00:00")
+  input=$(make_input "test-trail" "medium" "${first_seen_ts}" true "${ignore_expires_ts}" "2026-05-31 00:00:00+00:00")
   evaluate_rego "${input}" "${PARAMS_BETA}"
   assert_allow
-}
-
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# Missing max_ignore_expiry_days param => non-compliant (fail-safe)
-
-test_deny_active_ignore_when_max_ignore_expiry_days_param_is_missing()
-{
-  # A missing max_ignore_expiry_days param must produce deny, not silent
-  # compliance. This guards against using not ignore_too_far_ahead(vuln)
-  # in the policy, which would be vacuously true when the param is absent.
-  local -r first_seen_ts=$((NOW_TS - 5 * SECONDS_PER_DAY))
-  local -r ignore_expires_ts=$((NOW_TS + SECONDS_PER_DAY))
-  local input
-  input=$(make_input "test-trail" "medium" "${first_seen_ts}" true "${ignore_expires_ts}" "2025-06-01 00:00:00+00:00")
-  evaluate_rego "${input}" "${PARAMS_MISSING_IGNORE_EXPIRY}"
-  assert_deny
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

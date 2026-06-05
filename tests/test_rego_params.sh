@@ -30,11 +30,6 @@ test_prod_low_limit_le_beta_low_limit()
   assert_prod_le_beta "low limit" '.max_days_by_severity.low'
 }
 
-test_prod_max_ignore_expiry_days_le_beta_max_ignore_expiry_days()
-{
-  assert_prod_le_beta "max_ignore_expiry_days" '.max_ignore_expiry_days'
-}
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 assert_prod_le_beta()

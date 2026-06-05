@@ -61,6 +61,6 @@ date is 3 days away.
 
 Options:
 - Fix the underlying dependency and deploy (removes the vuln entirely)
-- Extend the expiry date in .snyk (if fixing is not yet feasible). You can extend by at most 30 days, as set by max_ignore_expiry_days in the rego params files above.
+- Extend the expiry date in .snyk (if fixing is not yet feasible). Omitting the expiry date ignores the vuln indefinitely.
 
 Relevant file: .snyk (in the relevant repo)

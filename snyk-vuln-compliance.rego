@@ -3,7 +3,6 @@ package policy
 import rego.v1
 
 max_days_by_severity    := data.params.max_days_by_severity
-max_ignore_expiry_days  := data.params.max_ignore_expiry_days
 
 default allow := false
 
@@ -25,17 +24,10 @@ ignore_has_expired(vuln) if {
     vuln.ignore_expires_ts < vuln.now_ts
 }
 
-ignore_too_far_ahead(vuln) if {
-    vuln.ignore_expires_exists == true
-    vuln.ignore_forever == false
-    vuln.ignore_expires_ts > vuln.now_ts + (max_ignore_expiry_days * seconds_per_day)
-}
-
 ignore_is_active(vuln) if {
     vuln.ignore_expires_exists == true
     vuln.ignore_forever == false
     vuln.ignore_expires_ts >= vuln.now_ts
-    vuln.ignore_expires_ts <= vuln.now_ts + (max_ignore_expiry_days * seconds_per_day)
 }
 
 # A .snyk ignore entry with no expiry date suppresses the vuln forever.
@@ -52,7 +44,7 @@ ignore_is_forever(vuln) if {
 # Case 1: no .snyk ignore entry -- age determines compliance
 trail_is_compliant(trail) if age_within_limit(vuln_of(trail))
 
-# Case 2: .snyk ignore entry exists and is active (not expired and expiry date not too far in the future) -- compliant regardless of age
+# Case 2: .snyk ignore entry exists and is active (not expired) -- compliant regardless of age
 trail_is_compliant(trail) if ignore_is_active(vuln_of(trail))
 
 # Case 3: .snyk ignore entry exists with no expiry date -- suppressed forever, compliant regardless of age
@@ -68,15 +60,6 @@ inactive_ignore_msg(trail) := msg if {
     msg := sprintf(
         "trail '%v': %v snyk ignore entry expired at %v",
         [trail.name, vuln.full_id, vuln.ignore_expires],
-    )
-}
-
-inactive_ignore_msg(trail) := msg if {
-    vuln := vuln_of(trail)
-    ignore_too_far_ahead(vuln)
-    msg := sprintf(
-        "trail '%v': %v snyk ignore entry expiry %v is more than %d days ahead",
-        [trail.name, vuln.full_id, vuln.ignore_expires, max_ignore_expiry_days],
     )
 }
 

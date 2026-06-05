@@ -70,7 +70,7 @@ violations contains msg if {
     not age_within_limit(vuln)
     msg := sprintf(
         "trail '%v': %v severity vuln age %d days exceeds %d day limit for severity %v",
-        [input.trail.name, vuln.full_id, age_days(vuln), max_days_by_severity[vuln.severity], vuln.severity],
+        [input.trail.name, vuln.full_id, floor(age_days(vuln)), max_days_by_severity[vuln.severity], vuln.severity],
     )
 }
 

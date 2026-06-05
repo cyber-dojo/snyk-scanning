@@ -113,6 +113,18 @@ test_deny_medium_vuln_at_age_limit()
   assert_violation_message "trail 'test-trail': SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804 severity vuln age ${MEDIUM_LIMIT_BETA} days exceeds ${MEDIUM_LIMIT_BETA} day limit for severity medium"
 }
 
+test_deny_vuln_age_message_uses_whole_days_for_fractional_age()
+{
+  # 9.5 days old (fractional) over the 4-day medium limit -- the violation message
+  # must report a whole number of days, not a Go %d-on-float error token.
+  local -r first_seen_ts=$((NOW_TS - 9 * SECONDS_PER_DAY - SECONDS_PER_DAY / 2))
+  local input
+  input=$(make_input "test-trail" "medium" "${first_seen_ts}" false 0 "")
+  evaluate_rego "${input}" "${PARAMS_BETA}"
+  assert_deny
+  assert_violation_message "trail 'test-trail': SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804 severity vuln age 9 days exceeds ${MEDIUM_LIMIT_BETA} day limit for severity medium"
+}
+
 test_deny_critical_vuln_at_age_limit_on_beta()
 {
   # at the critical age limit on aws-beta: non-compliant

@@ -445,7 +445,7 @@ jobs:
           COMPLIANT=true
           echo "COMPLIANT=${COMPLIANT}" >> "${GITHUB_ENV}"
           kosli attest generic \
-            --compliant "${COMPLIANT}" \
+            --compliant="${COMPLIANT}" \
             --attachments "${REGO_POLICY_FILENAME}" \
             --attachments "${REGO_PARAMS_FILENAME}" \
             --attachments "${SNYK_SARIF_FILENAME}" \
@@ -468,7 +468,7 @@ jobs:
           done < <(jq --raw-output '.[] | [(.evaluation.allow | tostring), .attestation_url] | @tsv' "${VULNS_FILENAME}")
 
           kosli attest generic \
-            --compliant "${COMPLIANT}" \
+            --compliant="${COMPLIANT}" \
             --attachments "${REGO_POLICY_FILENAME}" \
             --attachments "${REGO_PARAMS_FILENAME}" \
             --attachments "${SNYK_SARIF_FILENAME}" \

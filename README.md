@@ -111,7 +111,7 @@ For example, [aws-prod-co-promotion/.github/workflows/promote_one.yml](https://g
 Also called directly by build workflows in other repos to scan a newly built artifact.
 For example, [nginx/.github/workflows/main.yml](https://github.com/cyber-dojo/nginx/blob/b1ce55beb190397c80d3ba0536f6b97bb5f468f6/.github/workflows/main.yml#L102):
 
-**Example usage**
+**Example use**
 
 ```yaml
 jobs:

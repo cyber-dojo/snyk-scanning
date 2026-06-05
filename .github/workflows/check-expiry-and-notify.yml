@@ -57,7 +57,7 @@ jobs:
                  else "Days non-compliant: \(0 - $d)"
                  end)                             as $days_line |
                 "Mechanism: \($v.mechanism)"      as $mechanism |
-                "\($vuln)\n\($severity)\n\($repo)\n\($days_line)\n\($mechanism)"
+                "\($days_line)\n\($vuln)\n\($severity)\n\($repo)\n\($mechanism)"
               end'
             echo "EOF"
           } >> ${GITHUB_ENV}

@@ -32,10 +32,16 @@ jobs:
           RESULT=$(./bin/find_expiring_vulns.py \
             --env ${{ inputs.kosli_env }} \
             --vuln-dir vulns)
+          STATUS_SYMBOL=$(echo "${RESULT}" | jq --raw-output '
+            if ((.vulns | length) > 0) and (.vulns[0].days_remaining <= 0)
+            then ":x:"
+            else ":white_check_mark:"
+            end')
           {
             echo "VULNS_JSON<<EOF"
             echo "${RESULT}" | jq --compact-output '.vulns'
             echo "EOF"
+            echo "STATUS_SYMBOL=${STATUS_SYMBOL}"
             echo "SLACK_MESSAGE<<EOF"
             echo "${RESULT}" | jq --raw-output '
               if (.vulns | length) == 0
@@ -43,12 +49,15 @@ jobs:
               else
                 .vulns[0]                         as $v         |
                 ($v.days_remaining | ceil)        as $d         |
-                "Next vuln: \($v.full_id)"        as $next_vuln |
+                "Vuln: \($v.full_id)"             as $vuln      |
                 "Severity: \($v.severity)"        as $severity  |
                 "Repo: \($v.artifact)"            as $repo      |
-                "Days till non-compliance: \($d)" as $days_till |
+                (if $d > 0
+                 then "Days till non-compliant: \($d)"
+                 else "Days non-compliant: \(0 - $d)"
+                 end)                             as $days_line |
                 "Mechanism: \($v.mechanism)"      as $mechanism |
-                "\($next_vuln)\n\($severity)\n\($repo)\n\($days_till)\n\($mechanism)"
+                "\($vuln)\n\($severity)\n\($repo)\n\($days_line)\n\($mechanism)"
               end'
             echo "EOF"
           } >> ${GITHUB_ENV}
@@ -57,7 +66,7 @@ jobs:
         uses: ./.github/actions/send-slack-message
         with:
           slack_url: ${{secrets.SLACK_WEBHOOK_URL}}
-          message: "Environment: ${{ inputs.kosli_env }}\n${SLACK_MESSAGE}\nSee: ${GITHUB_RUN_URL}\nResponse guide: ${RESPONSE_GUIDE_URL}"
+          message: "Environment: ${{ inputs.kosli_env }} ${STATUS_SYMBOL}\n${SLACK_MESSAGE}\nSee: ${GITHUB_RUN_URL}\nResponse guide: ${RESPONSE_GUIDE_URL}"
 
       - name: Send Slack -- workflow failure
         if: failure()

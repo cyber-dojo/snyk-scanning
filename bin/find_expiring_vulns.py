@@ -22,6 +22,9 @@ def dot_snyk_result(data, env, now_ts):
     """Return a result dict if the .snyk ignore entry has a future expiry, else None."""
     if not data.get("ignore_expires_exists"):
         return None
+    if data.get("ignore_forever"):
+        # No expiry date -- suppressed forever, so it never appears in an expiry report.
+        return None
     secs_remaining = data["ignore_expires_ts"] - now_ts
     if secs_remaining <= 0:
         return None

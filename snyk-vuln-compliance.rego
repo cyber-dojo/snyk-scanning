@@ -21,18 +21,27 @@ age_within_limit(vuln) if {
 
 ignore_has_expired(vuln) if {
     vuln.ignore_expires_exists == true
+    vuln.ignore_forever == false
     vuln.ignore_expires_ts < vuln.now_ts
 }
 
 ignore_too_far_ahead(vuln) if {
     vuln.ignore_expires_exists == true
+    vuln.ignore_forever == false
     vuln.ignore_expires_ts > vuln.now_ts + (max_ignore_expiry_days * seconds_per_day)
 }
 
 ignore_is_active(vuln) if {
     vuln.ignore_expires_exists == true
+    vuln.ignore_forever == false
     vuln.ignore_expires_ts >= vuln.now_ts
     vuln.ignore_expires_ts <= vuln.now_ts + (max_ignore_expiry_days * seconds_per_day)
+}
+
+# A .snyk ignore entry with no expiry date suppresses the vuln forever.
+ignore_is_forever(vuln) if {
+    vuln.ignore_expires_exists == true
+    vuln.ignore_forever == true
 }
 
 # allow is driven by a positive assertion (every trail must be compliant) rather
@@ -45,6 +54,9 @@ trail_is_compliant(trail) if age_within_limit(vuln_of(trail))
 
 # Case 2: .snyk ignore entry exists and is active (not expired and expiry date not too far in the future) -- compliant regardless of age
 trail_is_compliant(trail) if ignore_is_active(vuln_of(trail))
+
+# Case 3: .snyk ignore entry exists with no expiry date -- suppressed forever, compliant regardless of age
+trail_is_compliant(trail) if ignore_is_forever(vuln_of(trail))
 
 allow if trail_is_compliant(input.trail)
 
@@ -79,10 +91,11 @@ violations contains msg if {
     )
 }
 
-# Case 2 violation: ignore entry exists but is not active
+# Case 2 violation: ignore entry exists (with an expiry date) but is not active
 violations contains msg if {
     vuln := vuln_of(input.trail)
     vuln.ignore_expires_exists == true
+    vuln.ignore_forever == false
     not ignore_is_active(vuln)
     msg := inactive_ignore_msg(input.trail)
 }

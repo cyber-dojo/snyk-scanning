@@ -1,0 +1,5 @@
+ignore:
+  SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804:
+    - '*':
+        reason: Ignoring license issue
+        created: 2025-04-08T10:03:36.589Z

@@ -58,6 +58,16 @@ test_two_vulns_one_with_active_ignore()
   assert_stale_equals "$(cat "${my_dir}/combine-snyk/expected/stale-empty.json")"
 }
 
+test_one_medium_vuln_with_no_expiry_ignore()
+{
+  # A .snyk entry with no expiry date means suppress that warning forever.
+  run_combine_snyk "one-medium.sarif.json" "no-expiry-ignore.snyk.yaml"
+  assert_status_equals 0
+  assert_stdout_equals "$(cat "${my_dir}/combine-snyk/expected/one-medium-no-expiry-ignore.json")"
+  assert_stderr_equals ""
+  assert_stale_equals "$(cat "${my_dir}/combine-snyk/expected/stale-empty.json")"
+}
+
 test_one_stale_snyk_entry()
 {
   # .snyk ignores a vuln that does not appear in the SARIF output

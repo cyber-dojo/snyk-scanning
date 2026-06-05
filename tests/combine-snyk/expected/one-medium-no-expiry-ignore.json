@@ -6,10 +6,10 @@
     "full_id": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
     "severity": "medium",
     "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
-    "ignore_expires": "2099-01-01 00:00:00+00:00",
-    "ignore_expires_ts": 4070908800.0,
+    "ignore_expires": "",
+    "ignore_expires_ts": 0,
     "ignore_expires_exists": true,
-    "ignore_forever": false,
+    "ignore_forever": true,
     "trail_name": "test-repo-medium-SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804"
   }
 ]

@@ -44,6 +44,9 @@ Relevant files:
 Mechanism: dot_snyk_expiry
 --------------------------
 The .snyk ignore entry for this vuln is about to expire.
+Note: a .snyk entry without an expiry date means ignore forever. Such an entry is
+compliant regardless of the vuln's age and never appears in an expiry report, so
+it will never trigger this alert.
 
 Example step summary entry:
 

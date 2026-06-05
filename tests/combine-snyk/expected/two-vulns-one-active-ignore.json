@@ -9,6 +9,7 @@
     "ignore_expires": "2099-01-01 00:00:00+00:00",
     "ignore_expires_ts": 4070908800.0,
     "ignore_expires_exists": true,
+    "ignore_forever": false,
     "trail_name": "test-repo-medium-SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804"
   },
   {
@@ -21,6 +22,7 @@
     "ignore_expires": "",
     "ignore_expires_ts": 0,
     "ignore_expires_exists": false,
+    "ignore_forever": false,
     "trail_name": "test-repo-high-SNYK-GOLANG-GITHUBCOMOPENCONTAINERSSELINUXGOSELINUX-13843568"
   }
 ]

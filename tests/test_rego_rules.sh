@@ -37,6 +37,19 @@ test_allow_vuln_with_active_ignore()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Forever ignore (.snyk entry with no expiry) => compliant regardless of age
+
+test_allow_vuln_with_forever_ignore()
+{
+  # well over the medium age limit, but ignored forever (.snyk entry has no expiry) -- age does not matter
+  local -r first_seen_ts=$((NOW_TS - (MEDIUM_LIMIT_BETA + 5) * SECONDS_PER_DAY))
+  local input
+  input=$(make_input "test-trail" "medium" "${first_seen_ts}" true 0 "" true)
+  evaluate_rego "${input}" "${PARAMS_BETA}"
+  assert_allow
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # No ignore => age within limit => compliant
 
 test_allow_medium_vuln_within_age_limit()
@@ -214,6 +227,7 @@ make_input()
   local -r ignore_expires_exists="${4}"
   local -r ignore_expires_ts="${5}"
   local -r ignore_expires="${6}"
+  local -r ignore_forever="${7:-false}"
   jq -n \
     --arg     trail_name            "${trail_name}" \
     --arg     severity              "${severity}" \
@@ -222,6 +236,7 @@ make_input()
     --argjson ignore_expires_exists "${ignore_expires_exists}" \
     --argjson ignore_expires_ts     "${ignore_expires_ts}" \
     --arg     ignore_expires        "${ignore_expires}" \
+    --argjson ignore_forever        "${ignore_forever}" \
     '{
       trail: {
         name: $trail_name,
@@ -235,7 +250,8 @@ make_input()
                 severity:              $severity,
                 ignore_expires_exists: $ignore_expires_exists,
                 ignore_expires_ts:     $ignore_expires_ts,
-                ignore_expires:        $ignore_expires
+                ignore_expires:        $ignore_expires,
+                ignore_forever:        $ignore_forever
               }
             }
           }

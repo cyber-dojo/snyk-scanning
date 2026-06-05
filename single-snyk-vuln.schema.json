@@ -32,6 +32,10 @@
       "type": "number",
       "description": "Unix timestamp of the ignore expiry, 0 if none"
     },
+    "ignore_forever": {
+      "type": "boolean",
+      "description": "Whether the Snyk ignore entry has no expiry date (suppressed forever)"
+    },
     "first_seen_ts": {
       "type": "number",
       "description": "Unix timestamp when this vulnerability was first seen in the repo"
@@ -53,6 +57,7 @@
     "ignore_expires_exists",
     "ignore_expires",
     "ignore_expires_ts",
+    "ignore_forever",
     "first_seen_ts",
     "first_seen",
     "trail_name"

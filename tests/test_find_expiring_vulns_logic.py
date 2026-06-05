@@ -21,6 +21,7 @@ def _high_vuln_no_ignore(first_seen_ts=None):
         "severity": "high",
         "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
         "ignore_expires_exists": False,
+        "ignore_forever": False,
         "ignore_expires_ts": 0,
         "ignore_expires": "",
         "first_seen_ts": first_seen_ts if first_seen_ts is not None else NOW_TS - 1 * 86400,
@@ -55,6 +56,16 @@ class TestDotSnykResult(unittest.TestCase):
                 "ignore_expires_exists": True,
                 "ignore_expires_ts": NOW_TS - 1,
                 "ignore_expires": "2025-05-31 23:59:59+00:00"}
+        result = find_expiring_vulns.dot_snyk_result(data, "aws-prod", NOW_TS)
+        self.assertIsNone(result)
+
+    def test_c7f2a308(self):
+        """Returns None when the .snyk ignore entry has no expiry (suppressed forever)."""
+        data = {**_high_vuln_no_ignore(),
+                "ignore_expires_exists": True,
+                "ignore_forever": True,
+                "ignore_expires_ts": 0,
+                "ignore_expires": ""}
         result = find_expiring_vulns.dot_snyk_result(data, "aws-prod", NOW_TS)
         self.assertIsNone(result)
 

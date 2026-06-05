@@ -42,6 +42,7 @@ if __name__ == "__main__":  # pragma: no cover
                 'ignore_expires': '',
                 'ignore_expires_ts': 0,
                 "ignore_expires_exists": False,
+                'ignore_forever': False,
                 'trail_name': trail_name,
             }
 
@@ -55,10 +56,17 @@ if __name__ == "__main__":  # pragma: no cover
         for id in ignore:
             if id in vulns:
                 vuln = vulns[id]
-                expires = ignore[id][0]['*']['expires']
-                vuln['ignore_expires'] = expires
-                vuln['ignore_expires_ts'] = expires.timestamp()
+                entry = ignore[id][0]['*']
                 vuln['ignore_expires_exists'] = True
+                if 'expires' in entry:
+                    expires = entry['expires']
+                    vuln['ignore_expires'] = expires
+                    vuln['ignore_expires_ts'] = expires.timestamp()
+                else:
+                    # A .snyk entry with no expiry date means suppress that warning forever.
+                    # The rego treats this as compliant regardless of age, so there is no
+                    # concrete expiry date to record.
+                    vuln['ignore_forever'] = True
             else:
                 stale_ids.append(id)
 

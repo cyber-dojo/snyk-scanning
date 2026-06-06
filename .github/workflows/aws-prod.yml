@@ -51,6 +51,7 @@ jobs:
       - name: Tag the Flow
         run:
           kosli tag flow ${KOSLI_FLOW}
+            --set env=${KOSLI_ENV}
             --set kind=run
             --set ci=github
             --set workflow_url="${WORKFLOW_URL}"

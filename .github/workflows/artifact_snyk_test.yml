@@ -297,6 +297,7 @@ jobs:
 
           WORKFLOW_URL="https://github.com/cyber-dojo/snyk-scanning/blob/main/.github/workflows/artifact_snyk_test.yml"
           kosli tag flow ${KOSLI_FLOW} \
+            --set env=${{inputs.kosli_env}} \
             --set kind=run \
             --set ci=github \
             --set workflow_url="${WORKFLOW_URL}"

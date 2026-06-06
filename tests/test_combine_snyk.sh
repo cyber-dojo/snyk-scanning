@@ -6,6 +6,8 @@ readonly my_dir="$(cd "$(dirname "${0}")" && pwd)"
 readonly NOW_TS=1748736000
 readonly SNYK_VERSION="1.0.0"
 readonly REPO_NAME="test-repo"
+readonly ARTIFACT_FINGERPRINT="1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a"
+readonly ARTIFACT_NAME="244531986313.dkr.ecr.eu-central-1.amazonaws.com/test-repo:abc1234@sha256:${ARTIFACT_FINGERPRINT}"
 
 setUp()
 {
@@ -99,6 +101,8 @@ run_combine_snyk()
     "${my_dir}/combine-snyk/${sarif_filename}" \
     "${my_dir}/combine-snyk/${snyk_policy_filename}" \
     "${staleF}" \
+    "${ARTIFACT_NAME}" \
+    "${ARTIFACT_FINGERPRINT}" \
     | jq . >${stdoutF} 2>${stderrF}
   echo $? >${statusF}
 }

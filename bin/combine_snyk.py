@@ -14,6 +14,8 @@ if __name__ == "__main__":  # pragma: no cover
     sarif_filename = sys.argv[4]
     snyk_policy_filename = sys.argv[5]
     stale_filename = sys.argv[6]
+    artifact_name = sys.argv[7]
+    artifact_fingerprint = sys.argv[8]
 
     # Extract ids and severities of each vulnerability in sarif file
     with open(sarif_filename) as sarif_file:
@@ -36,6 +38,8 @@ if __name__ == "__main__":  # pragma: no cover
                 'now_ts': now_ts,
                 'now': now,
                 'version': snyk_version,
+                'artifact_name': artifact_name,
+                'artifact_fingerprint': artifact_fingerprint,
                 'full_id': full_id,
                 'severity': severity,
                 'vuln_url': vuln_url,

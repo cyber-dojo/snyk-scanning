@@ -229,6 +229,8 @@ jobs:
             ${SNYK_SARIF_FILENAME} \
             ${SNYK_POLICY_FILENAME} \
             ${STALE_VULNS_FILENAME} \
+            "${{inputs.artifact_name}}" \
+            "${{steps.set-fingerprint.outputs.fingerprint}}" \
               > ${VULNS_FILENAME}
 
       - name: Write stale .snyk entries to job summary
@@ -267,6 +269,9 @@ jobs:
       VULN_FILENAME: vuln-${{matrix.trail_name}}.json
       KOSLI_FLOW: snyk-${{inputs.kosli_env}}-per-vuln
       KOSLI_TRAIL: ${{matrix.trail_name}}
+      # Per-fingerprint attestation name so two builds of the same artifact in one
+      # deploy snapshot do not clobber each other on the shared per-vuln trail.
+      VULN_ATTESTATION_NAME: snyk-${{matrix.artifact_fingerprint}}
     strategy:
       matrix:
         include: ${{fromJSON(needs.find-snyk-vulns.outputs.vulns)}}
@@ -316,7 +321,7 @@ jobs:
           kosli attest custom
             --annotate snyk_URL=${{matrix.vuln_url}}
             --attestation-data ${VULN_FILENAME}
-            --name snyk
+            --name ${VULN_ATTESTATION_NAME}
             --type ${SNYK_CAT_NAME}
 
       - name: Evaluate trail and add to vuln data
@@ -325,10 +330,16 @@ jobs:
           curl --fail-with-body "${REGO_POLICY_URL}" > ${REGO_POLICY_FILENAME}
           curl --fail-with-body "${REGO_PARAMS_URL}" > ${REGO_PARAMS_FILENAME}
 
+          # The rego selects the attestation named snyk-<fingerprint>, so it
+          # needs the fingerprint alongside the severity limits. --params takes a
+          # single value, so merge the fingerprint into the rego params object.
+          PARAMS="$(jq --compact-output --arg fp "${{matrix.artifact_fingerprint}}" \
+            '. + {fingerprint: $fp}' "${REGO_PARAMS_FILENAME}")"
+
           kosli evaluate trail ${KOSLI_TRAIL} \
             --flow ${KOSLI_FLOW} \
             --policy "${REGO_POLICY_FILENAME}" \
-            --params "@${REGO_PARAMS_FILENAME}" \
+            --params "${PARAMS}" \
             --debug=false \
             --no-assert \
             --output=json > evaluation.json
@@ -339,7 +350,7 @@ jobs:
 
       - name: Get attestation URL ready for --annotate
         run: |
-          ATTESTATION_URL="$(kosli get attestation snyk \
+          ATTESTATION_URL="$(kosli get attestation ${VULN_ATTESTATION_NAME} \
             --flow ${KOSLI_FLOW} \
             --trail ${KOSLI_TRAIL} \
             --output json \

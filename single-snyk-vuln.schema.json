@@ -7,6 +7,22 @@
       "type": "string",
       "description": "The version of Snyk that found the vulnerability, eg 1.1300.2"
     },
+    "artifact_name": {
+      "type": "string",
+      "description": "The full name of the scanned artifact, eg <registry>/runner:tag@sha256:<digest>"
+    },
+    "artifact_fingerprint": {
+      "type": "string",
+      "description": "The sha256 fingerprint of the scanned artifact"
+    },
+    "now_ts": {
+      "type": "number",
+      "description": "Unix timestamp when this scan ran"
+    },
+    "now": {
+      "type": "string",
+      "description": "Human-readable UTC datetime when this scan ran"
+    },
     "full_id": {
       "type": "string",
       "description": "The full identifier of the vulnerability, eg SNYK-ALPINE321-RUBY-14100871"
@@ -51,6 +67,10 @@
   },
   "required": [
     "version",
+    "artifact_name",
+    "artifact_fingerprint",
+    "now_ts",
+    "now",
     "full_id",
     "severity",
     "vuln_url",

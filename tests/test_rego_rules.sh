@@ -20,6 +20,10 @@ readonly CRITICAL_LIMIT_PROD="$(jq '.max_days_by_severity.critical' "${PARAMS_PR
 readonly NOW_TS=1748736000
 readonly SECONDS_PER_DAY=86400
 
+# Per-vuln attestations are named snyk-<fingerprint>; the rego selects the entry
+# matching data.params.fingerprint. Tests key their input and params to this.
+readonly TEST_FINGERPRINT="1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a"
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Active ignore => compliant regardless of age
 
@@ -160,6 +164,7 @@ test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input()
   local -r first_seen_ts=$((NOW_TS - (MEDIUM_LIMIT_BETA + 1) * SECONDS_PER_DAY))
   local input
   input=$(jq -n \
+    --arg     fingerprint   "${TEST_FINGERPRINT}" \
     --argjson now_ts        "${NOW_TS}" \
     --argjson first_seen_ts "${first_seen_ts}" \
     '{
@@ -167,7 +172,7 @@ test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input()
         name: "test-trail",
         compliance_status: {
           attestations_statuses: {
-            snyk: {
+            ("snyk-" + $fingerprint): {
               attestation_data: {
                 not_full_id:           "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
                 now_ts:                $now_ts,
@@ -188,14 +193,84 @@ test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# Per-fingerprint selection: one shared trail can carry two builds' verdicts.
+# The rego must return the verdict for the fingerprint being evaluated, never
+# the other build's. This is what stops a deploy-swap race from clobbering.
+
+test_selects_only_the_matching_fingerprints_verdict()
+{
+  # The two real runner builds from the aws-prod deploy swap that triggered this:
+  # incoming bc5fbc14 and outgoing bc8fb513.
+  local -r fingerprintA="bdc8eb7fd4717d25b74f5bae58316e66c24283f17a03ce0256ea04fe7eee72b1"
+  local -r fingerprintB="9db5a9987ba83419bec8ded2cc7bc5c9db814c8f0f275b5fe7228957ceed5ac2"
+  # Both builds are well over the medium age limit. fingerprintA has an active ignore
+  # (compliant); fingerprintB has no ignore (non-compliant on age).
+  local -r old_ts=$((NOW_TS - (MEDIUM_LIMIT_BETA + 5) * SECONDS_PER_DAY))
+  local -r future_ts=$((NOW_TS + SECONDS_PER_DAY))
+  local input
+  input=$(jq -n \
+    --arg     fingerprintA       "${fingerprintA}" \
+    --arg     fingerprintB       "${fingerprintB}" \
+    --argjson now_ts    "${NOW_TS}" \
+    --argjson old_ts    "${old_ts}" \
+    --argjson future_ts "${future_ts}" \
+    '{
+      trail: {
+        name: "test-trail",
+        compliance_status: {
+          attestations_statuses: {
+            ("snyk-" + $fingerprintA): {
+              attestation_data: {
+                full_id:               "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
+                artifact_fingerprint:  $fingerprintA,
+                now_ts:                $now_ts,
+                first_seen_ts:         $old_ts,
+                severity:              "medium",
+                ignore_expires_exists: true,
+                ignore_expires_ts:     $future_ts,
+                ignore_expires:        "2025-06-01 00:00:00+00:00",
+                ignore_forever:        false
+              }
+            },
+            ("snyk-" + $fingerprintB): {
+              attestation_data: {
+                full_id:               "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
+                artifact_fingerprint:  $fingerprintB,
+                now_ts:                $now_ts,
+                first_seen_ts:         $old_ts,
+                severity:              "medium",
+                ignore_expires_exists: false,
+                ignore_expires_ts:     0,
+                ignore_expires:        "",
+                ignore_forever:        false
+              }
+            }
+          }
+        }
+      }
+    }')
+  # fingerprintA: active ignore => compliant
+  evaluate_rego "${input}" "${PARAMS_BETA}" "${fingerprintA}"
+  assert_allow
+  # fingerprintB: same trail, but no ignore and age over the limit => non-compliant
+  evaluate_rego "${input}" "${PARAMS_BETA}" "${fingerprintB}"
+  assert_deny
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 evaluate_rego()
 {
   local -r input_json="${1}"
   local -r params_file="${2}"
+  local -r fingerprint="${3:-${TEST_FINGERPRINT}}"
+  # The rego needs both the severity limits (from the params file) and the
+  # fingerprint of the artifact being evaluated. --params takes a single value,
+  # so merge them into one inline JSON object.
+  local -r params="$(jq -c --arg fp "${fingerprint}" '. + {fingerprint: $fp}' "${params_file}")"
   echo "${input_json}" | kosli evaluate input \
     --policy "${rego_dir}/snyk-vuln-compliance.rego" \
-    --params "@${params_file}" \
+    --params "${params}" \
     --output json \
     >${stdoutF} 2>${stderrF}
   echo $? >${statusF}
@@ -213,6 +288,7 @@ make_input()
   jq -n \
     --arg     trail_name            "${trail_name}" \
     --arg     severity              "${severity}" \
+    --arg     fingerprint           "${TEST_FINGERPRINT}" \
     --argjson now_ts                "${NOW_TS}" \
     --argjson first_seen_ts         "${first_seen_ts}" \
     --argjson ignore_expires_exists "${ignore_expires_exists}" \
@@ -224,9 +300,10 @@ make_input()
         name: $trail_name,
         compliance_status: {
           attestations_statuses: {
-            snyk: {
+            ("snyk-" + $fingerprint): {
               attestation_data: {
                 full_id:               "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
+                artifact_fingerprint:  $fingerprint,
                 now_ts:                $now_ts,
                 first_seen_ts:         $first_seen_ts,
                 severity:              $severity,

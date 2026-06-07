@@ -3,17 +3,17 @@ package policy
 import rego.v1
 
 max_days_by_severity    := data.params.max_days_by_severity
-fingerprint             := data.params.fingerprint
 
-# Per-vuln verdicts are attested under a per-fingerprint name so two builds of
-# the same artifact in one deploy snapshot cannot clobber each other on the
-# shared per-vuln trail.
-attestation_name        := sprintf("snyk-%s", [fingerprint])
+# Per-vuln verdicts are attested under a per-fingerprint name (snyk-<fingerprint>)
+# so two builds of the same artifact in one deploy snapshot cannot clobber each
+# other on the shared per-vuln trail. The workflow builds that name once and
+# passes it in via data.params.attestation_name; we do not rebuild the prefix here.
+attestation_name        := data.params.attestation_name
 
 default allow := false
 
-# Select the verdict for the fingerprint being evaluated, passed in via
-# data.params.fingerprint.
+# Select the verdict for the artifact being evaluated, named by
+# data.params.attestation_name.
 vuln_of(trail) := trail.compliance_status.attestations_statuses[attestation_name].attestation_data
 
 seconds_per_day := 60 * 60 * 24

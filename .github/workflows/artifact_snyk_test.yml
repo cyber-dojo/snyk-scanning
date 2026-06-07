@@ -331,11 +331,12 @@ jobs:
           curl --fail-with-body "${REGO_POLICY_URL}" > ${REGO_POLICY_FILENAME}
           curl --fail-with-body "${REGO_PARAMS_URL}" > ${REGO_PARAMS_FILENAME}
 
-          # The rego selects the attestation named snyk-<fingerprint>, so it
-          # needs the fingerprint alongside the severity limits. --params takes a
-          # single value, so merge the fingerprint into the rego params object.
-          PARAMS="$(jq --compact-output --arg fp "${{matrix.artifact_fingerprint}}" \
-            '. + {fingerprint: $fp}' "${REGO_PARAMS_FILENAME}")"
+          # The rego selects the per-vuln attestation by name. The name is built
+          # once as VULN_ATTESTATION_NAME (snyk-<fingerprint>), so pass that in
+          # alongside the severity limits rather than rebuilding the prefix in the
+          # rego. --params takes a single value, so merge it into the params object.
+          PARAMS="$(jq --compact-output --arg name "${VULN_ATTESTATION_NAME}" \
+            '. + {attestation_name: $name}' "${REGO_PARAMS_FILENAME}")"
 
           kosli evaluate trail ${KOSLI_TRAIL} \
             --flow ${KOSLI_FLOW} \

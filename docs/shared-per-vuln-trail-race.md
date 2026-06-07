@@ -189,11 +189,13 @@ What was changed:
    instead of the fixed `snyk`, and reads it back under the same name. Two builds
    in one snapshot now write two distinct statuses on the trail, so neither
    clobbers the other.
-2. Fingerprint-parameterised rego. `snyk-vuln-compliance.rego` selects
-   `attestations_statuses[sprintf("snyk-%s", [data.params.fingerprint])]`
-   (hoisted into the `attestation_name` rule) instead of the hard-coded
-   `["snyk"]`. The fingerprint is merged into the `evaluate trail --params`
-   object alongside `max_days_by_severity`. If the fingerprint is ever absent,
+2. Name-parameterised rego. `snyk-vuln-compliance.rego` selects
+   `attestations_statuses[data.params.attestation_name]` instead of the
+   hard-coded `["snyk"]`. The workflow builds the per-fingerprint name
+   `snyk-<fingerprint>` once (the `VULN_ATTESTATION_NAME` env var used for the
+   attest and read steps) and merges it into the `evaluate trail --params` object
+   alongside `max_days_by_severity`, so the `snyk-` prefix lives in exactly one
+   place rather than being rebuilt inside the rego. If the name is ever absent,
    `vuln_of` is undefined and `allow` defaults to `false` (the safe,
    non-compliant direction).
 3. Fingerprint in the attested data. `combine_snyk.py` emits `artifact_name`

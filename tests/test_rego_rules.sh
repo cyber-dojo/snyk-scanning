@@ -21,7 +21,7 @@ readonly NOW_TS=1748736000
 readonly SECONDS_PER_DAY=86400
 
 # Per-vuln attestations are named snyk-<fingerprint>; the rego selects the entry
-# matching data.params.fingerprint. Tests key their input and params to this.
+# matching data.params.attestation_name. Tests key their input and params to this.
 readonly TEST_FINGERPRINT="1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a"
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -265,9 +265,10 @@ evaluate_rego()
   local -r params_file="${2}"
   local -r fingerprint="${3:-${TEST_FINGERPRINT}}"
   # The rego needs both the severity limits (from the params file) and the
-  # fingerprint of the artifact being evaluated. --params takes a single value,
-  # so merge them into one inline JSON object.
-  local -r params="$(jq -c --arg fp "${fingerprint}" '. + {fingerprint: $fp}' "${params_file}")"
+  # attestation name of the artifact being evaluated. The workflow builds that
+  # name as snyk-<fingerprint>; mirror it here. --params takes a single value, so
+  # merge them into one inline JSON object.
+  local -r params="$(jq -c --arg name "snyk-${fingerprint}" '. + {attestation_name: $name}' "${params_file}")"
   echo "${input_json}" | kosli evaluate input \
     --policy "${rego_dir}/snyk-vuln-compliance.rego" \
     --params "${params}" \

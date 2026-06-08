@@ -91,7 +91,7 @@ Single job: check-expiry
   1. actions/checkout@v6
 
   2. Setup Kosli CLI
-       uses: kosli-dev/setup-cli-action@v3
+       uses: kosli-dev/setup-cli-action@v5
        version: ${{vars.KOSLI_CLI_VERSION}}
 
   3. Find expiring vulns (aws-beta)

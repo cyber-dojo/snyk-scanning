@@ -112,9 +112,8 @@ jobs:
       VULNS_FILENAME: vulns.json
       STALE_VULNS_FILENAME: stale_vulns.json
     steps:
-      - uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
+      - uses: cyber-dojo/harden-runner@main
+      - uses: cyber-dojo/setup-kosli-cli@main
 
       - uses: actions/checkout@v6
         with:
@@ -134,11 +133,6 @@ jobs:
       - name: Login to Amazon ECR
         if: contains(inputs.artifact_name, '.amazonaws.com')
         uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v3
-        with:
-          version: ${{vars.KOSLI_CLI_VERSION}}
 
       - name: Create custom-attestation-type
         run:
@@ -215,11 +209,6 @@ jobs:
         run:
           cat "${SNYK_POLICY_FILENAME}"
 
-      - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v3
-        with:
-          version: ${{vars.KOSLI_CLI_VERSION}}
-
       - name: Combine all data ready for individual data attestations
         run: |
           ./bin/combine_snyk.py \
@@ -276,18 +265,9 @@ jobs:
       matrix:
         include: ${{fromJSON(needs.find-snyk-vulns.outputs.vulns)}}
     steps:
-      - uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-
-      - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v3
-        with:
-          version: ${{vars.KOSLI_CLI_VERSION}}
+      - uses: cyber-dojo/harden-runner@main
+      - uses: cyber-dojo/pinned-checkout@main
+      - uses: cyber-dojo/setup-kosli-cli@main
 
       - name: Add time vuln first seen in the repo
         run: |
@@ -395,18 +375,9 @@ jobs:
       KOSLI_FINGERPRINT: ${{needs.find-snyk-vulns.outputs.fingerprint}}
       KOSLI_ATTESTATION_NAME: ${{inputs.kosli_attestation_name}}
     steps:
-      - uses: step-security/harden-runner@v2
-        with:
-          egress-policy: audit
-
-      - uses: actions/checkout@v6
-        with:
-          fetch-depth: 1
-
-      - name: Setup Kosli CLI
-        uses: kosli-dev/setup-cli-action@v3
-        with:
-          version: ${{vars.KOSLI_CLI_VERSION}}
+      - uses: cyber-dojo/harden-runner@main
+      - uses: cyber-dojo/pinned-checkout@main
+      - uses: cyber-dojo/setup-kosli-cli@main
 
       - uses: actions/download-artifact@v8
         with:

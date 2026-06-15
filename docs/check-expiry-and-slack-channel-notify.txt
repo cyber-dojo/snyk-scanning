@@ -3,422 +3,187 @@ Check-expiry and Slack notification workflow
 
 Purpose
 -------
-A daily GitHub Actions workflow that queries existing Kosli per-vuln trail
-data to find Snyk vulnerabilities that are approaching their compliance
-expiry. It sends a Slack message to the cyber-dojo-alerts channel (the same
-channel used by cyber-dojo/secrets check-secrets.yml). It makes NO Kosli
-attestations and has no effect on compliance status.
+A reusable GitHub Actions workflow that reports the Snyk vulnerabilities tracked
+in an environment and how close each is to becoming non-compliant. It sends a
+Slack message to the cyber-dojo-alerts channel and writes a GitHub step summary.
+It makes NO Kosli calls and has no effect on compliance status.
+
+It is called once per environment by aws-beta.yml and aws-prod.yml, after that
+environment's scan has run. The per-vuln data it reports on is produced earlier
+in the same GitHub Actions run by artifact_snyk_test.yml, which uploads one
+vuln-*.json file per vulnerability.
 
 
-Context: two expiry mechanisms
--------------------------------
-Each per-vuln Kosli trail holds a "snyk" attestation whose attestation_data
-contains these fields (from bin/combine_snyk.py):
+Two expiry mechanisms
+---------------------
+Each vuln-*.json file is the per-vuln matrix data from artifact_snyk_test.yml,
+with first_seen_ts (the trail's created_at) added. find_expiring_vulns.py reads
+these fields:
 
-  first_seen_ts        unix timestamp when the trail was first created
-  severity             "critical" | "high" | "medium" | "low"
+  first_seen_ts          unix timestamp the per-vuln trail was first created
+  severity               "critical" | "high" | "medium" | "low"
   ignore_expires_exists  true if the .snyk file has an ignore entry for this vuln
-  ignore_expires_ts    unix timestamp of that ignore entry's expiry (0 if none)
-  full_id              e.g. "SNYK-ALPINE322-ZLIB-16078399"
-  vuln_url             e.g. "https://security.snyk.io/vuln/SNYK-..."
-  trail_name           e.g. "creator-medium-SNYK-ALPINE322-ZLIB-16078399"
+  ignore_forever         true if that ignore entry has no expiry date
+  ignore_expires_ts      unix timestamp of that ignore entry's expiry (0 if none)
+  ignore_expires         string form of that expiry (empty if none)
+  full_id                e.g. "SNYK-ALPINE322-ZLIB-16078399"
+  vuln_url               e.g. "https://security.snyk.io/vuln/SNYK-..."
+  trail_name             e.g. "creator-medium-SNYK-ALPINE322-ZLIB-16078399"
 
 The rego policy (snyk-vuln-compliance.rego) uses max_days_by_severity from
 rego.params.{env}.json:
 
-  aws-beta:  critical=1, high=2, medium=4, low=6
-  aws-prod:  critical=0, high=2, medium=4, low=6
+  aws-beta:  critical=1, high=2, medium=4, low=10
+  aws-prod:  critical=0, high=2, medium=4, low=10
 
-Two mechanisms by which a currently-compliant vuln can become non-compliant:
+Each tracked vuln is reported under exactly one of two mechanisms:
 
-  Mechanism 1 -- explicit .snyk expiry approaching:
-    ignore_expires_exists == true
-    AND the ignore entry has not yet expired (ignore_expires_ts > now_ts)
-    AND (ignore_expires_ts - now_ts) / 86400 <= WARNING_DAYS
+  dot_snyk_expiry -- the vuln has a .snyk ignore entry with an expiry date.
+    days_remaining = (ignore_expires_ts - now_ts) / 86400
+    (A .snyk ignore entry with no expiry date is "ignore forever": compliant
+    regardless of age and never reported.)
 
-  Mechanism 2 -- rego age limit approaching:
-    ignore_expires_exists == false
-    AND age_days = (now_ts - first_seen_ts) / 86400
-    AND age_days >= max_days_by_severity[severity] - WARNING_DAYS
+  rego_limit -- the vuln has no .snyk ignore entry, so the rego age limit applies.
+    age_days = (now_ts - first_seen_ts) / 86400
+    days_remaining = max_days_by_severity[severity] - age_days
 
-WARNING_DAYS is a configurable parameter (see workflow env section below);
-default is 7.
-
-
-New files
----------
-  .github/workflows/check-expiry-and-notify.yml
-  .github/actions/send-slack-message/action.yml
-  bin/find_expiring_vulns.py
-  docs/expiry-response.md
-
-
-Secrets / vars required
------------------------
-  secrets.KOSLI_API_TOKEN     already present in the repo -- used for
-                              kosli list trails / get attestation GETs.
-                              A throwaway string would also work for these
-                              read-only calls, but using the existing secret
-                              avoids a special-case.
-
-  secrets.SLACK_WEBHOOK_URL   NOT yet present in snyk-scanning. Must be
-                              added to the repo settings. The same webhook
-                              value used in cyber-dojo/secrets.
-
-  vars.KOSLI_CLI_VERSION      already present
-  vars.KOSLI_HOST             already present
-  vars.KOSLI_ORG              already present
+days_remaining is positive while the vuln is still compliant and zero or negative
+once it is already non-compliant. Both compliant and already-non-compliant vulns
+are reported (the report is informational; the nightly scan owns the verdict).
 
 
 .github/workflows/check-expiry-and-notify.yml
 ----------------------------------------------
-Trigger:
-  schedule: cron '0 6 * * *'  (06:00 UTC daily, well after the 01:00 scans)
-  workflow_dispatch            (for manual testing)
+Trigger: workflow_call
+  inputs:  kosli_env (required)
+  secrets: SLACK_WEBHOOK_URL (required)
 
 env block:
-  KOSLI_HOST:      ${{vars.KOSLI_HOST}}
-  KOSLI_ORG:       ${{vars.KOSLI_ORG}}
-  KOSLI_API_TOKEN: ${{secrets.KOSLI_API_TOKEN}}
-  WARNING_DAYS:    7
-  GITHUB_RUN_URL:       https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}
-  RESPONSE_GUIDE_URL:  https://github.com/${{github.repository}}/blob/main/docs/expiry-response.md
+  GITHUB_RUN_URL     link to this Actions run
+  RESPONSE_GUIDE_URL link to docs/expiry-response.md
 
-Single job: check-expiry
-  runs-on: ubuntu-latest
-  steps:
-
+Single job: check-expiry (runs-on: ubuntu-latest)
   1. actions/checkout@v6
-
-  2. Setup Kosli CLI
-       uses: kosli-dev/setup-cli-action@v5
-       version: ${{vars.KOSLI_CLI_VERSION}}
-
-  3. Find expiring vulns (aws-beta)
-       run: |
-         {
-           echo "EXPIRING_VULNS_BETA<<EOF"
-           ./bin/find_expiring_vulns.py \
-             --warning-days ${WARNING_DAYS} \
-             --envs aws-beta
-           echo "EOF"
-         } >> ${GITHUB_ENV}
-
-  4. Find expiring vulns (aws-prod)
-       run: |
-         {
-           echo "EXPIRING_VULNS_PROD<<EOF"
-           ./bin/find_expiring_vulns.py \
-             --warning-days ${WARNING_DAYS} \
-             --envs aws-prod
-           echo "EOF"
-         } >> ${GITHUB_ENV}
-
-  5. Send Slack -- aws-beta all clear
-       if: env.EXPIRING_VULNS_BETA == '[]'
-       uses: ./.github/actions/send-slack-message
-       with:
-         slack_url: ${{secrets.SLACK_WEBHOOK_URL}}
-         message: "aws-beta: No Snyk vulnerabilities approaching expiry :-)"
-
-  6. Send Slack -- aws-beta vulns expiring soon
-       if: env.EXPIRING_VULNS_BETA != '[]'
-       uses: ./.github/actions/send-slack-message
-       with:
-         slack_url: ${{secrets.SLACK_WEBHOOK_URL}}
-         message: "aws-beta Snyk vulnerabilities approaching expiry.\nSee ${GITHUB_RUN_URL}\nResponse guide: ${RESPONSE_GUIDE_URL}"
-
-  7. Send Slack -- aws-prod all clear
-       if: env.EXPIRING_VULNS_PROD == '[]'
-       uses: ./.github/actions/send-slack-message
-       with:
-         slack_url: ${{secrets.SLACK_WEBHOOK_URL}}
-         message: "aws-prod: No Snyk vulnerabilities approaching expiry :-)"
-
-  8. Send Slack -- aws-prod vulns expiring soon
-       if: env.EXPIRING_VULNS_PROD != '[]'
-       uses: ./.github/actions/send-slack-message
-       with:
-         slack_url: ${{secrets.SLACK_WEBHOOK_URL}}
-         message: "aws-prod Snyk vulnerabilities approaching expiry.\nSee ${GITHUB_RUN_URL}\nResponse guide: ${RESPONSE_GUIDE_URL}"
-
-  9. Send Slack -- workflow failure
-       if: failure()
-       uses: ./.github/actions/send-slack-message
-       with:
-         slack_url: ${{secrets.SLACK_WEBHOOK_URL}}
-         message: "check-expiry-and-notify workflow failed.\nSee ${GITHUB_RUN_URL}"
-
-  10. Write GitHub step summary
-       run: |
-         ./bin/print_expiring_vulns_summary.py \
-           --beta "${EXPIRING_VULNS_BETA}" \
-           --prod "${EXPIRING_VULNS_PROD}" \
-           >> "${GITHUB_STEP_SUMMARY}"
-
-     (print_expiring_vulns_summary.py is a thin formatter; see below.)
-
-Slack message examples:
-
-  Both environments clear:
-    "aws-beta: No Snyk vulnerabilities approaching expiry :-)"
-    "aws-prod: No Snyk vulnerabilities approaching expiry :-)"
-
-  Both environments have findings:
-    "aws-beta Snyk vulnerabilities approaching expiry.\nSee <run_url>\nResponse guide: <guide_url>"
-    "aws-prod Snyk vulnerabilities approaching expiry.\nSee <run_url>\nResponse guide: <guide_url>"
-
-  Only aws-prod has findings:
-    "aws-beta: No Snyk vulnerabilities approaching expiry :-)"
-    "aws-prod Snyk vulnerabilities approaching expiry.\nSee <run_url>\nResponse guide: <guide_url>"
+  2. actions/download-artifact@v8 -- pattern vuln-*.json, merge-multiple, into vulns/
+  3. Find vulns:
+       ./bin/find_expiring_vulns.py --env <kosli_env> --vuln-dir vulns
+       Then jq builds, into GITHUB_ENV:
+         VULNS_JSON    the .vulns array
+         STATUS_SYMBOL :x: if there are vulns and the soonest is already
+                       non-compliant (days_remaining <= 0), else :white_check_mark:
+         SLACK_MESSAGE "No Snyk vulnerabilities :-)" when the list is empty,
+                       otherwise the soonest vuln's days line ("Days till
+                       non-compliant: N" or "Days non-compliant: N"), full_id,
+                       severity, repo (artifact), and mechanism.
+  4. Send Slack:
+       "Environment: <kosli_env> <STATUS_SYMBOL>\n<SLACK_MESSAGE>\n
+        See: <GITHUB_RUN_URL>\nResponse guide: <RESPONSE_GUIDE_URL>"
+  5. Send Slack -- workflow failure (if: failure())
+  6. Write GitHub step summary:
+       ./bin/print_expiring_vulns_summary.py --env <kosli_env> --vulns "$VULNS_JSON"
+       >> $GITHUB_STEP_SUMMARY
 
 
 .github/actions/send-slack-message/action.yml
 ----------------------------------------------
-Mirror of the same action in cyber-dojo/secrets. Kept local so snyk-scanning
-has no cross-repo action dependency.
-
-  name: Send Slack Message
-  description: Send Slack message to cyber-dojo-alerts channel
+Composite action. Kept local so snyk-scanning has no cross-repo action dependency.
 
   inputs:
-    message:   required: true
-    slack_url: required: true
+    message:   required
+    slack_url: required
 
-  runs:
-    using: composite
-    steps:
-      - shell: bash
-        run: |
-          MESSAGE=$(cat <<EOF
-          {
-            "text": "Snyk expiry check",
-            "blocks": [
-              {
-                "type": "section",
-                "text": { "type": "mrkdwn", "text": "${{ inputs.message }}" }
-              }
-            ]
-          }
-          EOF
-          )
-          curl -X POST \
-            -H 'Content-type: application/json' \
-            --data "${MESSAGE}" \
-            --fail \
-            "${{ inputs.slack_url }}"
+  Posts a single Slack "section" block (mrkdwn) containing the message via
+  curl -X POST --fail to slack_url.
 
 
 bin/find_expiring_vulns.py
 --------------------------
 CLI:
-  ./bin/find_expiring_vulns.py --warning-days N --envs aws-beta,aws-prod
+  ./bin/find_expiring_vulns.py --env <env> --vuln-dir <dir>
 
-Writes a JSON array to stdout. Each element represents one approaching-expiry
-vuln:
+Reads rego.params.{env}.json for the severity limits, globs vuln-*.json in
+<dir>, and for each file emits at most one result (dot_snyk_result OR
+rego_result, depending on whether a .snyk ignore entry exists). Writes a JSON
+object to stdout and exits 0:
 
   {
-    "env":                "aws-prod",
-    "trail_name":         "runner-high-SNYK-GOLANG-...",
-    "full_id":            "SNYK-GOLANG-...",
-    "severity":           "high",
-    "vuln_url":           "https://security.snyk.io/vuln/...",
-    "mechanism":          "dot_snyk_expiry" | "rego_limit",
-    "days_remaining":     1,
-    "ignore_expires":     "2026-05-14 00:00:00+00:00" | null,
-    "age_days":           1,
-    "limit_days":         2
+    "vulns": [
+      {
+        "env":            "aws-beta",
+        "trail_name":     "runner-high-SNYK-GOLANG-...",
+        "full_id":        "SNYK-GOLANG-...",
+        "severity":       "high",
+        "vuln_url":       "https://security.snyk.io/vuln/...",
+        "mechanism":      "dot_snyk_expiry" | "rego_limit",
+        "days_remaining": 19.8,
+        "ignore_expires": "2026-06-01 10:53:10+00:00" | null,
+        "age_days":       5.16 | null,
+        "limit_days":     10 | null,
+        "artifact":       "runner"
+      }
+    ]
   }
 
-Exits 0 in all cases (the caller decides what to do with the list).
-
-Algorithm:
-
-  CUTOFF_TS = now_ts - 48 * 3600        (48h window to catch last night's scan)
-  WARNING_SECS = warning_days * 86400
-
-  for env in envs:
-    load rego.params from local file rego.params.{env}.json
-    max_days = params["max_days_by_severity"]
-
-    page = 1
-    loop:
-      trails = kosli list trails
-                 --flow snyk-{env}-per-vuln
-                 --page {page}
-                 --page-limit 200
-                 --output json
-
-      for each trail in trails["data"]:
-        if trail["last_modified_at"] < CUTOFF_TS:
-          continue              (skip stale trail, do not fetch attestation)
-
-        data = kosli get attestation snyk
-                 --flow snyk-{env}-per-vuln
-                 --trail {trail["name"]}
-                 --output json
-               -> take first element -> .attestation_data
-
-        check_dot_snyk_expiry(data, env, warning_days, now_ts)
-        check_rego_limit(data, env, warning_days, now_ts, max_days)
-
-      oldest_ts = min(trail["last_modified_at"] for trail in page)
-      if oldest_ts < CUTOFF_TS:
-        break                   (all remaining pages will be older, stop)
-
-      if page >= trails["pagination"]["page_count"]:
-        break
-
-      page += 1
-
-  output: json.dumps(results)
-
-Mechanism 1 check (explicit .snyk expiry approaching):
-  if data["ignore_expires_exists"] is True:
-    secs_remaining = data["ignore_expires_ts"] - now_ts
-    if 0 < secs_remaining <= WARNING_SECS:
-      append result with mechanism="dot_snyk_expiry",
-                         days_remaining = secs_remaining / 86400,
-                         ignore_expires = data["ignore_expires"]
-
-Mechanism 2 check (rego age limit approaching):
-  if data["ignore_expires_exists"] is False:
-    age_days = (now_ts - data["first_seen_ts"]) / 86400
-    limit = max_days[data["severity"]]
-    days_remaining = limit - age_days
-    if 0 < days_remaining <= warning_days:
-      append result with mechanism="rego_limit",
-                         days_remaining = days_remaining,
-                         age_days = age_days,
-                         limit_days = limit
-
-Note: a vuln whose ignore has already expired or whose age already exceeds
-the limit is already non-compliant and handled by the nightly scan. We only
-warn about vulns that are still compliant but will soon become non-compliant.
-
-Note on now_ts: use the script's own time.time(), not data["now_ts"] from
-the attestation. The attestation's now_ts is from last night's scan and
-using it for "days remaining" calculations would be off by up to 24 hours.
+The list is sorted by days_remaining ascending, so the soonest-to-expire (or
+most-overdue) vuln is first. "artifact" is the trail_name segment before the
+first -severity- part. now_ts is the script's own time.time() (not any timestamp
+from the attestation).
 
 
-bin/print_expiring_vulns_summary.py (optional thin helper)
-----------------------------------------------------------
+bin/print_expiring_vulns_summary.py
+-----------------------------------
 CLI:
-  ./bin/print_expiring_vulns_summary.py \
-    --beta '<json array>' \
-    --prod  '<json array>'
+  ./bin/print_expiring_vulns_summary.py --env <env> --vulns '<json array>'
 
-Writes Markdown to stdout for use in the GitHub step summary.
+The --vulns value is the .vulns array from find_expiring_vulns.py. Writes
+Markdown to stdout for the GitHub step summary:
 
-For each env in order (aws-beta, aws-prod):
-  - If the JSON array is '[]': emit "## aws-{env} (Count=0)" with no table.
-  - Otherwise: emit "## aws-{env}", then for each artifact name found in the
-    results emit "### {artifact} (Count=N)" followed by a table.
+  ## <env> (Snyk vulns tracked: Count=N)
 
-    Artifact name is extracted from the trail_name field by taking everything
-    before the first "-{severity}-" segment, e.g. "creator" from
-    "creator-high-SNYK-ALPINE322-ZLIB-16078399".
+  then one table per severity, in order critical, high, medium, low:
 
-    Artifacts are sorted alphabetically. Rows within each artifact table are
-    sorted by severity (critical, high, medium, low) then by days_remaining
-    ascending within the same severity.
+  ### <Severity> (Count=N)
 
-    Columns: Level | Days remaining | Mechanism | Vuln ID
+  | Artifact | Days remaining | Mechanism | Vuln ID |
 
-    Level is the severity. Vuln ID is a Markdown hyperlink:
-    [full_id](vuln_url).
+  (or "No vulnerabilities." when that severity has none). Rows are sorted by
+  days_remaining ascending. Mechanism is displayed as "rego" (rego_limit) or
+  ".snyk" (dot_snyk_expiry). Vuln ID is a Markdown link [full_id](vuln_url).
 
 Example output:
 
-  ## aws-beta
+  ## aws-beta (Snyk vulns tracked: Count=2)
 
-  ### creator (Count=4)
+  ### Critical (Count=0)
 
-  | Level    | Days remaining | Mechanism       | Vuln ID |
-  |----------|----------------|-----------------|---------|
-  | critical | 2              | rego_limit      | [SNYK-GOLANG-NETHTTP-3321444](https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444) |
-  | critical | 5              | rego_limit      | [SNYK-GOLANG-GOLANG-3208976](https://security.snyk.io/vuln/SNYK-GOLANG-GOLANG-3208976) |
-  | high     | 1              | dot_snyk_expiry | [SNYK-ALPINE322-ZLIB-16078399](https://security.snyk.io/vuln/SNYK-ALPINE322-ZLIB-16078399) |
-  | medium   | 6              | rego_limit      | [SNYK-GOLANG-GOLANGORGJWTV4-3180456](https://security.snyk.io/vuln/SNYK-GOLANG-GOLANGORGJWTV4-3180456) |
+  No vulnerabilities.
 
-  ### runner (Count=3)
+  ### High (Count=1)
 
-  | Level | Days remaining | Mechanism  | Vuln ID |
-  |-------|----------------|------------|---------|
-  | high  | 2              | rego_limit | [SNYK-GOLANG-GOLANG-3208976](https://security.snyk.io/vuln/SNYK-GOLANG-GOLANG-3208976) |
-  | high  | 4              | rego_limit | [SNYK-GOLANG-NETHTTP-2314685](https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-2314685) |
-  | medium | 3             | rego_limit | [SNYK-GOLANG-GOLANGORGJWTV4-3180456](https://security.snyk.io/vuln/SNYK-GOLANG-GOLANGORGJWTV4-3180456) |
+  | Artifact | Days remaining | Mechanism | Vuln ID |
+  |----------|----------------|-----------|---------|
+  | runner | 20 | .snyk | [SNYK-GOLANG-GOLANGORGXNETHTTP2-16535157](https://security.snyk.io/vuln/SNYK-GOLANG-GOLANGORGXNETHTTP2-16535157) |
 
-  ## aws-prod (Count=0)
+  ### Medium (Count=0)
 
-This is only for the step summary, not the Slack message. The Slack message
-keeps it brief (just the env name and a link to the run).
+  No vulnerabilities.
 
+  ### Low (Count=1)
 
-Scaling note
-------------
-kosli list trails returns results newest-first (confirmed by CLI help text:
-"ordered from latest to oldest"). Per-vuln trail count grows over time as
-new vulns are discovered and their stale trails accumulate. The algorithm
-stops paginating as soon as the oldest trail on a page pre-dates the 48h
-cutoff. This means the number of kosli get attestation calls stays bounded
-by the number of vulns updated in the most recent nightly scan (~27 today),
-regardless of total trail history. With page-limit=200 this is at most 1-2
-pages of list calls even as history grows.
-
-
-Slack channel
--------------
-The same SLACK_WEBHOOK_URL as cyber-dojo/secrets check-secrets.yml, which
-posts to the cyber-dojo-alerts channel. This secret does not yet exist in
-the snyk-scanning repo and must be added under Settings > Secrets and
-variables > Actions before the workflow can run.
+  | Artifact | Days remaining | Mechanism | Vuln ID |
+  |----------|----------------|-----------|---------|
+  | creator | 5 | rego | [SNYK-ALPINE322-NGHTTP2-16426989](https://security.snyk.io/vuln/SNYK-ALPINE322-NGHTTP2-16426989) |
 
 
 What this workflow does NOT do
 ------------------------------
 - It does not run Snyk scans.
 - It does not create or modify any Kosli trails, attestations, or flows.
-- It does not affect compliance status of any artifact or environment.
-- It does not clone any repos or fetch .snyk files.
+- It makes no Kosli calls at all; it reads the run's local vuln-*.json files.
+- It does not affect the compliance status of any artifact or environment.
 
 
 docs/expiry-response.md
-------------------------
-Linked from Slack warning messages. Tells the reader what to do when a
-vuln is approaching expiry, depending on which mechanism applies.
-
-Content:
-
-  Snyk expiry alert response guide
-  =================================
-
-  When you receive a Slack alert from the check-expiry-and-notify workflow,
-  check the GitHub step summary (linked in the message) to see which vulns
-  are approaching expiry and which mechanism applies.
-
-
-  Mechanism: dot_snyk_expiry
-  --------------------------
-  The .snyk ignore entry for this vuln is about to expire.
-
-  Options:
-  - Fix the underlying dependency (removes the vuln entirely)
-  - Extend the expiry date in .snyk (if fixing is not yet feasible)
-
-  Relevant file: .snyk
-
-
-  Mechanism: rego_limit
-  ----------------------
-  The vuln has been open long enough to approach the policy age limit
-  defined in the rego params for that environment.
-
-  Options:
-  - Fix the underlying dependency (removes the vuln entirely)
-  - Add an explicit .snyk ignore entry (shifts it to mechanism 1
-    and buys more time)
-
-  Relevant files:
-    rego.params.aws-beta.json
-    rego.params.aws-prod.json
+-----------------------
+Linked from the Slack message. Tells the reader what to do when a vuln is
+approaching (or past) its expiry, depending on which mechanism applies.

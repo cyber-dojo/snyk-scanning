@@ -15,12 +15,15 @@ Mechanism: rego_limit
 The vuln has been open long enough to approach the policy age limit
 defined in the rego params for that environment.
 
-Example step summary entry:
+Example step summary entry (the summary groups vulns under a per-severity
+heading, and shows this mechanism as `rego`):
 
 <pre>
-| Level  | Days remaining | Mechanism  | Vuln ID |
-|--------|----------------|------------|---------|
-| medium | 1              | rego_limit | SNYK-GOLANG-GITHUBCOMSIGSTORETIMESTAMPAUTHORITYV2PKGVERIFICATION-16134930 |
+### Medium (Count=1)
+
+| Artifact | Days remaining | Mechanism | Vuln ID |
+|----------|----------------|-----------|---------|
+| creator  | 1              | rego      | SNYK-GOLANG-GITHUBCOMSIGSTORETIMESTAMPAUTHORITYV2PKGVERIFICATION-16134930 |
 </pre>
 
 This means there is no .snyk ignore entry. The vuln has been open for 3 days
@@ -48,12 +51,15 @@ Note: a .snyk entry without an expiry date means ignore forever. Such an entry i
 compliant regardless of the vuln's age and never appears in an expiry report, so
 it will never trigger this alert.
 
-Example step summary entry:
+Example step summary entry (shown under the High heading, with this mechanism
+displayed as `.snyk`):
 
 <pre>
-| Level | Days remaining | Mechanism       | Vuln ID |
-|-------|----------------|-----------------|---------|
-| high  | 3              | dot_snyk_expiry | SNYK-ALPINE322-ZLIB-16078399 |
+### High (Count=1)
+
+| Artifact | Days remaining | Mechanism | Vuln ID |
+|----------|----------------|-----------|---------|
+| runner   | 3              | .snyk     | SNYK-ALPINE322-ZLIB-16078399 |
 </pre>
 
 This means the .snyk file contains an ignore entry for this vuln whose expiry

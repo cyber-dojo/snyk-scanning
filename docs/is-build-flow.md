@@ -1,130 +1,73 @@
-# Refactoring is_build_flow() to use the type=build annotation
-
-Status: proposed (investigated 2026-06-14).
+# Detecting a build flow via the type=build annotation
 
 ## Summary
 
 `bin/artifacts.py` decides which of an artifact's flows is the "build flow"
 (the CI flow that built the image) so it can emit one scanning matrix entry
-per artifact. Today that decision is a hardcoded allow-list. This document
-proposes replacing it with a data-driven check: a flow is a build flow when
-the artifact's attestation in that flow carries the annotation `type=build`,
-set by the `kosli attest artifact --annotate type=build` call that the CI
-pipeline runs.
+per artifact. A flow is a build flow when the artifact's attestation in that
+flow carries the annotation `type=build`, set by the
+`kosli attest artifact --annotate type=build` call that the CI pipeline runs.
 
-## Current implementation
+`is_build_flow(flow_name, fingerprint, fetch)` returns true when the artifact's
+`annotations` in that flow contain `type == "build"`.
 
-`is_build_flow()` matches the flow name against a hardcoded list:
+### Example, from an aws-beta snapshot
 
-    BUILD_FLOWS = [
-        "dashboard-ci",
-        "differ-ci",
-        "custom-start-points-ci",
-        "languages-start-points-ci",
-        "exercises-start-points-ci",
-        "saver-ci",
-        "web-ci",
-        "creator-ci",
-        "runner-ci",
-        "nginx-ci"
-    ]
+An artifact appears in several flows. Querying each flow:
 
-    def is_build_flow(flow_name):
-        return flow_name in BUILD_FLOWS
-
-The docstring records that an earlier attempt called `kosli get flow
---output=json` and inspected its tags, but that was "very slow", so the list
-was hardcoded instead.
-
-### Problems with the hardcoded list
-
-- It must be edited by hand whenever a service is added, removed, or renamed.
-  A new build flow that is not in the list is silently skipped, so its artifact
-  never gets a scanning matrix entry. That is the dangerous direction: an
-  unscanned artifact can run in an environment without ever being checked.
-- It couples the scanning tool to a fixed roster of cyber-dojo services rather
-  than to a property of the flow itself.
-- The `[:-3]` repo-name derivation (stripping the `-ci` suffix) assumes every
-  build flow name ends in `-ci`, which the hardcoded list happens to guarantee
-  but the convention does not enforce.
-
-## Proposed approach: detect the type=build annotation
-
-The CI pipeline that builds each artifact attests it with
-`kosli attest artifact --annotate type=build`. That annotation is stored on the
-artifact-in-flow record and is returned by `kosli get artifact` under the
-`annotations` field. A non-build flow such as `snyk-aws-beta-per-artifact`
-attests the same fingerprint without that annotation, so its `annotations`
-field is empty.
-
-So the build flow is the one whose artifact record has `annotations` containing
-`type == "build"`.
-
-### Verified from the aws-beta snapshot (2026-06-14)
-
-The saver artifact (fingerprint `f5909cc8...`) appears in two flows:
-`saver-ci` and `snyk-aws-beta-per-artifact`. Querying each flow:
-
-    kosli get artifact saver-ci@f5909cc8...                 --output json
+    kosli get artifact runner-ci@<fingerprint>                  --output json
         -> annotations: {"type": "build"}
 
-    kosli get artifact snyk-aws-beta-per-artifact@f5909cc8... --output json
+    kosli get artifact snyk-aws-beta-per-artifact@<fingerprint> --output json
         -> annotations: {}
 
-Only `saver-ci`, the build flow, carries `type=build`. This matches the
-hardcoded list (`saver-ci` is in `BUILD_FLOWS`, `snyk-aws-beta-per-artifact`
-is not), confirming the annotation reproduces the existing classification.
+    kosli get artifact production-promotion@<fingerprint>       --output json
+        -> annotations: {}
 
-## Cost: the snapshot JSON does not carry annotations
+Only the build flow (`runner-ci`) carries `type=build`.
 
-This is the key tradeoff to weigh before adopting the change.
+## The snapshot JSON does not carry annotations
 
-`artifacts()` iterates over `artifact["flows"]` from the snapshot JSON that is
-piped in on stdin. The per-flow objects in the snapshot do **not** include an
-`annotations` field (confirmed against the aws-beta snapshot: the flow object
-keys are `flow_name`, `trail_name`, `template_reference_name`, `git_commit`,
-`commit_url`, `git_commit_info`, `html_url`, `flow_html_url`,
-`deployment_diff`, `commit_lead_time`, `artifact_compliance_in_flow`,
-`flow_reasons_for_non_compliance` -- no `annotations`).
+`artifacts()` iterates over `artifact["flows"]` from the snapshot JSON piped in
+on stdin. The per-flow objects in that snapshot do NOT include an `annotations`
+field. The annotation is only visible through
+`kosli get artifact <flow>@<fingerprint> --output json`.
 
-The annotation is only visible through `kosli get artifact <flow>@<fingerprint>
---output json`. So the refactored `is_build_flow()` can no longer be a pure
-in-memory string check; it must make one `kosli get artifact` API call per
-(flow, fingerprint) pair to read `annotations`. This is the same class of cost
-that pushed the original implementation away from `kosli get flow`, so the
-performance impact must be measured, and mitigations considered:
+So `is_build_flow()` is not a pure in-memory check; it makes one
+`kosli get artifact` call per (flow, fingerprint) pair via the `fetch` argument.
+Each (flow, fingerprint) pair is visited exactly once in a run (each artifact has
+a unique fingerprint, and an artifact's `flows` list has distinct flow names), so
+there is nothing to memoize.
 
-- Memoize per (flow_name, fingerprint) within a run so repeated flows are not
-  re-fetched.
-- Each artifact in the snapshot typically has two flows, so the call count is
-  bounded by roughly 2 x number-of-artifacts.
+`fetch_annotations` runs the `kosli get artifact` call with a restricted
+environment containing only `PATH` (so the `kosli` executable can be located).
+The host, org, and API token are passed explicitly as `--host`, `--org`, and
+`--api-token` flags, read from the `KOSLI_HOST`, `KOSLI_ORG`, and
+`KOSLI_API_TOKEN` environment variables, so nothing else in the ambient
+environment can influence the call.
+
+## Testability
+
+The single impure operation is isolated in `fetch_annotations(flow_name,
+fingerprint)`, which shells out to `kosli get artifact`. `artifacts()` and
+`is_build_flow()` take that fetcher as an injected `fetch` argument, defaulting to
+the real `fetch_annotations`. Unit tests in `tests/test_artifacts_logic.py` pass a
+dict-backed fake fetcher, so they supply the annotation JSON directly and never
+make a live kosli call. The failure path is tested by monkeypatching
+`subprocess.run` to raise.
 
 ## Compliance direction
 
-The safe failure mode follows the project rule that we must never report a
-non-compliant artifact as compliant. Here, treating a build flow as a non-build
-flow drops its scanning matrix entry, which can leave an artifact unscanned.
-Therefore, if the `kosli get artifact` call fails, times out, or returns an
-artifact whose `annotations` cannot be read, the refactored function must NOT
-silently exclude the flow. It should either fail loudly (non-zero exit, as
-`raw_snyk_policy_url` already does for an unknown CI system) or fall back to
-including the flow, never silently skip it.
+Treating a build flow as a non-build flow drops its scanning matrix entry, which
+can leave an artifact unscanned. That must never happen silently. So if the
+`kosli get artifact` call fails or returns JSON that cannot be parsed,
+`fetch_annotations` exits non-zero (exit code 43) rather than guess. Likewise an
+unset `KOSLI_HOST`, `KOSLI_ORG`, or `KOSLI_API_TOKEN` exits 44, and an
+unrecognised CI system in a commit_url exits 42.
 
-## Sketch of the change
+## repo_name is derived from the commit_url
 
-    def is_build_flow(flow_name, fingerprint):
-        """
-        A flow is a build flow when the artifact's attestation in that flow
-        carries the annotation type=build, set by the CI pipeline's
-        'kosli attest artifact --annotate type=build' call.
-        Requires a 'kosli get artifact <flow>@<fingerprint>' call because the
-        snapshot JSON does not include per-flow annotations.
-        """
-        annotations = get_artifact_annotations(flow_name, fingerprint)
-        return annotations.get("type") == "build"
-
-The caller in `artifacts()` would pass the fingerprint it already has in scope.
-The `repo_name = flow_name[:-3]` derivation can stay for now, but once flows are
-identified by annotation rather than by an `-ci` name, consider sourcing the
-repo name from a flow field (for example `template_reference_name` or the
-commit URL) instead of stripping a suffix.
+`parse_commit_url(commit_url)` returns `repo_name` as the last path segment of the
+repository in the artifact's `commit_url` (the same URL used to build the raw
+`.snyk` policy URL), so the repo name does not depend on the flow naming
+convention.

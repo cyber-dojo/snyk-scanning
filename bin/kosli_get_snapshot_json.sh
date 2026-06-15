@@ -4,10 +4,12 @@ set -Eeu
 export ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "${ROOT_DIR}/bin/lib.sh"
 
-KOSLI_HOST="${KOSLI_HOST:-https://app.kosli.com}"
-KOSLI_ORG="${KOSLI_ORG:-cyber-dojo}"
-KOSLI_API_TOKEN="${KOSLI_API_TOKEN:-read-only-dummy}"
-KOSLI_ENV="${KOSLI_ENV:-aws-beta}"
+# No defaults: require each variable to be set explicitly so we never silently
+# query the wrong host/org, use a dummy token, or default to the wrong environment.
+: "${KOSLI_HOST:?KOSLI_HOST must be set}"
+: "${KOSLI_ORG:?KOSLI_ORG must be set}"
+: "${KOSLI_API_TOKEN:?KOSLI_API_TOKEN must be set}"
+: "${KOSLI_ENV:?KOSLI_ENV must be set}"
 
 # NOTE: in a Github Action, stdout and stderr are multiplexed together.
 # This multiplexing is standard behaviour inside a docker container with a tty.

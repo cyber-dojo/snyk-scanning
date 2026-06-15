@@ -1,6 +1,6 @@
 
 0. Very easy to say compliant when it was in fact non-compliant.
-   See rego-undefined-field-inviolations.md
+   See rego-undefined-field-in-violations.md
    See rego-default-allow-false-safety.md
    I feel the safest option is to assume non-compliance and prove compliance.
 

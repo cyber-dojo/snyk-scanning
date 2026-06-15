@@ -6,11 +6,6 @@ import subprocess
 import sys
 
 
-KOSLI_HOST = os.environ.get("KOSLI_HOST")
-KOSLI_ORG = os.environ.get("KOSLI_ORG")
-KOSLI_API_TOKEN = os.environ.get("KOSLI_API_TOKEN")
-
-
 def print_help():
     print("""
         Reads (from stdin) the result of a 'kosli get snapshot $ENV --org=cyber-dojo ... --output=json'.
@@ -36,8 +31,14 @@ def print_help():
     """)
 
 
-def artifacts():
-    raw = json.loads(sys.stdin.read())
+def artifacts(raw, fetch=None):
+    """
+    Transform a parsed snapshot dict into the scanning matrix list, one entry per
+    (artifact, build-flow) pair. 'fetch' is the annotation fetcher injected for
+    testing; it defaults to the real 'fetch_annotations' that calls kosli.
+    """
+    if fetch is None:
+        fetch = fetch_annotations
     result = []
     snapshot_index = raw["index"]
     html_url = raw["html_url"]
@@ -48,10 +49,10 @@ def artifacts():
             fingerprint = artifact["fingerprint"]
             for flow in artifact["flows"]:
                 flow_name = flow["flow_name"]
-                if is_build_flow(flow_name):
+                if is_build_flow(flow_name, fingerprint, fetch):
                     git_commit = flow["git_commit"]
                     commit_url = flow["commit_url"]
-                    repo_name = flow_name[:-3]
+                    repo_name, raw_url = parse_commit_url(commit_url)
                     result.append({
                         "artifact_name": artifact_name,
                         "artifact_fingerprint": fingerprint,
@@ -60,50 +61,86 @@ def artifacts():
                         "repo_name": repo_name,
                         "snapshot_index": snapshot_index,
                         "snapshot_artifact_url": f"{html_url}?fingerprint={fingerprint}",
-                        "raw_snyk_policy_url": raw_snyk_policy_url(commit_url)
+                        "raw_snyk_policy_url": raw_url
                     })
 
     return result
 
 
-def raw_snyk_policy_url(commit_url):
+def parse_commit_url(commit_url):
+    """
+    Parse an artifact's commit_url into (repo_name, raw_snyk_policy_url).
+    repo_name is the repository's short name (the last path segment of the repo),
+    taken from the commit_url itself so it does not depend on the flow naming
+    convention. Exits non-zero for an unrecognised CI system.
+    """
     commit_sha = commit_url[-40:]
     if commit_url.startswith("https://github.com"):
-        # https://github.com/cyber-dojo/languages-start-points/commit/88366281011d1aa83c5db4280aa8a6daa0be8541
-        cut_suffix = "/commit/88366281011d1aa83c5db4280aa8a6daa0be8541"
-        prefix_url = commit_url[len("https://github.com/"):-len(cut_suffix)]
-        # eg prefix_url = cyber-dojo/languages-start-points/commit
-        return f"https://raw.githubusercontent.com/{prefix_url}/{commit_sha}/.snyk"
+        # https://github.com/cyber-dojo/languages-start-points/commit/<commit_sha>
+        repo_path = commit_url[len("https://github.com/"):-len(f"/commit/{commit_sha}")]
+        # eg repo_path = cyber-dojo/languages-start-points
+        repo_name = repo_path.split("/")[-1]
+        raw_url = f"https://raw.githubusercontent.com/{repo_path}/{commit_sha}/.snyk"
+        return repo_name, raw_url
     elif commit_url.startswith("https://gitlab.com"):
-        # https://gitlab.com/cyber-dojo/creator/-/commit/dca5d2f7571f9b63d651088c2b38946091853083
-        cut_suffix = "/-/commit/dca5d2f7571f9b63d651088c2b38946091853083"
-        prefix_url = commit_url[:-len(cut_suffix)]
-        # eg prefix_url = https://gitlab.com/cyber-dojo/creator
-        return f"{prefix_url}/-/raw/{commit_sha}/.snyk"
+        # https://gitlab.com/cyber-dojo/creator/-/commit/<commit_sha>
+        repo_url = commit_url[:-len(f"/-/commit/{commit_sha}")]
+        # eg repo_url = https://gitlab.com/cyber-dojo/creator
+        repo_name = repo_url.split("/")[-1]
+        raw_url = f"{repo_url}/-/raw/{commit_sha}/.snyk"
+        return repo_name, raw_url
     else:
         stderr(f"Unknown CI system {commit_url}")
         sys.exit(42)
 
 
-BUILD_FLOWS = [
-    "dashboard-ci",
-    "differ-ci",
-    "custom-start-points-ci",
-    "languages-start-points-ci",
-    "exercises-start-points-ci",
-    "saver-ci",
-    "web-ci",
-    "creator-ci",
-    "runner-ci",
-    "nginx-ci"
-]
+def is_build_flow(flow_name, fingerprint, fetch):
+    """
+    A flow is a build flow when the artifact's attestation in that flow carries
+    the annotation type=build, set by the CI pipeline's
+    'kosli attest artifact --annotate type=build' call.
+    'fetch' reads the annotations dict for this (flow_name, fingerprint).
+    """
+    return fetch(flow_name, fingerprint).get("type") == "build"
 
-def is_build_flow(flow_name):
+
+def fetch_annotations(flow_name, fingerprint):
     """
-    Originally tried this by doing a kosli-get-flow --output=json
-    and then looking the tags in the json but it was very slow.
+    Return the annotations dict for an artifact-in-flow by calling
+    'kosli get artifact <flow_name>@<fingerprint> --output=json'.
+    The snapshot JSON does not carry per-flow annotations, so each
+    (flow_name, fingerprint) pair needs its own call.
+    Exits non-zero on any failure rather than risk dropping a build flow.
+    Requires KOSLI_HOST, KOSLI_ORG and KOSLI_API_TOKEN to be set; exits with a
+    clear message rather than passing an unset (None) value to the kosli call.
     """
-    return flow_name in BUILD_FLOWS
+    host = os.environ.get("KOSLI_HOST")
+    org = os.environ.get("KOSLI_ORG")
+    api_token = os.environ.get("KOSLI_API_TOKEN")
+    for name, value in (("KOSLI_HOST", host), ("KOSLI_ORG", org), ("KOSLI_API_TOKEN", api_token)):
+        if not value:
+            stderr(f"{name} must be set")
+            sys.exit(44)
+    try:
+        output = subprocess.run(
+            ["kosli", "get", "artifact", f"{flow_name}@{fingerprint}",
+             "--host", host,
+             "--org", org,
+             "--api-token", api_token,
+             "--debug=false",
+             "--output=json"],
+            check=True,
+            capture_output=True,
+            text=True,
+            # Restrict the child to only PATH (so kosli can be located) and pass
+            # all config explicitly as flags, so nothing else in the ambient
+            # environment can influence the call.
+            env={"PATH": os.environ.get("PATH", "")},
+        ).stdout
+        return json.loads(output).get("annotations", {})
+    except (subprocess.CalledProcessError, json.JSONDecodeError) as error:
+        stderr(f"Could not read annotations for {flow_name}@{fingerprint}: {error}")
+        sys.exit(43)
 
 
 def stderr(message):
@@ -115,5 +152,6 @@ if __name__ == "__main__":
         print_help()
     else:
         # Note: This is expecting input on stdin
-        print(json.dumps(artifacts(), indent=2))
+        raw = json.loads(sys.stdin.read())
+        print(json.dumps(artifacts(raw), indent=2))
 

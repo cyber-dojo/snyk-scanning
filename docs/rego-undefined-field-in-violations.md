@@ -1,25 +1,44 @@
-# OPA/Rego: undefined field in violations rule silently produces compliant
+# OPA/Rego: undefined field in a violations rule silently fails to fire
 
-## The problem
+## The Rego footgun
 
 In a Rego `violations contains msg if { ... }` rule, if any expression in the
-rule body evaluates to `undefined`, the entire rule body silently fails to fire.
-The violations set stays empty, `count(violations) == 0` is true, and `allow`
-defaults to `true` -- even when the intent was to deny.
+rule body evaluates to `undefined`, the entire rule body silently fails to fire
+and contributes nothing to the `violations` set. The most common trigger is
+referencing an object field that does not exist in the input data: if the
+attestation data has `full_id` but the rego references `vuln.id`, then `vuln.id`
+is undefined, the `sprintf(...)` is undefined, `msg` is undefined, and the rule
+produces no violation.
 
-The most common trigger is referencing an object field that does not exist in
-the input data. For example, if the attestation data has `full_id` but the rego
-references `vuln.id`, then `vuln.id` is undefined, `sprintf(...)` is undefined,
-`msg` is undefined, and the rule body does not contribute to `violations`.
+The danger arises only when `allow` is *derived from the absence of violations*
+(`allow if count(violations) == 0`). Under that design an undefined field empties
+the violations set, so `allow` becomes `true` even when the intent was to deny.
 
-This was the bug in `snyk-vuln-compliance.rego`: both violation rules used
-`vuln.id` in their `sprintf` calls, but `combine_snyk.py` outputs `full_id`.
-Result: every vulnerability was evaluated as compliant regardless of age or
-expired ignore entries.
+## The bug this once caused here
 
-## Confirmed by experiment
+Both violation rules in `snyk-vuln-compliance.rego` used `vuln.id` in their
+`sprintf` calls, but `combine_snyk.py` outputs `full_id`. Combined with an
+`allow if count(violations) == 0` design, every vulnerability was evaluated as
+compliant regardless of age or expired ignore entries.
 
-Minimal reproducing rego:
+## Current design: allow does not depend on violations
+
+`snyk-vuln-compliance.rego` no longer derives `allow` from the violations set.
+It uses `default allow := false` (line 13) and proves compliance with a positive
+assertion, `allow if trail_is_compliant(input.trail)` (line 61). The `violations`
+rules exist only to produce human-readable diagnostic strings (line 63: "Violations
+provide diagnostics only -- they do not drive the allow decision").
+
+So an undefined field in a violations rule can now only lose a diagnostic message;
+it cannot flip the verdict to compliant. The violation rules reference
+`vuln.full_id` (lines 70, 81), matching `combine_snyk.py`. A regression test
+(`tests/test_rego_rules.sh`, `test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input`)
+asserts that even with a wrong field name the result is still `deny` with a null
+violations set.
+
+## Confirmed by experiment (the unsafe `count(violations)` design)
+
+This is the design the project moved away from. Minimal reproducing rego:
 
 ```rego
 violations contains msg if {

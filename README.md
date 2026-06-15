@@ -14,7 +14,7 @@ regardless of any `.snyk` file ignore entries. The `.snyk` file is only applied 
 Each individual vulnerability found in a running artifact is evaluated as follows:
 
 - If it has an `ignore` entry in the artifact's `.snyk` file, it is honoured and treated as
-  compliant — unless that ignore entry has an expiry date which has passed, in which case it
+  compliant. The exception is an ignore entry whose expiry date has passed, in which case it
   becomes non-compliant immediately.
 - If it has no `ignore` entry, compliance depends on how long that vulnerability has been
   present in the artifact running in the given environment. The allowed number of days before
@@ -45,16 +45,17 @@ artifact-level attestation named `{repo_name}.snyk-container-scan` with the sari
 policy file, Rego params file, and `.snyk` policy file attached.
 
 The per-vuln flow holds one trail per vulnerability found across all scanned artifacts. Trail
-names have the form `{repo_name}-{severity}-{CVE_ID}`. Each trail contains one `snyk` custom
-data attestation and is evaluated independently by `kosli evaluate trail`. The per-artifact
-attestation aggregates these results.
+names have the form `{repo_name}-{severity}-{snyk_id}`, where `snyk_id` is the Snyk rule id
+(for example `SNYK-ALPINE322-ZLIB-16078399`), not a CVE id. Each trail contains one custom
+attestation of type `single-snyk-vuln`, named `snyk-{artifact_fingerprint}`, and is evaluated
+independently by `kosli evaluate trail`. The per-artifact attestation aggregates these results.
 
 ## Rego compliance params
 
 Each environment has a `rego.params.{env}.json` file that sets the maximum number of days a
-vulnerability may exist in that environment before it is considered non-compliant, by severity. aws-prod has a slightly stricter limit for critical vulnerabilities (0 days — any critical vuln is immediately non-compliant), reflecting the higher risk of a production environment.
+vulnerability may exist in that environment before it is considered non-compliant, by severity. aws-prod has a slightly stricter limit for critical vulnerabilities (0 days, so any critical vuln is immediately non-compliant), reflecting the higher risk of a production environment.
 
-Example — `rego.params.aws-prod.json`:
+Example `rego.params.aws-prod.json`:
 
 ```json
 {
@@ -68,7 +69,7 @@ Example — `rego.params.aws-prod.json`:
 }
 ```
 
-What this means: when a new low severity vulnerability appears in aws-prod then you have 6 days to either fix it, or to add entries to the relevant .snyk files.
+What this means: when a new low severity vulnerability appears in aws-prod then you have 10 days to either fix it, or to add entries to the relevant .snyk files.
 
 
 ### `env_snyk_test.yml` (reusable)

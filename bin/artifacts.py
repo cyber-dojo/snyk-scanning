@@ -47,9 +47,11 @@ def artifacts(raw, fetch=None):
         if annotation_type != "exited":
             artifact_name = artifact["name"]
             fingerprint = artifact["fingerprint"]
+            found_build_flow = False
             for flow in artifact["flows"]:
                 flow_name = flow["flow_name"]
                 if is_build_flow(flow_name, fingerprint, fetch):
+                    found_build_flow = True
                     git_commit = flow["git_commit"]
                     commit_url = flow["commit_url"]
                     repo_name, raw_url = parse_commit_url(commit_url)
@@ -63,6 +65,11 @@ def artifacts(raw, fetch=None):
                         "snapshot_artifact_url": f"{html_url}?fingerprint={fingerprint}",
                         "raw_snyk_policy_url": raw_url
                     })
+            # A running artifact with no build flow must never be silently dropped:
+            # that would leave it unscanned. Fail loud instead.
+            if not found_build_flow:
+                stderr(f"No build flow found for artifact {fingerprint}")
+                sys.exit(45)
 
     return result
 

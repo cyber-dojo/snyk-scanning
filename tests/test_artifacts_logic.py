@@ -94,14 +94,27 @@ def test_b4e1f20a():
     seen = []
 
     def fetch(flow_name, fingerprint):
-        """Record the (flow_name, fingerprint) it is asked about; treat none as a build flow."""
+        """Record the (flow_name, fingerprint) it is asked about; runner-ci is the build flow."""
         seen.append((flow_name, fingerprint))
-        return {}
+        return {"type": "build"} if flow_name == "runner-ci" else {}
     artifacts.artifacts(snapshot, fetch=fetch)
     assert seen == [
         ("runner-ci", expected_fingerprint),
         ("aws-snyk-scan", expected_fingerprint),
     ]
+
+
+def test_b4e1f20b(capsys):
+    """A non-exited artifact whose flows include no build flow fails loudly rather than being silently dropped."""
+    snapshot = _load('github-artifact.snapshot.json')
+    fetch = _fetch_from({"runner-ci": {}})  # annotations present but no type=build
+    with pytest.raises(SystemExit) as exc:
+        artifacts.artifacts(snapshot, fetch=fetch)
+    assert exc.value.code == 45
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    expected_fingerprint = snapshot["artifacts"][0]["fingerprint"]
+    assert captured.err == f"ERROR: No build flow found for artifact {expected_fingerprint}\n"
 
 
 def test_b4e1f209(monkeypatch):

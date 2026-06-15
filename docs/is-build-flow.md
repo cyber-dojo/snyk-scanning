@@ -65,6 +65,10 @@ can leave an artifact unscanned. That must never happen silently. So if the
 unset `KOSLI_HOST`, `KOSLI_ORG`, or `KOSLI_API_TOKEN` exits 44, and an
 unrecognised CI system in a commit_url exits 42.
 
+For the same reason, a non-exited artifact whose flows contain no build flow is
+never silently dropped (which would leave it unscanned): `artifacts()` exits 45,
+naming the fingerprint, rather than omit it from the matrix.
+
 ## repo_name is derived from the commit_url
 
 `parse_commit_url(commit_url)` returns `repo_name` as the last path segment of the

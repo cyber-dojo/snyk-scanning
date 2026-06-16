@@ -443,13 +443,19 @@ jobs:
           echo "COMPLIANT=${COMPLIANT}" >> "${GITHUB_ENV}"
 
           ANNOTATE_FLAGS=()
-          i=0
-          while IFS=$'\t' read -r allow url; do
+          while IFS=$'\t' read -r allow url label; do
             if [ "${allow}" = "true" ]; then status=pass; else status=fail; fi
-            printf -v key "vuln_url_%s_%03d" "${status}" "${i}"
+            # The Kosli UI renders an annotation value that is a URL as a link
+            # whose visible text is the URL itself, so the only place to surface
+            # a readable vuln identifier is the key. Put status + severity +
+            # full id there. The CLI restricts annotation keys to [A-Za-z0-9_]
+            # (no hyphen, no colon), so the jq below converts the hyphens in the
+            # vuln id to underscores; the UI's humanize filter then renders each
+            # underscore as a space. full id is unique per vuln so no numeric
+            # suffix is needed.
+            key="${status}_${label}"
             ANNOTATE_FLAGS+=(--annotate "${key}=${url}")
-            i=$((i+1))
-          done < <(jq --raw-output '.[] | [(.evaluation.allow | tostring), .attestation_url] | @tsv' "${VULNS_FILENAME}")
+          done < <(jq --raw-output '.[] | [(.evaluation.allow | tostring), .attestation_url, ("\(.severity)-\(.full_id)" | gsub("-"; "_"))] | @tsv' "${VULNS_FILENAME}")
 
           kosli attest generic \
             --compliant="${COMPLIANT}" \

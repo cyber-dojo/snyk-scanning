@@ -258,9 +258,6 @@ jobs:
       VULN_FILENAME: vuln-${{matrix.trail_name}}.json
       KOSLI_FLOW: snyk-${{inputs.kosli_env}}-per-vuln
       KOSLI_TRAIL: ${{matrix.trail_name}}
-      # Per-fingerprint attestation name so two builds of the same artifact in one
-      # deploy snapshot do not clobber each other on the shared per-vuln trail.
-      VULN_ATTESTATION_NAME: snyk-${{matrix.artifact_fingerprint}}
     strategy:
       matrix:
         include: ${{fromJSON(needs.find-snyk-vulns.outputs.vulns)}}
@@ -268,6 +265,11 @@ jobs:
       - uses: cyber-dojo/harden-runner@main
       - uses: cyber-dojo/pinned-checkout@main
       - uses: cyber-dojo/setup-kosli-cli@main
+
+      - name: Set the per-vuln attestation name
+        run: |
+          FINGERPRINT="${{matrix.artifact_fingerprint}}"
+          echo "VULN_ATTESTATION_NAME=snyk-${FINGERPRINT:0:10}" >> "${GITHUB_ENV}"
 
       - name: Add time vuln first seen in the repo
         run: |
@@ -312,7 +314,7 @@ jobs:
           curl --fail-with-body "${REGO_PARAMS_URL}" > ${REGO_PARAMS_FILENAME}
 
           # The rego selects the per-vuln attestation by name. The name is built
-          # once as VULN_ATTESTATION_NAME (snyk-<fingerprint>), so pass that in
+          # once as VULN_ATTESTATION_NAME (snyk-<short fingerprint>), so pass that in
           # alongside the severity limits rather than rebuilding the prefix in the
           # rego. --params takes a single value, so merge it into the params object.
           PARAMS="$(jq --compact-output --arg name "${VULN_ATTESTATION_NAME}" \

@@ -438,6 +438,16 @@ jobs:
             --attachments "${SNYK_POLICY_FILENAME}" \
             --name "${KOSLI_ATTESTATION_NAME}"
 
+          kosli attest decision \
+            --compliant="${COMPLIANT}" \
+            --control "SDLC-CTRL-0022" \
+            --attachments "${REGO_POLICY_FILENAME}" \
+            --attachments "${REGO_PARAMS_FILENAME}" \
+            --attachments "${SNYK_SARIF_FILENAME}" \
+            --attachments "${SNYK_POLICY_FILENAME}" \
+            --name "${KOSLI_ATTESTATION_NAME}-decision"
+
+
       - name: Attest SOME vulns
         if: needs.attest-individual-snyk-vulns.result != 'skipped'
         run: |

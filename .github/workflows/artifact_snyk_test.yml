@@ -417,7 +417,7 @@ jobs:
           fi
           curl --fail-with-body "${REGO_PARAMS_URL}" > ${REGO_PARAMS_FILENAME}
 
-      - name: Don't attest the artifact in a build workflow
+      - name: Don't (re)attest the artifact in a build workflow
         if: github.repository == 'cyber-dojo/snyk-scanning' || github.repository == 'cyber-dojo/aws-prod-co-promotion'
         run: |
           # runner.snyk-scan => runner
@@ -430,23 +430,15 @@ jobs:
         run: |
           COMPLIANT=true
           echo "COMPLIANT=${COMPLIANT}" >> "${GITHUB_ENV}"
-          kosli attest generic \
-            --compliant="${COMPLIANT}" \
-            --attachments "${REGO_POLICY_FILENAME}" \
-            --attachments "${REGO_PARAMS_FILENAME}" \
-            --attachments "${SNYK_SARIF_FILENAME}" \
-            --attachments "${SNYK_POLICY_FILENAME}" \
-            --name "${KOSLI_ATTESTATION_NAME}"
 
           kosli attest decision \
             --compliant="${COMPLIANT}" \
             --control "SDLC-CTRL-0022" \
             --attachments "${REGO_POLICY_FILENAME}" \
             --attachments "${REGO_PARAMS_FILENAME}" \
-            --attachments "${SNYK_SARIF_FILENAME}" \
+            --attachments "${SNYK_SARIF_FILENAME}"  \
             --attachments "${SNYK_POLICY_FILENAME}" \
-            --name "${KOSLI_ATTESTATION_NAME}-decision"
-
+            --name "${KOSLI_ATTESTATION_NAME}"
 
       - name: Attest SOME vulns
         if: needs.attest-individual-snyk-vulns.result != 'skipped'
@@ -469,11 +461,12 @@ jobs:
             ANNOTATE_FLAGS+=(--annotate "${key}=${url}")
           done < <(jq --raw-output '.[] | [(.evaluation.allow | tostring), .attestation_url, ("\(.severity)-\(.full_id)" | gsub("-"; "_"))] | @tsv' "${VULNS_FILENAME}")
 
-          kosli attest generic \
+          kosli attest decision \
             --compliant="${COMPLIANT}" \
+            --control "SDLC-CTRL-0022" \
             --attachments "${REGO_POLICY_FILENAME}" \
             --attachments "${REGO_PARAMS_FILENAME}" \
-            --attachments "${SNYK_SARIF_FILENAME}" \
+            --attachments "${SNYK_SARIF_FILENAME}"  \
             --attachments "${SNYK_POLICY_FILENAME}" \
             --name "${KOSLI_ATTESTATION_NAME}" \
             "${ANNOTATE_FLAGS[@]}"

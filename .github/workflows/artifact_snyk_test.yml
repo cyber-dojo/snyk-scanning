@@ -453,13 +453,14 @@ jobs:
             # whose visible text is the URL itself, so the only place to surface
             # a readable vuln identifier is the key. Put status + severity +
             # full id there. The CLI restricts annotation keys to [A-Za-z0-9_]
-            # (no hyphen, no colon), so the jq below converts the hyphens in the
-            # vuln id to underscores; the UI's humanize filter then renders each
-            # underscore as a space. full id is unique per vuln so no numeric
-            # suffix is needed.
+            # (no hyphen, no colon, no parens), so the jq below converts every
+            # character outside that set (hyphens, colons, parentheses, etc) in
+            # the vuln id to underscores; the UI's humanize filter then renders
+            # each underscore as a space. full id is unique per vuln so no
+            # numeric suffix is needed.
             key="${status}_${label}"
             ANNOTATE_FLAGS+=(--annotate "${key}=${url}")
-          done < <(jq --raw-output '.[] | [(.evaluation.allow | tostring), .attestation_url, ("\(.severity)-\(.full_id)" | gsub("-"; "_"))] | @tsv' "${VULNS_FILENAME}")
+          done < <(jq --raw-output '.[] | [(.evaluation.allow | tostring), .attestation_url, ("\(.severity)-\(.full_id)" | gsub("[^A-Za-z0-9_]"; "_"))] | @tsv' "${VULNS_FILENAME}")
 
           kosli attest decision \
             --compliant="${COMPLIANT}" \

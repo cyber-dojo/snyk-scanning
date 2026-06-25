@@ -426,9 +426,9 @@ jobs:
           kosli attest artifact ${{inputs.artifact_name}} \
             --name="${ARTIFACT_SLOT_NAME}"
 
-          kosli attest decision
-            --control SDLC-CTRL-0002
-            --compliant=true
+          kosli attest decision \
+            --control SDLC-CTRL-0002 \
+            --compliant=true \
             --name provenance
 
       - name: Attest NO vulns

@@ -1,4 +1,4 @@
-name: Check Expiry and Notify
+name: 📦 Check Expiry and Notify
 
 on:
   workflow_call:

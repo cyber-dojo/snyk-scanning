@@ -1,4 +1,4 @@
-name: Environment Snyk Test
+name: 📦 Environment Snyk Test
 
 on:
   workflow_call:

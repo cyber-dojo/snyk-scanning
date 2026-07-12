@@ -7,7 +7,7 @@
 # ${{env.KOSLI_ORG}}
 # ${{env.KOSLI_HOST}}
 
-name: Artifact Snyk Test
+name: 📦 Artifact Snyk Test
 
 on:
   workflow_call:

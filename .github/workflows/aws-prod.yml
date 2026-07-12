@@ -1,4 +1,4 @@
-name: Live Snyk Test aws-prod
+name: ▶️ Live Snyk Test aws-prod
 
 on:
   workflow_dispatch:

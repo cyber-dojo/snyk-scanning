@@ -194,15 +194,11 @@ jobs:
           path: ${{env.SNYK_SARIF_FILENAME}}
 
       - name: Get the real .snyk file
-        run: |
-          URL="${{inputs.raw_snyk_policy_url}}"
-          if curl --fail-with-body --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 --output "${SNYK_POLICY_FILENAME}" "${URL}" 2>/dev/null ; then
-            echo "Using .snyk policy file from ${URL}"
-          else
-            echo > "${SNYK_POLICY_FILENAME}"
-            echo "WARNING: could not fetch .snyk policy file from ${URL} - falling back to empty policy" \
-              | tee -a "${GITHUB_STEP_SUMMARY}"
-          fi
+        uses: ./.github/actions/fetch-url-to-file
+        with:
+          url: ${{inputs.raw_snyk_policy_url}}
+          path: ${{env.SNYK_POLICY_FILENAME}}
+          optional: 'true'
 
       - name: Debug print policy file
         if: env.KOSLI_DEBUG == 'true'
@@ -307,12 +303,22 @@ jobs:
             --name ${VULN_ATTESTATION_NAME}
             --type ${SNYK_CAT_NAME}
 
+      # The checkout is in the caller's context, so the action is named by its
+      # repo path rather than ./.github/actions/
+      - name: Get the rego policy file
+        uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
+        with:
+          url: ${{env.REGO_POLICY_URL}}
+          path: ${{env.REGO_POLICY_FILENAME}}
+
+      - name: Get the rego params file
+        uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
+        with:
+          url: ${{env.REGO_PARAMS_URL}}
+          path: ${{env.REGO_PARAMS_FILENAME}}
+
       - name: Evaluate trail and add to vuln data
         run: |
-          # Curl files - the checkout is in the caller's context
-          curl --fail-with-body --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 --output ${REGO_POLICY_FILENAME} "${REGO_POLICY_URL}"
-          curl --fail-with-body --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 --output ${REGO_PARAMS_FILENAME} "${REGO_PARAMS_URL}"
-
           # The rego selects the per-vuln attestation by name. The name is built
           # once as VULN_ATTESTATION_NAME (snyk-<short fingerprint>), so pass that in
           # alongside the severity limits rather than rebuilding the prefix in the
@@ -404,18 +410,26 @@ jobs:
         run:
           jq . ${VULNS_FILENAME}
 
-      - name: Get the rego files
-        run: |
-          curl --fail-with-body --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 --output ${REGO_POLICY_FILENAME} "${REGO_POLICY_URL}"
-          URL="${{inputs.raw_snyk_policy_url}}"
-          if curl --fail-with-body --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 --output "${SNYK_POLICY_FILENAME}" "${URL}" 2>/dev/null ; then
-            echo "Using .snyk policy file from ${URL}"
-          else
-            echo > "${SNYK_POLICY_FILENAME}"
-            echo "WARNING: could not fetch .snyk policy file from ${URL} - falling back to empty policy" \
-              | tee -a "${GITHUB_STEP_SUMMARY}"
-          fi
-          curl --fail-with-body --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 10 --output ${REGO_PARAMS_FILENAME} "${REGO_PARAMS_URL}"
+      # The checkout is in the caller's context, so the action is named by its
+      # repo path rather than ./.github/actions/
+      - name: Get the rego policy file
+        uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
+        with:
+          url: ${{env.REGO_POLICY_URL}}
+          path: ${{env.REGO_POLICY_FILENAME}}
+
+      - name: Get the real .snyk file
+        uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
+        with:
+          url: ${{inputs.raw_snyk_policy_url}}
+          path: ${{env.SNYK_POLICY_FILENAME}}
+          optional: 'true'
+
+      - name: Get the rego params file
+        uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
+        with:
+          url: ${{env.REGO_PARAMS_URL}}
+          path: ${{env.REGO_PARAMS_FILENAME}}
 
       - name: Don't (re)attest the artifact in a build workflow
         if: github.repository == 'cyber-dojo/snyk-scanning' || github.repository == 'cyber-dojo/aws-prod-co-promotion'

@@ -1,0 +1,51 @@
+name: Fetch URL To File
+description: Fetch a URL into a file, retrying transient network failures
+
+inputs:
+  url:
+    description: The URL to fetch
+    required: true
+  path:
+    description: The file the response body is written to
+    required: true
+  optional:
+    description: When true, a failed fetch writes an empty file and warns instead of failing the step
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        URL: ${{inputs.url}}
+        FILE: ${{inputs.path}}
+        OPTIONAL: ${{inputs.optional}}
+      run: |
+        # --retry-all-errors is what retries a mid-transfer reset (curl exit 35);
+        # --retry alone does not cover that class.
+        #
+        # --output rather than shell redirection because a retried transfer
+        # appends to a redirect, leaving a partial prefix in front of the full
+        # body with curl still exiting 0. Letting curl write the file itself
+        # means it truncates on retry, so a retry cannot silently corrupt it.
+        FLAGS=(
+          --fail-with-body
+          --retry 5
+          --retry-all-errors
+          --retry-delay 2
+          --connect-timeout 10
+        )
+
+        if [ "${OPTIONAL}" != "true" ]; then
+          curl "${FLAGS[@]}" --output "${FILE}" "${URL}"
+          exit 0
+        fi
+
+        if curl "${FLAGS[@]}" --output "${FILE}" "${URL}" 2>/dev/null ; then
+          echo "Using ${FILE} from ${URL}"
+        else
+          echo > "${FILE}"
+          echo "WARNING: could not fetch ${FILE} from ${URL} - falling back to empty file" \
+            | tee -a "${GITHUB_STEP_SUMMARY}"
+        fi

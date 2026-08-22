@@ -1,0 +1,42 @@
+# Tests this repo's own code: the rego policy, the bin/ scripts and the
+# attestation-type schema. Separate from the Snyk Test workflows, which scan
+# artifacts rather than testing this repo.
+#
+# Every service repo calls artifact_snyk_test.yml@main, so main is the live
+# deploy target for all of them at once. That makes green-before-merge the only
+# real gate, which is why this runs on pull_request.
+#
+# kosli evaluate input, which test_rego_rules.sh shells out to, evaluates a
+# policy locally and needs no credentials, so this workflow needs no secrets and
+# runs on pull requests from forks.
+#
+# pytest and PyYAML come from the runner image. tests/run_tests.sh puts the first
+# python3 that can import both at the front of PATH, and exits naming them if no
+# python3 qualifies, so a runner image that stops shipping either one fails here
+# with a diagnosis rather than an import traceback.
+
+name: ▶️ Run Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: cyber-dojo/setup-kosli-cli@main
+
+      - name: Run the tests
+        run:
+          make run_tests

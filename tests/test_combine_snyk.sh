@@ -2,8 +2,6 @@
 
 readonly my_dir="$(cd "$(dirname "${0}")" && pwd)"
 
-# Fixed point in time for all tests: 2025-06-01 00:00:00 UTC
-readonly NOW_TS=1748736000
 readonly SNYK_VERSION="1.0.0"
 readonly REPO_NAME="test-repo"
 readonly ARTIFACT_FINGERPRINT="1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a"
@@ -95,7 +93,6 @@ run_combine_snyk()
   local -r sarif_filename="${1}"
   local -r snyk_policy_filename="${2}"
   python3 "${my_dir}/../bin/combine_snyk.py" \
-    "${NOW_TS}" \
     "${SNYK_VERSION}" \
     "${REPO_NAME}" \
     "${my_dir}/combine-snyk/${sarif_filename}" \

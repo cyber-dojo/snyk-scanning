@@ -3,19 +3,19 @@
 import sys
 import json
 import yaml
-from datetime import datetime, timezone
 
 
+# now_ts and now are stamped later, by the job that begins the per-vuln trail,
+# so that the instant a vuln's age is measured from is never earlier than the
+# trail created_at it is measured against.
 if __name__ == "__main__":  # pragma: no cover
-    now_ts = int(sys.argv[1])
-    now = str(datetime.fromtimestamp(now_ts, tz=timezone.utc))
-    snyk_version = sys.argv[2]
-    repo_name = sys.argv[3]
-    sarif_filename = sys.argv[4]
-    snyk_policy_filename = sys.argv[5]
-    stale_filename = sys.argv[6]
-    artifact_name = sys.argv[7]
-    artifact_fingerprint = sys.argv[8]
+    snyk_version = sys.argv[1]
+    repo_name = sys.argv[2]
+    sarif_filename = sys.argv[3]
+    snyk_policy_filename = sys.argv[4]
+    stale_filename = sys.argv[5]
+    artifact_name = sys.argv[6]
+    artifact_fingerprint = sys.argv[7]
 
     # Extract ids and severities of each vulnerability in sarif file
     with open(sarif_filename) as sarif_file:
@@ -35,8 +35,6 @@ if __name__ == "__main__":  # pragma: no cover
             trail_name = f"{repo_name}-{severity}-{full_id}"
 
             vulns[full_id] = {
-                'now_ts': now_ts,
-                'now': now,
                 'version': snyk_version,
                 'artifact_name': artifact_name,
                 'artifact_fingerprint': artifact_fingerprint,

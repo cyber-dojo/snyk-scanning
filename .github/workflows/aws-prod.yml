@@ -20,7 +20,15 @@ env:
   KOSLI_FLOW: snyk-aws-prod-per-artifact
 
 jobs:
+  # The push trigger above fires on changes to the rego and its params, which is
+  # exactly what test_rego_rules.sh and test_rego_params.sh cover. Gating the
+  # scan on them keeps an untested policy change out of a live compliance
+  # decision.
+  run-tests:
+    uses: ./.github/workflows/test.yml
+
   setup-flow:
+    needs: [run-tests]
     runs-on: ubuntu-latest
     outputs:
       kosli_env: ${{steps.set-outputs.outputs.kosli_env}}
@@ -78,7 +86,7 @@ jobs:
 
 
   notify-on-failure:
-    needs: [setup-flow, scan-aws-prod, notify-next-expiry]
+    needs: [run-tests, setup-flow, scan-aws-prod, notify-next-expiry]
     if: failure()
     runs-on: ubuntu-latest
     steps:
@@ -92,4 +100,4 @@ jobs:
         uses: ./.github/actions/send-slack-message
         with:
           slack_url: ${{secrets.SLACK_WEBHOOK_URL}}
-          message: "Snyk scan FAILED for ${{env.KOSLI_ENV}}.\nSee ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"
+          message: "Snyk ${{ needs['run-tests'].result == 'failure' && 'tests' || 'scan' }} FAILED for ${{env.KOSLI_ENV}}.\nSee ${{github.server_url}}/${{github.repository}}/actions/runs/${{github.run_id}}"

@@ -1,0 +1,54 @@
+# Tests this repo's own code: the rego policy, the bin/ scripts and the
+# attestation-type schema. Separate from the Snyk Test workflows, which scan
+# artifacts rather than testing this repo.
+#
+# Every service repo calls artifact_snyk_test.yml@main, so main is the live
+# deploy target for all of them at once. That makes green-before-merge the only
+# real gate, which is why this runs on pull_request.
+#
+# kosli evaluate input, which test_rego_rules.sh shells out to, evaluates a
+# policy locally and needs no credentials, so this workflow needs no secrets and
+# runs on pull requests from forks.
+#
+# ubuntu-latest carries no single python3 that can import both pytest and PyYAML,
+# so setup-python supplies the interpreter and pip installs both into it.
+# tests/run_tests.sh then picks it as the first python3 on PATH with both, and
+# exits naming them if none qualifies.
+
+name: ▶️ Run Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_call:
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@v2
+        with:
+          egress-policy: audit
+
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 1
+
+      - uses: cyber-dojo/setup-kosli-cli@main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # setup-python puts its interpreter at the front of PATH, so installing
+      # here is what makes one python3 able to import both, which is what
+      # tests/run_tests.sh looks for. PyYAML is needed because
+      # bin/combine_snyk.py reads the .snyk policy file, which is YAML.
+      - name: Install the modules the tests need
+        run:
+          python3 -m pip install --quiet pytest pyyaml
+
+      - name: Run the tests
+        run:
+          make run_tests

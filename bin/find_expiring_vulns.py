@@ -7,7 +7,6 @@ import json
 import os
 import re
 import sys
-import time
 
 
 def extract_artifact_name(trail_name):
@@ -55,7 +54,11 @@ def rego_result(data, env, now_ts, max_days):
         return None
     severity = data["severity"]
     limit = max_days.get(severity, 0)
-    age_days = (now_ts - data["first_seen_ts"]) / 86400
+    # first_seen_ts is the trail created_at, set by `kosli begin trail` in a job
+    # that runs after the one stamping now_ts, so on a vuln's first sighting it
+    # is ahead of now_ts. Clamping at zero matches the rego and stops the report
+    # offering more grace than the severity limit allows.
+    age_days = max(0, (now_ts - data["first_seen_ts"]) / 86400)
     days_remaining = limit - age_days
     return {
         "env": env,
@@ -126,12 +129,15 @@ def main():
         params = json.load(f)
     max_days = params["max_days_by_severity"]
 
-    now_ts = time.time()
     vulns = []
 
     for path in sorted(glob.glob(os.path.join(args.vuln_dir, "vuln-*.json"))):
         with open(path) as f:
             data = json.load(f)
+        # Age is measured against the now_ts stamped into the attested data, the
+        # same instant the rego divides by, so this report and the per-vuln
+        # attestation reach the same verdict from the same vuln file.
+        now_ts = data["now_ts"]
         result = dot_snyk_result(data, args.env, now_ts)
         if result:
             vulns.append(result)

@@ -25,7 +25,7 @@ jobs:
   # scan on them keeps an untested policy change out of a live compliance
   # decision.
   run-tests:
-    uses: ./.github/workflows/test.yml
+    uses: ./.github/workflows/repo_test.yml
 
   setup-flow:
     needs: [run-tests]

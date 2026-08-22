@@ -30,9 +30,11 @@ The inner trail-level attestations (one per Snyk vulnerability) _always_ take pl
 
 Triggered daily, manually via `workflow_dispatch`, or on a push
 to `main` that changes `snyk-vuln-compliance.rego` or the relevant
-`rego.params.{env}.json`. Calls `env_snyk_test.yml` for the target environment,
-then calls `check-expiry-and-notify.yml` to report on upcoming compliance
-expirations via Slack.
+`rego.params.{env}.json`. Calls `repo_test.yml` first, so a policy change that
+fails this repo's own tests never reaches a live compliance decision. Then calls
+`env_snyk_test.yml` for the target environment, and finally
+`check-expiry-and-notify.yml` to report on upcoming compliance expirations via
+Slack.
 
 | Workflow | Kosli flow (per-artifact) | Kosli flow (per-vuln) |
 |---|---|---|
@@ -160,4 +162,19 @@ compliance policy, and makes an artifact-level attestations in Kosli. Attaches t
 | Name | Description |
 |---|---|
 | `vulns_json` | JSON array of vulnerability objects found for the artifact |
+
+### `repo_test.yml` (reusable)
+
+Tests this repo's own code: the Rego policy, the `bin/` scripts, and the
+`single-snyk-vuln` attestation-type schema. It scans nothing; the Snyk Test
+workflows above scan artifacts.
+
+Runs on every pull request and on pushes to `main`, and is also called as a
+gating job by `aws-beta.yml` and `aws-prod.yml`. Every service repo calls
+`artifact_snyk_test.yml@main`, so `main` is the live deploy target for all of
+them at once, which makes green-before-merge the only real gate.
+
+Takes no inputs and needs no secrets: `kosli evaluate input`, which
+`test_rego_rules.sh` shells out to, evaluates a policy locally, so the workflow
+also runs on pull requests from forks.
 

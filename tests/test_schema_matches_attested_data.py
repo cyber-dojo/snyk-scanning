@@ -14,15 +14,17 @@ SCHEMA_FILE = os.path.join(ROOT_DIR, "single-snyk-vuln.schema.json")
 COMBINE = os.path.join(ROOT_DIR, "bin", "combine_snyk.py")
 COMBINE_DIR = os.path.join(MY_DIR, "combine-snyk")
 
-# Keys the workflow's "Add time vuln first seen in the repo" step injects into
-# each vuln dict after combine_snyk.py and before the data is attested.
-WORKFLOW_ADDED_KEYS = {"first_seen_ts", "first_seen"}
+# Keys the workflow's "Add times the vuln was first seen and is being measured
+# at" step injects into each vuln dict after combine_snyk.py and before the data
+# is attested. now_ts is stamped there, alongside first_seen_ts, so that it is
+# never earlier than the trail created_at the age is measured against.
+WORKFLOW_ADDED_KEYS = {"first_seen_ts", "first_seen", "now_ts", "now"}
 
 
 def attested_vuln_keys():
     """Return the keys of one per-vuln object as actually attested (combine output plus workflow-added keys)."""
     result = subprocess.run(
-        [sys.executable, COMBINE, "1748736000", "1.0.0", "test-repo",
+        [sys.executable, COMBINE, "1.0.0", "test-repo",
          os.path.join(COMBINE_DIR, "one-medium.sarif.json"),
          os.path.join(COMBINE_DIR, "no-ignore.snyk.yaml"),
          "/dev/null",

@@ -19,6 +19,21 @@ test_age_is_measured_from_the_attested_now_ts()
   assert_stderr_equals ""
 }
 
+# The same vuln at its first sighting, in the aws-prod run of 2026-08-20.
+# first_seen_ts is the trail created_at, set by `kosli begin trail` in a job that
+# runs after the one stamping now_ts, so it landed 75.8 seconds ahead of now_ts
+# and the raw age is negative. Holding such a vuln at day zero keeps this report
+# agreeing with the rego, which clamps the same way, and stops the report
+# offering more grace than the severity limit allows.
+
+test_first_seen_ahead_of_now_holds_the_vuln_at_day_zero()
+{
+  run_find_expiring_vulns aws-prod vulns-runner-high-first-seen-ahead
+  assert_status_equals 0
+  assert_stdout_equals "$(cat "${fixture_dir}/expected/runner-high-first-seen-ahead.json")"
+  assert_stderr_equals ""
+}
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 run_find_expiring_vulns()

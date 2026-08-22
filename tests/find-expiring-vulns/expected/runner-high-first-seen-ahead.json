@@ -1,0 +1,17 @@
+{
+  "vulns": [
+    {
+      "env": "aws-prod",
+      "trail_name": "runner-high-SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+      "full_id": "SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+      "severity": "high",
+      "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+      "mechanism": "rego_limit",
+      "days_remaining": 2,
+      "ignore_expires": null,
+      "age_days": 0,
+      "limit_days": 2,
+      "artifact": "runner"
+    }
+  ]
+}

@@ -18,7 +18,11 @@ vuln_of(trail) := trail.compliance_status.attestations_statuses[attestation_name
 
 seconds_per_day := 60 * 60 * 24
 
-age_days(vuln) := (vuln.now_ts - vuln.first_seen_ts) / seconds_per_day
+# first_seen_ts is the trail created_at, set by `kosli begin trail` in a job that
+# runs after the one stamping now_ts, so on a vuln's first sighting first_seen_ts
+# is ahead of now_ts. Clamping at zero holds such a vuln at day zero, which a
+# limit of 0 still rejects, rather than letting a negative age satisfy any limit.
+age_days(vuln) := max([0, (vuln.now_ts - vuln.first_seen_ts) / seconds_per_day])
 
 # Use < so that critical (max=0) is non-compliant on day zero
 age_within_limit(vuln) if {

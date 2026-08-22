@@ -54,7 +54,11 @@ def rego_result(data, env, now_ts, max_days):
         return None
     severity = data["severity"]
     limit = max_days.get(severity, 0)
-    age_days = (now_ts - data["first_seen_ts"]) / 86400
+    # first_seen_ts is the trail created_at, set by `kosli begin trail` in a job
+    # that runs after the one stamping now_ts, so on a vuln's first sighting it
+    # is ahead of now_ts. Clamping at zero matches the rego and stops the report
+    # offering more grace than the severity limit allows.
+    age_days = max(0, (now_ts - data["first_seen_ts"]) / 86400)
     days_remaining = limit - age_days
     return {
         "env": env,

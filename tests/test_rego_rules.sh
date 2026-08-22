@@ -151,6 +151,22 @@ test_deny_critical_vuln_on_prod_day_zero()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# No ignore, first_seen_ts ahead of now_ts => non-compliant
+# now_ts is stamped in the find-snyk-vulns job; first_seen_ts is the trail
+# created_at set by `kosli begin trail` in the job after it. On a vuln's first
+# sighting first_seen_ts is therefore ahead of now_ts, by 76 seconds in the
+# aws-prod run of 2026-08-20. A negative age must not satisfy a severity limit.
+
+test_deny_critical_vuln_on_prod_when_first_seen_is_ahead_of_now()
+{
+  local -r first_seen_ts=$((NOW_TS + 76))
+  local input
+  input=$(make_input "test-trail" "critical" "${first_seen_ts}" false 0 "")
+  evaluate_rego "${input}" "${PARAMS_PROD}"
+  assert_deny
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Demonstrate OPA undefined-field footgun: wrong field name in input silently
 # makes a violation rule body fail, producing compliant when it should be denied.
 # See docs/rego-undefined-field-in-violations.md

@@ -7,7 +7,6 @@ import json
 import os
 import re
 import sys
-import time
 
 
 def extract_artifact_name(trail_name):
@@ -126,12 +125,15 @@ def main():
         params = json.load(f)
     max_days = params["max_days_by_severity"]
 
-    now_ts = time.time()
     vulns = []
 
     for path in sorted(glob.glob(os.path.join(args.vuln_dir, "vuln-*.json"))):
         with open(path) as f:
             data = json.load(f)
+        # Age is measured against the now_ts stamped into the attested data, the
+        # same instant the rego divides by, so this report and the per-vuln
+        # attestation reach the same verdict from the same vuln file.
+        now_ts = data["now_ts"]
         result = dot_snyk_result(data, args.env, now_ts)
         if result:
             vulns.append(result)

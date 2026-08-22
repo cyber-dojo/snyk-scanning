@@ -10,10 +10,10 @@
 # policy locally and needs no credentials, so this workflow needs no secrets and
 # runs on pull requests from forks.
 #
-# pytest and PyYAML come from the runner image. tests/run_tests.sh puts the first
-# python3 that can import both at the front of PATH, and exits naming them if no
-# python3 qualifies, so a runner image that stops shipping either one fails here
-# with a diagnosis rather than an import traceback.
+# ubuntu-latest carries no single python3 that can import both pytest and PyYAML,
+# so setup-python supplies the interpreter and pip installs both into it.
+# tests/run_tests.sh then picks it as the first python3 on PATH with both, and
+# exits naming them if none qualifies.
 
 name: ▶️ Run Tests
 
@@ -36,6 +36,18 @@ jobs:
           fetch-depth: 1
 
       - uses: cyber-dojo/setup-kosli-cli@main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      # setup-python puts its interpreter at the front of PATH, so installing
+      # here is what makes one python3 able to import both, which is what
+      # tests/run_tests.sh looks for. PyYAML is needed because
+      # bin/combine_snyk.py reads the .snyk policy file, which is YAML.
+      - name: Install the modules the tests need
+        run:
+          python3 -m pip install --quiet pytest pyyaml
 
       - name: Run the tests
         run:

@@ -55,74 +55,77 @@ run_message()
   echo $? >${statusF}
 }
 
-EXPECTED_INSIDE_LIMIT='Days till non-compliant: 3
+readonly EXPECTED_INSIDE_LIMIT='Days till non-compliant: 3
 Vuln: SNYK-GOLANG-NETHTTP-3321444
 Severity: high
 Repo: creator
 Mechanism: rego_limit'
 
-EXPECTED_PAST_LIMIT='Days non-compliant: 1
+readonly EXPECTED_PAST_LIMIT='Days non-compliant: 1
 Vuln: SNYK-GOLANG-NETHTTP-3321444
 Severity: high
 Repo: creator
 Mechanism: rego_limit'
 
-EXPECTED_CLOCK_SKEW='Days non-compliant: unknown (clock skew)
+readonly EXPECTED_CLOCK_SKEW='Days non-compliant: unknown (clock skew)
 Vuln: SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666
 Severity: high
 Repo: runner
 Mechanism: clock_skew'
 
-# print_slack_vuln_message.py parses --vulns with json.loads, which ignores
-# whitespace, so a fixture can be laid out across lines to stay readable.
+# Every fixture is built through jq so that the fields each test turns on can be
+# marked with # <<<: jq programs take comments, JSON does not.
 
-ONE_CREATOR_HIGH_INSIDE_LIMIT='[
-  {
-    "env": "aws-beta",
-    "trail_name": "creator-high-SNYK-GOLANG-NETHTTP-3321444",
-    "full_id": "SNYK-GOLANG-NETHTTP-3321444",
-    "severity": "high",
-    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
-    "mechanism": "rego_limit",
-    "days_remaining": 2.3,
-    "ignore_expires": null,
-    "age_days": 4.7,
-    "limit_days": 7,
-    "artifact": "creator"
-  }
-]'
+readonly ONE_CREATOR_HIGH_INSIDE_LIMIT="$(jq --null-input '
+  [
+    {
+      env: "aws-beta",
+      trail_name: "creator-high-SNYK-GOLANG-NETHTTP-3321444",
+      full_id: "SNYK-GOLANG-NETHTTP-3321444",
+      severity: "high",           # <<< printed on the Severity line
+      vuln_url: "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
+      mechanism: "rego_limit",    # <<< printed raw on the Mechanism line
+      days_remaining: 2.3,        # <<< rounds UP to 3, which is what pins ceil
+      ignore_expires: null,
+      age_days: 4.7,
+      limit_days: 7,
+      artifact: "creator"         # <<< printed on the Repo line
+    }
+  ]')"
 
-ONE_CREATOR_HIGH_PAST_LIMIT='[
-  {
-    "env": "aws-beta",
-    "trail_name": "creator-high-SNYK-GOLANG-NETHTTP-3321444",
-    "full_id": "SNYK-GOLANG-NETHTTP-3321444",
-    "severity": "high",
-    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
-    "mechanism": "rego_limit",
-    "days_remaining": -1.0,
-    "ignore_expires": null,
-    "age_days": 8.0,
-    "limit_days": 7,
-    "artifact": "creator"
-  }
-]'
+readonly ONE_CREATOR_HIGH_PAST_LIMIT="$(jq --null-input '
+  [
+    {
+      env: "aws-beta",
+      trail_name: "creator-high-SNYK-GOLANG-NETHTTP-3321444",
+      full_id: "SNYK-GOLANG-NETHTTP-3321444",
+      severity: "high",
+      vuln_url: "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
+      mechanism: "rego_limit",
+      days_remaining: -1.0,       # <<< negative, so the line counts days overdue
+      ignore_expires: null,
+      age_days: 8.0,
+      limit_days: 7,
+      artifact: "creator"
+    }
+  ]')"
 
-ONE_RUNNER_HIGH_CLOCK_SKEW='[
-  {
-    "env": "aws-prod",
-    "trail_name": "runner-high-SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-    "full_id": "SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-    "severity": "high",
-    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-    "mechanism": "clock_skew",
-    "days_remaining": -99999,
-    "ignore_expires": null,
-    "age_days": null,
-    "limit_days": 2,
-    "artifact": "runner"
-  }
-]'
+readonly ONE_RUNNER_HIGH_CLOCK_SKEW="$(jq --null-input '
+  [
+    {
+      env: "aws-prod",
+      trail_name: "runner-high-SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+      full_id: "SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+      severity: "high",
+      vuln_url: "https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+      mechanism: "clock_skew",   # <<< selects the unknown-days line
+      days_remaining: -99999,    # <<< the sentinel that must not be counted
+      ignore_expires: null,
+      age_days: null,
+      limit_days: 2,
+      artifact: "runner"
+    }
+  ]')"
 
 echo "::${0##*/}"
 . ${my_dir}/shunit2_helpers.sh

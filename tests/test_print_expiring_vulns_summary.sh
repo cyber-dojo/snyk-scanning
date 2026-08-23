@@ -59,98 +59,105 @@ run_summary()
   echo $? >${statusF}
 }
 
-# print_expiring_vulns_summary.py parses --vulns with json.loads, which ignores
-# whitespace, so a fixture can be laid out across lines to stay readable.
+# Every fixture is built through jq so that the fields each test turns on can be
+# marked with # <<<: jq programs take comments, JSON does not.
 
-ONE_CREATOR_HIGH_BETA='[
-  {
-    "env": "aws-beta",
-    "trail_name": "creator-high-SNYK-GOLANG-NETHTTP-3321444",
-    "full_id": "SNYK-GOLANG-NETHTTP-3321444",
-    "severity": "high",
-    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
-    "mechanism": "rego_limit",
-    "days_remaining": 2.3,
-    "ignore_expires": null,
-    "age_days": 4.7,
-    "limit_days": 7,
-    "artifact": "creator"
-  }
-]'
+readonly ONE_CREATOR_HIGH_BETA="$(jq --null-input '
+  [
+    {
+      env: "aws-beta",            # <<< names the section heading
+      trail_name: "creator-high-SNYK-GOLANG-NETHTTP-3321444",
+      full_id: "SNYK-GOLANG-NETHTTP-3321444",
+      severity: "high",           # <<< picks the table the row lands in
+      vuln_url: "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
+      mechanism: "rego_limit",    # <<< renders as the "rego" label
+      days_remaining: 2.3,        # <<< rounds to nearest, so the table shows 2
+      ignore_expires: null,
+      age_days: 4.7,
+      limit_days: 7,
+      artifact: "creator"
+    }
+  ]')"
 
-ONE_CREATOR_HIGH_PROD='[
-  {
-    "env": "aws-prod",
-    "trail_name": "creator-high-SNYK-GOLANG-NETHTTP-3321444",
-    "full_id": "SNYK-GOLANG-NETHTTP-3321444",
-    "severity": "high",
-    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
-    "mechanism": "rego_limit",
-    "days_remaining": 2.3,
-    "ignore_expires": null,
-    "age_days": 4.7,
-    "limit_days": 7,
-    "artifact": "creator"
-  }
-]'
+# Identical to ONE_CREATOR_HIGH_BETA but for env, which is the whole point: the
+# section heading is the only thing that differs between the two environments.
+readonly ONE_CREATOR_HIGH_PROD="$(jq --null-input '
+  [
+    {
+      env: "aws-prod",            # <<< the only field that differs
+      trail_name: "creator-high-SNYK-GOLANG-NETHTTP-3321444",
+      full_id: "SNYK-GOLANG-NETHTTP-3321444",
+      severity: "high",
+      vuln_url: "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
+      mechanism: "rego_limit",
+      days_remaining: 2.3,
+      ignore_expires: null,
+      age_days: 4.7,
+      limit_days: 7,
+      artifact: "creator"
+    }
+  ]')"
 
-CREATOR_MIXED_BETA='[
-  {
-    "env": "aws-beta",
-    "trail_name": "creator-medium-SNYK-GOLANG-GOLANGORGJWTV4-3180456",
-    "full_id": "SNYK-GOLANG-GOLANGORGJWTV4-3180456",
-    "severity": "medium",
-    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GOLANGORGJWTV4-3180456",
-    "mechanism": "rego_limit",
-    "days_remaining": 6.0,
-    "ignore_expires": null,
-    "age_days": 24.0,
-    "limit_days": 30,
-    "artifact": "creator"
-  },
-  {
-    "env": "aws-beta",
-    "trail_name": "creator-high-SNYK-GOLANG-NETHTTP-3321444",
-    "full_id": "SNYK-GOLANG-NETHTTP-3321444",
-    "severity": "high",
-    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
-    "mechanism": "rego_limit",
-    "days_remaining": 5.0,
-    "ignore_expires": null,
-    "age_days": 2.0,
-    "limit_days": 7,
-    "artifact": "creator"
-  },
-  {
-    "env": "aws-beta",
-    "trail_name": "creator-high-SNYK-GOLANG-GOLANG-3208976",
-    "full_id": "SNYK-GOLANG-GOLANG-3208976",
-    "severity": "high",
-    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GOLANG-3208976",
-    "mechanism": "dot_snyk_expiry",
-    "days_remaining": 1.0,
-    "ignore_expires": "2026-05-09 00:00:00+00:00",
-    "age_days": null,
-    "limit_days": null,
-    "artifact": "creator"
-  }
-]'
+# Three vulns whose severity and days_remaining decide the order they render in.
+readonly CREATOR_MIXED_BETA="$(jq --null-input '
+  [
+    {
+      env: "aws-beta",
+      trail_name: "creator-medium-SNYK-GOLANG-GOLANGORGJWTV4-3180456",
+      full_id: "SNYK-GOLANG-GOLANGORGJWTV4-3180456",
+      severity: "medium",              # <<< lands in the medium table, below both highs
+      vuln_url: "https://security.snyk.io/vuln/SNYK-GOLANG-GOLANGORGJWTV4-3180456",
+      mechanism: "rego_limit",
+      days_remaining: 6.0,
+      ignore_expires: null,
+      age_days: 24.0,
+      limit_days: 30,
+      artifact: "creator"
+    },
+    {
+      env: "aws-beta",
+      trail_name: "creator-high-SNYK-GOLANG-NETHTTP-3321444",
+      full_id: "SNYK-GOLANG-NETHTTP-3321444",
+      severity: "high",
+      vuln_url: "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
+      mechanism: "rego_limit",
+      days_remaining: 5.0,             # <<< the larger of the two highs, so it renders second
+      ignore_expires: null,
+      age_days: 2.0,
+      limit_days: 7,
+      artifact: "creator"
+    },
+    {
+      env: "aws-beta",
+      trail_name: "creator-high-SNYK-GOLANG-GOLANG-3208976",
+      full_id: "SNYK-GOLANG-GOLANG-3208976",
+      severity: "high",
+      vuln_url: "https://security.snyk.io/vuln/SNYK-GOLANG-GOLANG-3208976",
+      mechanism: "dot_snyk_expiry",    # <<< the one row labelled .snyk
+      days_remaining: 1.0,             # <<< the smallest, so it renders first
+      ignore_expires: "2026-05-09 00:00:00+00:00",
+      age_days: null,
+      limit_days: null,
+      artifact: "creator"
+    }
+  ]')"
 
-ONE_RUNNER_HIGH_PROD_CLOCK_SKEW='[
-  {
-    "env": "aws-prod",
-    "trail_name": "runner-high-SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-    "full_id": "SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-    "severity": "high",
-    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-    "mechanism": "clock_skew",
-    "days_remaining": -99999,
-    "ignore_expires": null,
-    "age_days": null,
-    "limit_days": 2,
-    "artifact": "runner"
-  }
-]'
+readonly ONE_RUNNER_HIGH_PROD_CLOCK_SKEW="$(jq --null-input '
+  [
+    {
+      env: "aws-prod",
+      trail_name: "runner-high-SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+      full_id: "SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+      severity: "high",
+      vuln_url: "https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+      mechanism: "clock_skew",   # <<< selects the skew label and the "?" day count
+      days_remaining: -99999,    # <<< the sentinel that must not reach the table
+      ignore_expires: null,
+      age_days: null,            # <<< no age can be stated for this vuln
+      limit_days: 2,
+      artifact: "runner"
+    }
+  ]')"
 
 echo "::${0##*/}"
 . ${my_dir}/shunit2_helpers.sh

@@ -14,47 +14,6 @@ readonly TRAILS_URL="https://app.kosli.com/cyber-dojo/flows/snyk-aws-beta-per-vu
 readonly GOLANG_URL="${TRAILS_URL}/runner-high-${GOLANG_ID}?attestation_id=85d13fe9-b33b-49b1-8a03-8a99d4ad35c1"
 readonly OPENSSL_URL="${TRAILS_URL}/runner-medium-${OPENSSL_ID}?attestation_id=1f4b2c07-9d61-4a3e-8c55-71b0ee9c2a44"
 
-# The two vulns Snyk finds in the runner image, as the workflow writes them into
-# vulns.json after the per-vuln attestations have been made.
-readonly TWO_VULNS='[
-  {
-    "artifact_fingerprint": "f3cdc22a599ddb789e7791389a5a58b43fd9c30d3af079aec392d5962d181096",
-    "artifact_name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/runner:85cac88",
-    "first_seen": "2026-08-20 02:45:45+00:00",
-    "first_seen_ts": 1787193945,
-    "full_id": "SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-    "ignore_expires": "",
-    "ignore_expires_exists": false,
-    "ignore_expires_ts": 0,
-    "ignore_forever": false,
-    "now": "2026-08-21 14:45:45+00:00",
-    "now_ts": 1787323545,
-    "severity": "high",
-    "trail_name": "runner-high-SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-    "version": "v1.1300.2",
-    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-    "attestation_url": "https://app.kosli.com/cyber-dojo/flows/snyk-aws-beta-per-vuln/trails/runner-high-SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666?attestation_id=85d13fe9-b33b-49b1-8a03-8a99d4ad35c1"
-  },
-  {
-    "artifact_fingerprint": "f3cdc22a599ddb789e7791389a5a58b43fd9c30d3af079aec392d5962d181096",
-    "artifact_name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/runner:85cac88",
-    "first_seen": "2026-08-12 02:45:45+00:00",
-    "first_seen_ts": 1786502745,
-    "full_id": "SNYK-ALPINE321-OPENSSL-13939001",
-    "ignore_expires": "",
-    "ignore_expires_exists": false,
-    "ignore_expires_ts": 0,
-    "ignore_forever": false,
-    "now": "2026-08-21 14:45:45+00:00",
-    "now_ts": 1787323545,
-    "severity": "medium",
-    "trail_name": "runner-medium-SNYK-ALPINE321-OPENSSL-13939001",
-    "version": "v1.1300.2",
-    "vuln_url": "https://security.snyk.io/vuln/SNYK-ALPINE321-OPENSSL-13939001",
-    "attestation_url": "https://app.kosli.com/cyber-dojo/flows/snyk-aws-beta-per-vuln/trails/runner-medium-SNYK-ALPINE321-OPENSSL-13939001?attestation_id=1f4b2c07-9d61-4a3e-8c55-71b0ee9c2a44"
-  }
-]'
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # One evaluation labels every vuln: the one it names fails, the rest pass.
 
@@ -143,6 +102,47 @@ make_evaluation()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+# The two vulns Snyk finds in the runner image, as the workflow writes them into
+# vulns.json after the per-vuln attestations have been made.
+readonly TWO_VULNS='[
+  {
+    "artifact_fingerprint": "f3cdc22a599ddb789e7791389a5a58b43fd9c30d3af079aec392d5962d181096",
+    "artifact_name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/runner:85cac88",
+    "first_seen": "2026-08-20 02:45:45+00:00",
+    "first_seen_ts": 1787193945,
+    "full_id": "SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+    "ignore_expires": "",
+    "ignore_expires_exists": false,
+    "ignore_expires_ts": 0,
+    "ignore_forever": false,
+    "now": "2026-08-21 14:45:45+00:00",
+    "now_ts": 1787323545,
+    "severity": "high",
+    "trail_name": "runner-high-SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+    "version": "v1.1300.2",
+    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+    "attestation_url": "https://app.kosli.com/cyber-dojo/flows/snyk-aws-beta-per-vuln/trails/runner-high-SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666?attestation_id=85d13fe9-b33b-49b1-8a03-8a99d4ad35c1"
+  },
+  {
+    "artifact_fingerprint": "f3cdc22a599ddb789e7791389a5a58b43fd9c30d3af079aec392d5962d181096",
+    "artifact_name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/runner:85cac88",
+    "first_seen": "2026-08-12 02:45:45+00:00",
+    "first_seen_ts": 1786502745,
+    "full_id": "SNYK-ALPINE321-OPENSSL-13939001",
+    "ignore_expires": "",
+    "ignore_expires_exists": false,
+    "ignore_expires_ts": 0,
+    "ignore_forever": false,
+    "now": "2026-08-21 14:45:45+00:00",
+    "now_ts": 1787323545,
+    "severity": "medium",
+    "trail_name": "runner-medium-SNYK-ALPINE321-OPENSSL-13939001",
+    "version": "v1.1300.2",
+    "vuln_url": "https://security.snyk.io/vuln/SNYK-ALPINE321-OPENSSL-13939001",
+    "attestation_url": "https://app.kosli.com/cyber-dojo/flows/snyk-aws-beta-per-vuln/trails/runner-medium-SNYK-ALPINE321-OPENSSL-13939001?attestation_id=1f4b2c07-9d61-4a3e-8c55-71b0ee9c2a44"
+  }
+]'
 
 echo "::${0##*/}"
 . ${my_dir}/shunit2_helpers.sh

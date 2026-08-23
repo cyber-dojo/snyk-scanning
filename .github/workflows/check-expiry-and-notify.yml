@@ -32,17 +32,12 @@ jobs:
           RESULT=$(./bin/find_expiring_vulns.py \
             --env ${{ inputs.kosli_env }} \
             --vuln-dir vulns)
-          STATUS_SYMBOL=$(echo "${RESULT}" | jq --raw-output '
-            if ((.vulns | length) > 0) and (.vulns[0].days_remaining <= 0)
-            then ":x:"
-            else ":white_check_mark:"
-            end')
           VULNS=$(echo "${RESULT}" | jq --compact-output '.vulns')
           {
             echo "VULNS_JSON<<EOF"
             echo "${VULNS}"
             echo "EOF"
-            echo "STATUS_SYMBOL=${STATUS_SYMBOL}"
+            echo "STATUS_SYMBOL=$(./bin/print_slack_status_symbol.py --vulns "${VULNS}")"
             echo "SLACK_MESSAGE<<EOF"
             ./bin/print_slack_vuln_message.py --vulns "${VULNS}"
             echo "EOF"

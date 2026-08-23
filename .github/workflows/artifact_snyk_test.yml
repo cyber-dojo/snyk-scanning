@@ -222,18 +222,11 @@ jobs:
 
       - name: Write stale .snyk entries to job summary
         run: |
-          COUNT="$(jq 'length' "${STALE_VULNS_FILENAME}")"
-          if [ "${COUNT}" -gt 0 ]; then
-            {
-              echo "<table>"
-              echo "<tr><td><b>Stale .snyk entries</b></td><td>${COUNT} found</td></tr>"
-              echo "<tr><td><b>Artifact name</b></td><td>${{inputs.artifact_name}}</td></tr>"
-              echo "<tr><td><b>Artifact fingerprint</b></td><td>${{steps.set-fingerprint.outputs.fingerprint}}</td></tr>"
-              echo "<tr><td><b>Snyk version</b></td><td>${{inputs.snyk_version}}</td></tr>"
-              jq -r '.[] | "<tr><td></td><td>\(.)</td></tr>"' "${STALE_VULNS_FILENAME}"
-              echo "</table>"
-            } >> $GITHUB_STEP_SUMMARY
-          fi
+          ./bin/print_stale_snyk_entries_summary.py "${STALE_VULNS_FILENAME}" \
+            --artifact-name "${{inputs.artifact_name}}" \
+            --fingerprint   "${{steps.set-fingerprint.outputs.fingerprint}}" \
+            --snyk-version  "${{inputs.snyk_version}}" \
+            >> $GITHUB_STEP_SUMMARY
 
       - name: Debug print vulns
         if: env.KOSLI_DEBUG == 'true'
@@ -285,21 +278,11 @@ jobs:
           kosli begin trail ${KOSLI_TRAIL}
           kosli get trail ${KOSLI_TRAIL} --debug=false --output=json > trail.json
 
-          FIRST_SEEN_TS="$(jq '.created_at' trail.json)"
-          FIRST_SEEN="$(python3 -c "from datetime import datetime, timezone; print(str(datetime.fromtimestamp(${FIRST_SEEN_TS}, tz=timezone.utc)))")"
-
-          # now_ts is stamped here, after the trail exists, so that the instant a
-          # vuln's age is measured from is never earlier than the trail
-          # created_at it is measured against. Each vuln in the matrix gets its
-          # own stamp, which keeps every vuln self-consistent.
-          NOW_TS="$(date +%s)"
-          NOW="$(python3 -c "from datetime import datetime, timezone; print(str(datetime.fromtimestamp(${NOW_TS}, tz=timezone.utc)))")"
-
-          jq --argjson ts_val "${FIRST_SEEN_TS}" --arg str_val "${FIRST_SEEN}" \
-             --argjson now_ts_val "${NOW_TS}" --arg now_str_val "${NOW}" \
-            '. + {"first_seen_ts": $ts_val, "first_seen": $str_val,
-                  "now_ts": $now_ts_val, "now": $now_str_val}' \
-            <<< "${VULN_JSON}" > ${VULN_FILENAME}
+          # Stamped here, after the trail exists, so that the instant a vuln's
+          # age is measured at is never earlier than the trail created_at it is
+          # measured against. Each vuln in the matrix gets its own stamp, which
+          # keeps every vuln self-consistent.
+          ./bin/stamp_vuln_times.py trail.json "${VULN_JSON}" > ${VULN_FILENAME}
 
       - name: Debug print one vuln
         if: env.KOSLI_DEBUG == 'true'
@@ -478,26 +461,13 @@ jobs:
             --debug=false \
             > attestation.json
 
-          if [ "${COMPLIANT}" = "true" ]; then
-            STATUS="✅"
-          else
-            STATUS="❌"
-          fi
-          COUNT="$(jq 'length' "${VULNS_FILENAME}")"
-          ATTESTATION_URL="$(jq --raw-output 'first | .html_url' attestation.json)"
-          
-          {
-            echo '## <img src="https://app.kosli.com/static/images/nav-kosli-logo-new-collapsed.svg" height="20"> ${{inputs.repo_name}} - Snyk container vulnerabilities by Kosli'
-            # HTML table avoids Markdown's mandatory header row, which renders
-            # as a visible blank row when headers are empty.
-            echo "<table>"
-            echo "<tr><td><b>Status</b></td><td>${STATUS} ${COUNT} found</td></tr>"
-            echo "<tr><td><b>Artifact</b></td><td>${{inputs.artifact_name}}</td></tr>"
-            echo "<tr><td><b>Fingerprint</b></td><td>${KOSLI_FINGERPRINT}</td></tr>"
-            echo "<tr><td><b>Snyk</b></td><td>${{inputs.snyk_version}}</td></tr>"
-            echo "<tr><td><b>Attestation</b></td><td><a href=\"${ATTESTATION_URL}\">${ATTESTATION_URL}</a></td></tr>"
-            echo "</table>"
-          } >> $GITHUB_STEP_SUMMARY
+          ./bin/print_artifact_scan_summary.py "${VULNS_FILENAME}" attestation.json \
+            --compliant     "${COMPLIANT}" \
+            --repo-name     "${{inputs.repo_name}}" \
+            --artifact-name "${{inputs.artifact_name}}" \
+            --fingerprint   "${KOSLI_FINGERPRINT}" \
+            --snyk-version  "${{inputs.snyk_version}}" \
+            >> $GITHUB_STEP_SUMMARY
 
       - name: Set output vulns
         id: set-vulns

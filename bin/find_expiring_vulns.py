@@ -4,6 +4,7 @@
 import argparse
 import glob
 import json
+import math
 import os
 import re
 import sys
@@ -73,6 +74,29 @@ def rego_result(data, env, now_ts, max_days):
         "limit_days": limit,
         "artifact": extract_artifact_name(data["trail_name"]),
     }
+
+
+_SEVERITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
+
+
+def sort_key(vuln):
+    """Return the ordering key for a vuln: whole-day deadline, then severity, then trail_name.
+
+    days_remaining is quantised with ceil, the same rounding the Slack message
+    displays, so vulns falling due on the same day compare equal and severity
+    decides between them. Each vuln carries its own now_ts, stamped by its own
+    matrix job, so two vulns sharing a deadline differ by seconds; without the
+    quantising those seconds of job-start jitter would fix the order. trail_name
+    last keeps the result independent of the order the files are read in.
+
+    A severity outside the four Snyk reports raises KeyError. combine_snyk.py
+    asserts the same four when it builds a vuln, so reaching here with anything
+    else means that guard has gone, which is worth a crash rather than a silent
+    ranking.
+    """
+    return (math.ceil(vuln["days_remaining"]),
+            _SEVERITY_RANK[vuln["severity"]],
+            vuln["trail_name"])
 
 
 _EXAMPLE = """
@@ -145,7 +169,7 @@ def main():
         if result:
             vulns.append(result)
 
-    vulns.sort(key=lambda v: v["days_remaining"])
+    vulns.sort(key=sort_key)
     print(json.dumps({"vulns": vulns}))
     sys.exit(0)
 

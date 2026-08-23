@@ -119,5 +119,62 @@ def test_c7f2a307():
     assert result["limit_days"] == 2
 
 
+def _suppressed_vuln(trail_name, severity, secs_remaining):
+    """Return a dot_snyk_result-shaped dict for a vuln held by a .snyk ignore entry."""
+    full_id = trail_name.split("-", 2)[2]
+    return {
+        "env": "aws-prod",
+        "trail_name": trail_name,
+        "full_id": full_id,
+        "severity": severity,
+        "vuln_url": f"https://security.snyk.io/vuln/{full_id}",
+        "mechanism": "dot_snyk_expiry",
+        "days_remaining": secs_remaining / 86400,
+        "ignore_expires": "2026-09-21 00:00:00+00:00",
+        "age_days": None,
+        "limit_days": None,
+        "artifact": "runner",
+    }
+
+
+# The five runner vulns in the aws-prod scan of 2026-08-23. All are held by .snyk
+# ignore entries sharing one expiry, so they fall due on the same day; the spread
+# in seconds is the order their matrix jobs stamped now_ts.
+PROD_RUNNER_VULNS = [
+    ("runner-medium-SNYK-GOLANG-GOOPENTELEMETRYIOOTELPROPAGATION-17054905", "medium", 2495281),
+    ("runner-high-SNYK-GOLANG-GOOGLEGOLANGORGGRPCINTERNALTRANSPORT-18172578", "high", 2495282),
+    ("runner-medium-SNYK-GOLANG-GITHUBCOMCILIUMEBPFBTF-17810931", "medium", 2495285),
+    ("runner-high-SNYK-GOLANG-GITHUBCOMAWSAWSSDKGOV2SERVICECLOUDWATCHLOGS-16316406", "high", 2495286),
+    ("runner-medium-SNYK-GOLANG-GOOPENTELEMETRYIOOTELBAGGAGE-17054906", "medium", 2495288),
+]
+
+
+def test_c7f2a309():
+    """sort_key orders vulns sharing a whole-day deadline by severity, then by trail_name."""
+    vulns = [_suppressed_vuln(trail_name, severity, secs)
+             for trail_name, severity, secs in PROD_RUNNER_VULNS]
+    vulns.sort(key=find_expiring_vulns.sort_key)
+    assert [v["trail_name"] for v in vulns] == [
+        "runner-high-SNYK-GOLANG-GITHUBCOMAWSAWSSDKGOV2SERVICECLOUDWATCHLOGS-16316406",
+        "runner-high-SNYK-GOLANG-GOOGLEGOLANGORGGRPCINTERNALTRANSPORT-18172578",
+        "runner-medium-SNYK-GOLANG-GITHUBCOMCILIUMEBPFBTF-17810931",
+        "runner-medium-SNYK-GOLANG-GOOPENTELEMETRYIOOTELBAGGAGE-17054906",
+        "runner-medium-SNYK-GOLANG-GOOPENTELEMETRYIOOTELPROPAGATION-17054905",
+    ]
+
+
+def test_c7f2a30a():
+    """sort_key keeps a sooner medium ahead of a later high, so severity only breaks ties."""
+    later_high = _suppressed_vuln(
+        "runner-high-SNYK-GOLANG-GITHUBCOMAWSAWSSDKGOV2SERVICECLOUDWATCHLOGS-16316406",
+        "high", 29 * 86400)
+    sooner_medium = _suppressed_vuln(
+        "runner-medium-SNYK-GOLANG-GOOPENTELEMETRYIOOTELPROPAGATION-17054905",
+        "medium", 1 * 86400)
+    vulns = [later_high, sooner_medium]
+    vulns.sort(key=find_expiring_vulns.sort_key)
+    assert [v["severity"] for v in vulns] == ["medium", "high"]
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q"]))

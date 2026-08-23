@@ -23,18 +23,29 @@ compliant regardless of age or expired ignore entries.
 
 ## Current design: allow does not depend on violations
 
-`snyk-vuln-compliance.rego` no longer derives `allow` from the violations set.
-It uses `default allow := false` (line 13) and proves compliance with a positive
-assertion, `allow if trail_is_compliant(input.trail)` (line 61). The `violations`
-rules exist only to produce human-readable diagnostic strings (line 63: "Violations
-provide diagnostics only -- they do not drive the allow decision").
+`snyk-vuln-compliance.rego` does not derive `allow` from the violations set. It
+uses `default allow := false` and proves compliance with a positive assertion:
+`allow` holds only when every vuln in `input.vulns` satisfies `vuln_is_compliant`.
+The `violations` rules exist only to produce human-readable diagnostic strings
+("Violations provide diagnostics only -- they do not drive the allow decision").
 
-So an undefined field in a violations rule can now only lose a diagnostic message;
+So an undefined field in a violations rule can only lose a diagnostic message;
 it cannot flip the verdict to compliant. The violation rules reference
-`vuln.full_id` (lines 70, 81), matching `combine_snyk.py`. A regression test
+`vuln.full_id`, matching `combine_snyk.py`. A regression test
 (`tests/test_rego_rules.sh`, `test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input`)
 asserts that even with a wrong field name the result is still `deny` with a null
 violations set.
+
+## What a lost message does still cost
+
+One evaluation judges every vuln of an artifact, and `bin/vuln_annotations.py`
+labels each vuln pass or fail by whether a violation names it. A lost message
+therefore mislabels its vuln as pass. The artifact's own verdict is unaffected,
+because `allow` is proved positively, and the script refuses to label anything at
+all when a denial names no vuln in the list. A denial that names some but not all
+of its failing vulns cannot be detected from the evaluation alone, so what keeps
+it from happening is `tests/test_rego_rules.sh` pinning one named message per
+failing vuln.
 
 ## Confirmed by experiment (the unsafe `count(violations)` design)
 
@@ -83,7 +94,7 @@ room for silent failure.
 
 ```rego
 vuln_id := object.get(vuln, ["full_id"], "unknown")
-msg := sprintf("trail '%v': %v ...", [trail.name, vuln_id, ...])
+msg := sprintf("%v: ...", [vuln_id, ...])
 ```
 
 Returns the fallback string instead of undefined, so `sprintf` always
@@ -97,7 +108,7 @@ violations contains msg if {
     ...
     age_days >= max
     vuln.full_id  # body fails here if field is absent
-    msg := sprintf("...", [trail.name, vuln.full_id, ...])
+    msg := sprintf("...", [vuln.full_id, ...])
 }
 ```
 

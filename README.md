@@ -22,7 +22,10 @@ Each individual vulnerability found in a running artifact is evaluated as follow
 
 The top-level generic artifact-level attestation is controlled by the `attest_to_kosli` input, which defaults to `true` when the caller's workflow is on `main`.
 
-The inner trail-level attestations (one per Snyk vulnerability) _always_ take place and are the inputs to the `kosli evaluate trail` calls used to determine the overall compliance.
+The inner trail-level attestations (one per Snyk vulnerability) _always_ take place. A single
+`kosli evaluate input` call then judges every vulnerability found in the artifact at once. The
+artifact-level attestation carries that verdict, plus one annotation per vulnerability whose key
+says `pass` or `fail` and whose value links to that vulnerability's own attestation.
 
 ## Workflows
 
@@ -42,15 +45,17 @@ Slack.
 | `aws-prod.yml` | `snyk-aws-prod-per-artifact` | `snyk-aws-prod-per-vuln` |
 
 The per-artifact flow holds one trail per artifact currently running in the environment. Trail
-names have the form `{repo_name}-{artifact_fingerprint}`. Each trail contains one `generic`
+names have the form `{repo_name}-{artifact_fingerprint}`. Each trail contains one `decision`
 artifact-level attestation named `{repo_name}.snyk-container-scan` with the sarif output, Rego
-policy file, Rego params file, and `.snyk` policy file attached.
+policy file, Rego params file, `.snyk` policy file, the JSON handed to the policy, and the
+policy's verdict attached.
 
 The per-vuln flow holds one trail per vulnerability found across all scanned artifacts. Trail
 names have the form `{repo_name}-{severity}-{snyk_id}`, where `snyk_id` is the Snyk rule id
 (for example `SNYK-ALPINE322-ZLIB-16078399`), not a CVE id. Each trail contains one custom
-attestation of type `single-snyk-vuln`, named `snyk-{artifact_fingerprint}`, and is evaluated
-independently by `kosli evaluate trail`. The per-artifact attestation aggregates these results.
+attestation of type `single-snyk-vuln`, named `snyk-{first 10 characters of the artifact
+fingerprint}`. That attestation holds the data the compliance decision is made from, and its URL
+is what the matching annotation on the per-artifact attestation links to.
 
 ## Rego compliance params
 
@@ -133,7 +138,7 @@ jobs:
 ```
 
 Runs a Snyk container test against a single artifact, evaluates the results against a Rego
-compliance policy, and makes an artifact-level attestations in Kosli. Attaches the sarif output, the Rego policy file, the Rego params file, and the `.snyk` policy file to the attestation.
+compliance policy, and makes an artifact-level attestation in Kosli. Attaches the sarif output, the Rego policy file, the Rego params file, the `.snyk` policy file, the JSON handed to the policy, and the policy's verdict to the attestation.
 
 **Inputs**
 

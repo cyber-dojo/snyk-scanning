@@ -26,9 +26,10 @@ Compliance is then decided by `snyk-vuln-compliance.rego`:
 - Case 2 (active ignore entry): compliant regardless of age.
 - Case 3 (ignore entry with no expiry): compliant forever.
 
-The per-artifact `snyk-container-scan` attestation carries no verdict of its
-own. It builds its pass/fail annotations by reading the per-vuln trails via
-`kosli evaluate trail`.
+The per-artifact `snyk-container-scan` attestation carries the verdict for the
+artifact: one `kosli evaluate input` call judges all of that artifact's vulns
+together. Its pass/fail annotations come from the same evaluation, one per vuln,
+each linking to that vuln's own attestation on the per-vuln trail.
 
 ## The bug
 
@@ -98,12 +99,12 @@ later, was back to a single runner row.
 Each scan attests an attestation named `snyk` to the per-vuln trail, so over
 time the trail accumulates a history of `snyk` attestations (18 of them on this
 trail). But `compliance_status.attestations_statuses` surfaces only one status
-per attestation name. The rego reads exactly that one
+per attestation name. The rego of the day read exactly that one
 (`trail.compliance_status.attestations_statuses["snyk"]`). So no matter how many
-builds wrote `snyk`, the rego sees a single latest verdict. That collapse to one
-status per name is the mechanism behind last-writer-wins, and it is why
-recording the fingerprint inside the attestation data alone would not help: the
-older build's instance is not surfaced to the rego at all, only the latest.
+builds wrote `snyk`, it saw a single latest verdict. That collapse to one status
+per name is the mechanism behind last-writer-wins, and it is why recording the
+fingerprint inside the attestation data alone would not have helped: the older
+build's instance is never surfaced to a trail evaluation, only the latest.
 
 ## What threw the investigation off
 
@@ -137,7 +138,8 @@ tracking and must not be done.
 Vuln age is not measured from the scan time. The rego computes
 `age_days = (now_ts - first_seen_ts) / seconds_per_day`, and `first_seen_ts`
 is the per-vuln trail's `created_at`. The step in `artifact_snyk_test.yml` is
-named "Add time vuln first seen in the repo" and reads it back:
+named "Add times the vuln was first seen and is being measured at" and reads it
+back:
 
     kosli begin trail ${KOSLI_TRAIL}
     kosli get trail ${KOSLI_TRAIL} --output=json > trail.json
@@ -189,15 +191,12 @@ What was changed:
    instead of the fixed `snyk`, and reads it back under the same name. Two builds
    in one snapshot now write two distinct statuses on the trail, so neither
    clobbers the other.
-2. Name-parameterised rego. `snyk-vuln-compliance.rego` selects
-   `attestations_statuses[data.params.attestation_name]` instead of the
-   hard-coded `["snyk"]`. The workflow builds the per-fingerprint name
-   `snyk-<fingerprint>` once (the `VULN_ATTESTATION_NAME` env var used for the
-   attest and read steps) and merges it into the `evaluate trail --params` object
-   alongside `max_days_by_severity`, so the `snyk-` prefix lives in exactly one
-   place rather than being rebuilt inside the rego. If the name is ever absent,
-   `vuln_of` is undefined and `allow` defaults to `false` (the safe,
-   non-compliant direction).
+2. No verdict is read from the trail. The compliance decision is made by one
+   `kosli evaluate input` over the artifact's own vulns, so nothing reads
+   `attestations_statuses` and the collapse to one status per name can no longer
+   decide anything. The per-fingerprint attestation name still earns its keep:
+   it gives each build its own attestation on the shared trail, and that
+   attestation's URL is what the per-artifact annotation for the vuln links to.
 3. Fingerprint in the attested data. `combine_snyk.py` emits `artifact_name`
    and `artifact_fingerprint` on every vuln (fed from the workflow), and
    `single-snyk-vuln.schema.json` documents and requires them. Not strictly
@@ -208,32 +207,19 @@ Why this approach:
 
 - Age is untouched. `first_seen_ts` stays `trail.created_at`, shared across all
   fingerprints, which is exactly what the severity SLA needs.
-- The transient two-artifact snapshot stops mattering. Each per-artifact
-  evaluation reads only its own fingerprint's verdict, so deploy intent never has
-  to be inferred from the snapshot.
+- The transient two-artifact snapshot stops mattering. Each artifact's job judges
+  its own vulns, so deploy intent never has to be inferred from the snapshot.
 - It does not drop scans (unlike abort-on-ambiguity below).
 
 Tests:
 
-- `tests/test_rego_rules.sh` keys its inputs as `snyk-<fingerprint>` and passes
-  the fingerprint via params. A new test,
-  `test_selects_only_the_matching_fingerprints_verdict`, puts two builds'
-  verdicts on one trail (the real `bc5fbc14` and `bc8fb513` runner fingerprints
-  from snapshot #4701) and asserts each fingerprint gets its own verdict.
+- `tests/test_rego_rules.sh` feeds the policy the whole vuln array and asserts
+  that a mixed artifact denies and names only its failing vuln.
+- `tests/test_vuln_annotations_logic.py` and `tests/test_vuln_annotations_cli.sh`
+  cover turning one evaluation into a pass or fail annotation per vuln, including
+  the refusal to label anything when a denial names no vuln.
 - `tests/test_combine_snyk.sh` and `tests/test_schema_matches_attested_data.py`
-  cover the new data fields and the schema contract.
-
-Verification done: `kosli evaluate trail` feeds the rego an `input.trail` whose
-`compliance_status.attestations_statuses` is an object keyed by attestation name
-(the array shape seen via `kosli get trail` is only that command's
-representation). So distinct names become distinct keys and the rego selects by
-name. `kosli evaluate trail --show-input` dumps the exact policy input.
-
-Remaining caveat: this was confirmed with a single name present on the trail.
-That two per-fingerprint names coexist as two keys in one
-`attestations_statuses` object is inferred from the object-keyed-by-name
-structure, not yet observed with two names live. The next real deploy-swap scan
-will confirm it.
+  cover the attested data fields and the schema contract.
 
 ## Rejected approach: ordering artifacts from the snapshot
 

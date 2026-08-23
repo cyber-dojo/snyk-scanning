@@ -16,13 +16,13 @@ attests into a different flow.
 ## Mechanism (confirmed from code)
 
 In `artifact_snyk_test.yml`, the `attest-snyk-vulns` job sets the fingerprint in
-its own `env:` block and attests a generic attestation:
+its own `env:` block and attests a decision:
 
     env:
       KOSLI_FINGERPRINT:      ${{needs.find-snyk-vulns.outputs.fingerprint}}
       KOSLI_ATTESTATION_NAME: ${{inputs.kosli_attestation_name}}
     ...
-    kosli attest generic --name "${KOSLI_ATTESTATION_NAME}"
+    kosli attest decision --compliant "${COMPLIANT}" --name "${KOSLI_ATTESTATION_NAME}"
 
 `KOSLI_FLOW` (`${{inputs.kosli_flow}}`, i.e. `snyk-<env>-per-artifact`) is set
 once at the workflow level and inherited by this job.

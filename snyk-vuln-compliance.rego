@@ -4,24 +4,15 @@ import rego.v1
 
 max_days_by_severity    := data.params.max_days_by_severity
 
-# Per-vuln verdicts are attested under a per-fingerprint name (snyk-<fingerprint>)
-# so two builds of the same artifact in one deploy snapshot cannot clobber each
-# other on the shared per-vuln trail. The workflow builds that name once and
-# passes it in via data.params.attestation_name; we do not rebuild the prefix here.
-attestation_name        := data.params.attestation_name
-
 default allow := false
-
-# Select the verdict for the artifact being evaluated, named by
-# data.params.attestation_name.
-vuln_of(trail) := trail.compliance_status.attestations_statuses[attestation_name].attestation_data
 
 seconds_per_day := 60 * 60 * 24
 
-# first_seen_ts is the trail created_at, set by `kosli begin trail` in a job that
-# runs after the one stamping now_ts, so on a vuln's first sighting first_seen_ts
-# is ahead of now_ts. Clamping at zero holds such a vuln at day zero, which a
-# limit of 0 still rejects, rather than letting a negative age satisfy any limit.
+# first_seen_ts is the per-vuln trail created_at, set by `kosli begin trail` in a
+# job that runs after the one stamping now_ts, so on a vuln's first sighting
+# first_seen_ts is ahead of now_ts. Clamping at zero holds such a vuln at day
+# zero, which a limit of 0 still rejects, rather than letting a negative age
+# satisfy any limit.
 age_days(vuln) := max([0, (vuln.now_ts - vuln.first_seen_ts) / seconds_per_day])
 
 # Use < so that critical (max=0) is non-compliant on day zero
@@ -48,49 +39,53 @@ ignore_is_forever(vuln) if {
     vuln.ignore_forever == true
 }
 
-# allow is driven by a positive assertion (every trail must be compliant) rather
+# allow is driven by a positive assertion (every vuln must be compliant) rather
 # than by the absence of violations. This ensures that if some error occurs while
 # generating a diagnostic string, it can only lose a message -- it cannot silently
 # produce a compliant result. See https://github.com/open-policy-agent/opa/issues/1857
 
 # Case 1: no .snyk ignore entry -- age determines compliance
-trail_is_compliant(trail) if age_within_limit(vuln_of(trail))
+vuln_is_compliant(vuln) if age_within_limit(vuln)
 
 # Case 2: .snyk ignore entry exists and is active (not expired) -- compliant regardless of age
-trail_is_compliant(trail) if ignore_is_active(vuln_of(trail))
+vuln_is_compliant(vuln) if ignore_is_active(vuln)
 
 # Case 3: .snyk ignore entry exists with no expiry date -- suppressed forever, compliant regardless of age
-trail_is_compliant(trail) if ignore_is_forever(vuln_of(trail))
+vuln_is_compliant(vuln) if ignore_is_forever(vuln)
 
-allow if trail_is_compliant(input.trail)
+# The artifact is compliant when every vuln found in it is compliant, so an
+# artifact with no vulns is compliant. An input carrying no vulns key at all
+# leaves this body undefined, so allow falls back to its false default.
+allow if {
+    every vuln in input.vulns {
+        vuln_is_compliant(vuln)
+    }
+}
 
 # Violations provide diagnostics only -- they do not drive the allow decision.
-
-inactive_ignore_msg(trail) := msg if {
-    vuln := vuln_of(trail)
-    ignore_has_expired(vuln)
-    msg := sprintf(
-        "trail '%v': %v snyk ignore entry expired at %v",
-        [trail.name, vuln.full_id, vuln.ignore_expires],
-    )
-}
+#
+# Every message begins with its vuln's full_id followed by a colon. full_id
+# holds no colon, so the caller recovers the set of failing vuln ids by taking
+# the first colon-delimited field of each message. That is what lets a single
+# evaluation label each vuln of an artifact pass or fail.
 
 # Case 1 violation: no ignore entry and vulnerability age exceeds the threshold for its severity
 violations contains msg if {
-    vuln := vuln_of(input.trail)
+    some vuln in input.vulns
     vuln.ignore_expires_exists == false
     not age_within_limit(vuln)
     msg := sprintf(
-        "trail '%v': %v severity vuln age %d days exceeds %d day limit for severity %v",
-        [input.trail.name, vuln.full_id, floor(age_days(vuln)), max_days_by_severity[vuln.severity], vuln.severity],
+        "%v: %v severity vuln age %d days exceeds %d day limit",
+        [vuln.full_id, vuln.severity, floor(age_days(vuln)), max_days_by_severity[vuln.severity]],
     )
 }
 
-# Case 2 violation: ignore entry exists (with an expiry date) but is not active
+# Case 2 violation: ignore entry exists (with an expiry date) but has expired
 violations contains msg if {
-    vuln := vuln_of(input.trail)
-    vuln.ignore_expires_exists == true
-    vuln.ignore_forever == false
-    not ignore_is_active(vuln)
-    msg := inactive_ignore_msg(input.trail)
+    some vuln in input.vulns
+    ignore_has_expired(vuln)
+    msg := sprintf(
+        "%v: snyk ignore entry expired at %v",
+        [vuln.full_id, vuln.ignore_expires],
+    )
 }

@@ -99,6 +99,9 @@ env:
   REGO_PARAMS_FILENAME: rego.params.${{inputs.kosli_env}}.json
   REGO_PARAMS_URL:      https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/rego.params.${{inputs.kosli_env}}.json
 
+  ANNOTATIONS_FILENAME: vuln_annotations.py
+  ANNOTATIONS_URL:      https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/bin/vuln_annotations.py
+
 jobs:
   find-snyk-vulns:
     runs-on: ubuntu-latest
@@ -311,41 +314,6 @@ jobs:
             --name ${VULN_ATTESTATION_NAME}
             --type ${SNYK_CAT_NAME}
 
-      # The checkout is in the caller's context, so the action is named by its
-      # repo path rather than ./.github/actions/
-      - name: Get the rego policy file
-        uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
-        with:
-          url: ${{env.REGO_POLICY_URL}}
-          path: ${{env.REGO_POLICY_FILENAME}}
-
-      - name: Get the rego params file
-        uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
-        with:
-          url: ${{env.REGO_PARAMS_URL}}
-          path: ${{env.REGO_PARAMS_FILENAME}}
-
-      - name: Evaluate trail and add to vuln data
-        run: |
-          # The rego selects the per-vuln attestation by name. The name is built
-          # once as VULN_ATTESTATION_NAME (snyk-<short fingerprint>), so pass that in
-          # alongside the severity limits rather than rebuilding the prefix in the
-          # rego. --params takes a single value, so merge it into the params object.
-          PARAMS="$(jq --compact-output --arg name "${VULN_ATTESTATION_NAME}" \
-            '. + {attestation_name: $name}' "${REGO_PARAMS_FILENAME}")"
-
-          kosli evaluate trail ${KOSLI_TRAIL} \
-            --flow ${KOSLI_FLOW} \
-            --policy "${REGO_POLICY_FILENAME}" \
-            --params "${PARAMS}" \
-            --debug=false \
-            --no-assert \
-            --output=json > evaluation.json
-
-          jq --slurpfile eval evaluation.json \
-            '. + {"evaluation": $eval[0]}' \
-            ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}
-
       - name: Get attestation URL ready for --annotate
         run: |
           ATTESTATION_URL="$(kosli get attestation ${VULN_ATTESTATION_NAME} \
@@ -358,11 +326,6 @@ jobs:
           jq --arg url "${ATTESTATION_URL}" \
             '. + {"attestation_url": $url}' \
             ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}
-
-      - name: Debug print evaluation.json
-        if: env.KOSLI_DEBUG == 'true'
-        run:
-          jq . evaluation.json
 
       # upload-artifact produces an "Artifacts produced during runtime" section
       # in the GitHub step summary. We would like to avoid this because the
@@ -388,6 +351,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       VULNS_FILENAME: vulns.json
+      POLICY_INPUT_FILENAME: policy_input.json
+      EVALUATION_FILENAME: evaluation.json
       KOSLI_FINGERPRINT: ${{needs.find-snyk-vulns.outputs.fingerprint}}
       KOSLI_ATTESTATION_NAME: ${{inputs.kosli_attestation_name}}
     steps:
@@ -448,42 +413,45 @@ jobs:
           kosli attest artifact ${{inputs.artifact_name}} \
             --name="${ARTIFACT_SLOT_NAME}"
 
-      - name: Attest NO vulns
-        if: needs.attest-individual-snyk-vulns.result == 'skipped'
+      - name: Get the vuln annotations script
+        uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
+        with:
+          url: ${{env.ANNOTATIONS_URL}}
+          path: ${{env.ANNOTATIONS_FILENAME}}
+
+      - name: Judge every vuln of the artifact in one evaluation
         run: |
-          COMPLIANT=true
+          jq '{vulns: .}' "${VULNS_FILENAME}" > "${POLICY_INPUT_FILENAME}"
+
+          kosli evaluate input \
+            --input-file "${POLICY_INPUT_FILENAME}" \
+            --policy "${REGO_POLICY_FILENAME}" \
+            --params "@${REGO_PARAMS_FILENAME}" \
+            --debug=false \
+            --no-assert \
+            --output=json > "${EVALUATION_FILENAME}"
+
+      - name: Debug print evaluation
+        if: env.KOSLI_DEBUG == 'true'
+        run:
+          jq . "${EVALUATION_FILENAME}"
+
+      - name: Attest the decision, annotated pass or fail per vuln
+        run: |
+          COMPLIANT="$(jq '.allow' "${EVALUATION_FILENAME}")"
           echo "COMPLIANT=${COMPLIANT}" >> "${GITHUB_ENV}"
 
-          kosli attest decision \
-            --compliant="${COMPLIANT}" \
-            --control "SDLC-CTRL-0022" \
-            --attachments "${REGO_POLICY_FILENAME}" \
-            --attachments "${REGO_PARAMS_FILENAME}" \
-            --attachments "${SNYK_SARIF_FILENAME}"  \
-            --attachments "${SNYK_POLICY_FILENAME}" \
-            --name "${KOSLI_ATTESTATION_NAME}"
-
-      - name: Attest SOME vulns
-        if: needs.attest-individual-snyk-vulns.result != 'skipped'
-        run: |
-          COMPLIANT="$(jq 'map(.evaluation.allow) | all' "${VULNS_FILENAME}")"
-          echo "COMPLIANT=${COMPLIANT}" >> "${GITHUB_ENV}"
+          # One annotation per vuln, each naming its status and pointing at that
+          # vuln's own attestation. The script exits non-zero, and so fails this
+          # step, rather than label a vuln whose verdict it cannot place.
+          python3 "${ANNOTATIONS_FILENAME}" \
+            "${VULNS_FILENAME}" \
+            "${EVALUATION_FILENAME}" > annotations.txt
 
           ANNOTATE_FLAGS=()
-          while IFS=$'\t' read -r allow url label; do
-            if [ "${allow}" = "true" ]; then status=pass; else status=fail; fi
-            # The Kosli UI renders an annotation value that is a URL as a link
-            # whose visible text is the URL itself, so the only place to surface
-            # a readable vuln identifier is the key. Put status + severity +
-            # full id there. The CLI restricts annotation keys to [A-Za-z0-9_]
-            # (no hyphen, no colon, no parens), so the jq below converts every
-            # character outside that set (hyphens, colons, parentheses, etc) in
-            # the vuln id to underscores; the UI's humanize filter then renders
-            # each underscore as a space. full id is unique per vuln so no
-            # numeric suffix is needed.
-            key="${status}_${label}"
-            ANNOTATE_FLAGS+=(--annotate "${key}=${url}")
-          done < <(jq --raw-output '.[] | [(.evaluation.allow | tostring), .attestation_url, ("\(.severity)-\(.full_id)" | gsub("[^A-Za-z0-9_]"; "_"))] | @tsv' "${VULNS_FILENAME}")
+          while IFS= read -r annotation; do
+            ANNOTATE_FLAGS+=(--annotate "${annotation}")
+          done < annotations.txt
 
           kosli attest decision \
             --compliant "${COMPLIANT}" \
@@ -492,6 +460,8 @@ jobs:
             --attachments "${REGO_PARAMS_FILENAME}" \
             --attachments "${SNYK_SARIF_FILENAME}"  \
             --attachments "${SNYK_POLICY_FILENAME}" \
+            --attachments "${POLICY_INPUT_FILENAME}" \
+            --attachments "${EVALUATION_FILENAME}" \
             --name "${KOSLI_ATTESTATION_NAME}" \
             "${ANNOTATE_FLAGS[@]}"
 

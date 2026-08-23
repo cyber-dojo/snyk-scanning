@@ -176,11 +176,11 @@ test_deny_critical_vuln_on_prod_day_zero()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# No ignore, first_seen_ts ahead of now_ts => non-compliant
-# now_ts is stamped in the find-snyk-vulns job; first_seen_ts is the trail
-# created_at set by `kosli begin trail` in the job after it. On a vuln's first
-# sighting first_seen_ts is therefore ahead of now_ts, by 76 seconds in the
-# aws-prod run of 2026-08-20. A negative age must not satisfy a severity limit.
+# No ignore, first_seen_ts ahead of now_ts => non-compliant.
+# now_ts is stamped after `kosli begin trail` sets first_seen_ts, so job
+# ordering cannot put first_seen_ts ahead, but the two readings come from
+# different clocks (the GitHub runner and the Kosli server) and skew between
+# them can. A negative age must not satisfy a severity limit.
 
 test_deny_critical_vuln_on_prod_when_first_seen_is_ahead_of_now()
 {
@@ -189,6 +189,22 @@ test_deny_critical_vuln_on_prod_when_first_seen_is_ahead_of_now()
   input=$(make_input "$(make_vuln "${VULN_ID}" "critical" "${first_seen_ts}" false 0 "")")
   evaluate_rego "${input}" "${PARAMS_PROD}"
   assert_deny
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# The same skew, at a severity whose limit is above zero. Critical (limit 0)
+# denies on age alone, so only a severity with room to spare can show a
+# negative age wrongly satisfying its limit.
+
+test_deny_medium_vuln_on_beta_when_first_seen_is_ahead_of_now()
+{
+  local -r first_seen_ts=$((NOW_TS + 76))
+  local input
+  input=$(make_input "$(make_vuln "${VULN_ID}" "medium" "${first_seen_ts}" false 0 "")")
+  evaluate_rego "${input}" "${PARAMS_BETA}"
+  assert_deny
+  assert_violation_count 1
+  assert_violation_message "${VULN_ID}: first_seen_ts ${first_seen_ts} is ahead of now_ts ${NOW_TS}, indicating clock skew between the GitHub runner and the Kosli server, so the vuln age cannot be measured"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

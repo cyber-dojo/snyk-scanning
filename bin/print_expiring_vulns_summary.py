@@ -9,9 +9,12 @@ import sys
 SEVERITY_ORDER = ["critical", "high", "medium", "low"]
 
 
+_MECHANISM_LABELS = {"rego_limit": "rego", "clock_skew": "skew"}
+
+
 def mechanism_label(mechanism):
     """Return a short display label for the mechanism."""
-    return "rego" if mechanism == "rego_limit" else ".snyk"
+    return _MECHANISM_LABELS.get(mechanism, ".snyk")
 
 
 def format_severity_table(severity, vulns):
@@ -27,7 +30,11 @@ def format_severity_table(severity, vulns):
         lines.append("| Artifact | Days remaining | Mechanism | Vuln ID |")
         lines.append("|----------|----------------|-----------|---------|")
         for v in sev_vulns:
-            days = int(round(v["days_remaining"]))
+            # A clock_skew vuln has no measurable age, so its days_remaining is
+            # a sentinel that sorts it above every real deadline rather than a
+            # count of days. Showing "?" keeps that out of the table while the
+            # sentinel still does the sorting above.
+            days = "?" if v["mechanism"] == "clock_skew" else int(round(v["days_remaining"]))
             mech = mechanism_label(v["mechanism"])
             link = f"[{v['full_id']}]({v['vuln_url']})"
             lines.append(f"| {v['artifact']} | {days} | {mech} | {link} |")

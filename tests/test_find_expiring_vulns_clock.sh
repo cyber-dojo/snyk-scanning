@@ -19,14 +19,15 @@ test_age_is_measured_from_the_attested_now_ts()
   assert_stderr_equals ""
 }
 
-# The same vuln at its first sighting, in the aws-prod run of 2026-08-20.
-# first_seen_ts is the trail created_at, set by `kosli begin trail` in a job that
-# runs after the one stamping now_ts, so it landed 75.8 seconds ahead of now_ts
-# and the raw age is negative. Holding such a vuln at day zero keeps this report
-# agreeing with the rego, which clamps the same way, and stops the report
-# offering more grace than the severity limit allows.
+# The same vuln in the aws-prod run of 2026-08-20, where first_seen_ts landed
+# 75.8 seconds ahead of now_ts. The two timestamps come from different clocks
+# (the GitHub runner stamps now_ts, the Kosli server sets the trail created_at),
+# so skew between them can order the pair this way and leave the age
+# unmeasurable. Reporting it as clock_skew with no age_days keeps this report
+# agreeing with the rego, which denies such a vuln, and stops the report
+# offering grace that no measured age supports.
 
-test_first_seen_ahead_of_now_holds_the_vuln_at_day_zero()
+test_first_seen_ahead_of_now_reports_clock_skew()
 {
   run_find_expiring_vulns aws-prod vulns-runner-high-first-seen-ahead
   assert_status_equals 0

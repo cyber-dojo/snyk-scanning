@@ -1,0 +1,19 @@
+## aws-prod (Snyk vulns tracked: Count=1)
+
+### Critical (Count=0)
+
+No vulnerabilities.
+
+### High (Count=1)
+
+| Artifact | Days remaining | Mechanism | Vuln ID |
+|----------|----------------|-----------|---------|
+| runner | ? | skew | [SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666](https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666) |
+
+### Medium (Count=0)
+
+No vulnerabilities.
+
+### Low (Count=0)
+
+No vulnerabilities.

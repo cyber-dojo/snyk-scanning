@@ -34,6 +34,20 @@ test_sorted_by_severity_then_days_remaining()
   assert_stderr_equals ""
 }
 
+# A clock_skew vuln carries no measurable age, so its days_remaining is the
+# sentinel find_expiring_vulns.py uses to sort it above every real deadline. The
+# table shows "?" in place of that number, because the sentinel is a sort device
+# and not a count of days anyone can act on, and labels the mechanism "skew" so
+# the row is not read as a .snyk expiry.
+
+test_clock_skew_vuln_shows_no_day_count_and_its_own_mechanism_label()
+{
+  run_summary aws-prod "${ONE_RUNNER_HIGH_PROD_CLOCK_SKEW}"
+  assert_status_equals 0
+  assert_stdout_equals "$(cat "${my_dir}/print-expiring-vulns-summary/expected/clock-skew-vuln.txt")"
+  assert_stderr_equals ""
+}
+
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 run_summary()
@@ -45,11 +59,98 @@ run_summary()
   echo $? >${statusF}
 }
 
-ONE_CREATOR_HIGH_BETA='[{"env":"aws-beta","trail_name":"creator-high-SNYK-GOLANG-NETHTTP-3321444","full_id":"SNYK-GOLANG-NETHTTP-3321444","severity":"high","vuln_url":"https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444","mechanism":"rego_limit","days_remaining":2.3,"ignore_expires":null,"age_days":4.7,"limit_days":7,"artifact":"creator"}]'
+# print_expiring_vulns_summary.py parses --vulns with json.loads, which ignores
+# whitespace, so a fixture can be laid out across lines to stay readable.
 
-ONE_CREATOR_HIGH_PROD='[{"env":"aws-prod","trail_name":"creator-high-SNYK-GOLANG-NETHTTP-3321444","full_id":"SNYK-GOLANG-NETHTTP-3321444","severity":"high","vuln_url":"https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444","mechanism":"rego_limit","days_remaining":2.3,"ignore_expires":null,"age_days":4.7,"limit_days":7,"artifact":"creator"}]'
+ONE_CREATOR_HIGH_BETA='[
+  {
+    "env": "aws-beta",
+    "trail_name": "creator-high-SNYK-GOLANG-NETHTTP-3321444",
+    "full_id": "SNYK-GOLANG-NETHTTP-3321444",
+    "severity": "high",
+    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
+    "mechanism": "rego_limit",
+    "days_remaining": 2.3,
+    "ignore_expires": null,
+    "age_days": 4.7,
+    "limit_days": 7,
+    "artifact": "creator"
+  }
+]'
 
-CREATOR_MIXED_BETA='[{"env":"aws-beta","trail_name":"creator-medium-SNYK-GOLANG-GOLANGORGJWTV4-3180456","full_id":"SNYK-GOLANG-GOLANGORGJWTV4-3180456","severity":"medium","vuln_url":"https://security.snyk.io/vuln/SNYK-GOLANG-GOLANGORGJWTV4-3180456","mechanism":"rego_limit","days_remaining":6.0,"ignore_expires":null,"age_days":24.0,"limit_days":30,"artifact":"creator"},{"env":"aws-beta","trail_name":"creator-high-SNYK-GOLANG-NETHTTP-3321444","full_id":"SNYK-GOLANG-NETHTTP-3321444","severity":"high","vuln_url":"https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444","mechanism":"rego_limit","days_remaining":5.0,"ignore_expires":null,"age_days":2.0,"limit_days":7,"artifact":"creator"},{"env":"aws-beta","trail_name":"creator-high-SNYK-GOLANG-GOLANG-3208976","full_id":"SNYK-GOLANG-GOLANG-3208976","severity":"high","vuln_url":"https://security.snyk.io/vuln/SNYK-GOLANG-GOLANG-3208976","mechanism":"dot_snyk_expiry","days_remaining":1.0,"ignore_expires":"2026-05-09 00:00:00+00:00","age_days":null,"limit_days":null,"artifact":"creator"}]'
+ONE_CREATOR_HIGH_PROD='[
+  {
+    "env": "aws-prod",
+    "trail_name": "creator-high-SNYK-GOLANG-NETHTTP-3321444",
+    "full_id": "SNYK-GOLANG-NETHTTP-3321444",
+    "severity": "high",
+    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
+    "mechanism": "rego_limit",
+    "days_remaining": 2.3,
+    "ignore_expires": null,
+    "age_days": 4.7,
+    "limit_days": 7,
+    "artifact": "creator"
+  }
+]'
+
+CREATOR_MIXED_BETA='[
+  {
+    "env": "aws-beta",
+    "trail_name": "creator-medium-SNYK-GOLANG-GOLANGORGJWTV4-3180456",
+    "full_id": "SNYK-GOLANG-GOLANGORGJWTV4-3180456",
+    "severity": "medium",
+    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GOLANGORGJWTV4-3180456",
+    "mechanism": "rego_limit",
+    "days_remaining": 6.0,
+    "ignore_expires": null,
+    "age_days": 24.0,
+    "limit_days": 30,
+    "artifact": "creator"
+  },
+  {
+    "env": "aws-beta",
+    "trail_name": "creator-high-SNYK-GOLANG-NETHTTP-3321444",
+    "full_id": "SNYK-GOLANG-NETHTTP-3321444",
+    "severity": "high",
+    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
+    "mechanism": "rego_limit",
+    "days_remaining": 5.0,
+    "ignore_expires": null,
+    "age_days": 2.0,
+    "limit_days": 7,
+    "artifact": "creator"
+  },
+  {
+    "env": "aws-beta",
+    "trail_name": "creator-high-SNYK-GOLANG-GOLANG-3208976",
+    "full_id": "SNYK-GOLANG-GOLANG-3208976",
+    "severity": "high",
+    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GOLANG-3208976",
+    "mechanism": "dot_snyk_expiry",
+    "days_remaining": 1.0,
+    "ignore_expires": "2026-05-09 00:00:00+00:00",
+    "age_days": null,
+    "limit_days": null,
+    "artifact": "creator"
+  }
+]'
+
+ONE_RUNNER_HIGH_PROD_CLOCK_SKEW='[
+  {
+    "env": "aws-prod",
+    "trail_name": "runner-high-SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+    "full_id": "SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+    "severity": "high",
+    "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
+    "mechanism": "clock_skew",
+    "days_remaining": -99999,
+    "ignore_expires": null,
+    "age_days": null,
+    "limit_days": 2,
+    "artifact": "runner"
+  }
+]'
 
 echo "::${0##*/}"
 . ${my_dir}/shunit2_helpers.sh

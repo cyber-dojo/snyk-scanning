@@ -8,12 +8,16 @@ default allow := false
 
 seconds_per_day := 60 * 60 * 24
 
-# first_seen_ts is the per-vuln trail created_at, set by `kosli begin trail` in a
-# job that runs after the one stamping now_ts, so on a vuln's first sighting
-# first_seen_ts is ahead of now_ts. Clamping at zero holds such a vuln at day
-# zero, which a limit of 0 still rejects, rather than letting a negative age
-# satisfy any limit.
-age_days(vuln) := max([0, (vuln.now_ts - vuln.first_seen_ts) / seconds_per_day])
+# first_seen_ts is the per-vuln trail created_at, set by `kosli begin trail`
+# before now_ts is stamped, so job ordering cannot put first_seen_ts ahead of
+# now_ts. The two readings come from different clocks (the GitHub runner and
+# the Kosli server), so skew between them can. age_days is undefined for such a
+# vuln, which stops age_within_limit firing and leaves the vuln non-compliant:
+# an age that cannot be measured must not satisfy a severity limit.
+age_days(vuln) := days if {
+    days := (vuln.now_ts - vuln.first_seen_ts) / seconds_per_day
+    days >= 0
+}
 
 # Use < so that critical (max=0) is non-compliant on day zero
 age_within_limit(vuln) if {
@@ -87,5 +91,21 @@ violations contains msg if {
     msg := sprintf(
         "%v: snyk ignore entry expired at %v",
         [vuln.full_id, vuln.ignore_expires],
+    )
+}
+
+# Case 3 violation: no ignore entry and first_seen_ts is ahead of now_ts. That
+# ordering is only reachable through skew between the two clocks the timestamps
+# come from, so the message names it as the thing to go and fix. age_days is
+# undefined for such a vuln, which is what makes it non-compliant and is also
+# why the Case 1 message cannot be built, so this rule carries the diagnostic
+# for that deny. Both timestamps are named to show the size of the skew.
+violations contains msg if {
+    some vuln in input.vulns
+    vuln.ignore_expires_exists == false
+    vuln.first_seen_ts > vuln.now_ts
+    msg := sprintf(
+        "%v: first_seen_ts %d is ahead of now_ts %d, indicating clock skew between the GitHub runner and the Kosli server, so the vuln age cannot be measured",
+        [vuln.full_id, vuln.first_seen_ts, vuln.now_ts],
     )
 }

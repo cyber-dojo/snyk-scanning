@@ -45,29 +45,47 @@ def dot_snyk_result(data, env, now_ts):
     }
 
 
+# days_remaining for a vuln whose age cannot be measured. Every consumer treats
+# days_remaining as a number -- print_expiring_vulns_summary.py sorts on it and
+# rounds it, and check-expiry-and-notify.yml pipes it through jq's ceil -- so the
+# unmeasurable case needs a numeric stand-in rather than null. This one sorts
+# above every measurable vuln and is conspicuous enough to read as "not a real
+# deadline" wherever it surfaces.
+_CLOCK_SKEW_DAYS_REMAINING = -99999
+
+
 def rego_result(data, env, now_ts, max_days):
     """Return a result dict for a vuln tracked by the rego age limit (no .snyk ignore), else None.
 
     days_remaining is limit - age_days: positive while still within the age limit,
     zero or negative once the age has reached or exceeded the limit (non-compliant).
+
+    now_ts is stamped on the GitHub runner and first_seen_ts is the trail
+    created_at from the Kosli server, so skew between the two clocks can put
+    first_seen_ts ahead of now_ts and leave the age unmeasurable. Such a vuln
+    reports mechanism clock_skew with no age_days, matching the rego, which holds
+    it non-compliant rather than granting it the grace a zero age would.
     """
     if data.get("ignore_expires_exists"):
         return None
     severity = data["severity"]
     limit = max_days.get(severity, 0)
-    # first_seen_ts is the trail created_at, set by `kosli begin trail` in a job
-    # that runs after the one stamping now_ts, so on a vuln's first sighting it
-    # is ahead of now_ts. Clamping at zero matches the rego and stops the report
-    # offering more grace than the severity limit allows.
-    age_days = max(0, (now_ts - data["first_seen_ts"]) / 86400)
-    days_remaining = limit - age_days
+    age_secs = now_ts - data["first_seen_ts"]
+    if age_secs < 0:
+        mechanism = "clock_skew"
+        age_days = None
+        days_remaining = _CLOCK_SKEW_DAYS_REMAINING
+    else:
+        mechanism = "rego_limit"
+        age_days = age_secs / 86400
+        days_remaining = limit - age_days
     return {
         "env": env,
         "trail_name": data["trail_name"],
         "full_id": data["full_id"],
         "severity": data["severity"],
         "vuln_url": data["vuln_url"],
-        "mechanism": "rego_limit",
+        "mechanism": mechanism,
         "days_remaining": days_remaining,
         "ignore_expires": None,
         "age_days": age_days,

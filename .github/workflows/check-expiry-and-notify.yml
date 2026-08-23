@@ -37,28 +37,14 @@ jobs:
             then ":x:"
             else ":white_check_mark:"
             end')
+          VULNS=$(echo "${RESULT}" | jq --compact-output '.vulns')
           {
             echo "VULNS_JSON<<EOF"
-            echo "${RESULT}" | jq --compact-output '.vulns'
+            echo "${VULNS}"
             echo "EOF"
             echo "STATUS_SYMBOL=${STATUS_SYMBOL}"
             echo "SLACK_MESSAGE<<EOF"
-            echo "${RESULT}" | jq --raw-output '
-              if (.vulns | length) == 0
-              then "No Snyk vulnerabilities :-)"
-              else
-                .vulns[0]                         as $v         |
-                ($v.days_remaining | ceil)        as $d         |
-                "Vuln: \($v.full_id)"             as $vuln      |
-                "Severity: \($v.severity)"        as $severity  |
-                "Repo: \($v.artifact)"            as $repo      |
-                (if $d > 0
-                 then "Days till non-compliant: \($d)"
-                 else "Days non-compliant: \(0 - $d)"
-                 end)                             as $days_line |
-                "Mechanism: \($v.mechanism)"      as $mechanism |
-                "\($days_line)\n\($vuln)\n\($severity)\n\($repo)\n\($mechanism)"
-              end'
+            ./bin/print_slack_vuln_message.py --vulns "${VULNS}"
             echo "EOF"
           } >> ${GITHUB_ENV}
 

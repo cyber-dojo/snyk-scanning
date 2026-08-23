@@ -119,6 +119,24 @@ def test_c7f2a307():
     assert result["limit_days"] == 2
 
 
+def test_c7f2a30b():
+    """rego_result flags a vuln whose first_seen_ts is ahead of now_ts as clock skew.
+
+    now_ts comes from the GitHub runner and first_seen_ts from the Kosli server,
+    so skew between the two can put first_seen_ts ahead and leave the age
+    unmeasurable. age_days is None because no age can be stated, and
+    days_remaining is the sentinel that sorts the vuln above every measurable
+    one. Asserting the literal pins the value the Slack workflow reads.
+    """
+    data = _high_vuln_no_ignore(first_seen_ts=NOW_TS + 76)
+    result = find_expiring_vulns.rego_result(data, "aws-prod", NOW_TS, PROD_MAX_DAYS)
+    assert result is not None
+    assert result["mechanism"] == "clock_skew"
+    assert result["age_days"] is None
+    assert result["days_remaining"] == -99999
+    assert result["limit_days"] == 2
+
+
 def _suppressed_vuln(trail_name, severity, secs_remaining):
     """Return a dot_snyk_result-shaped dict for a vuln held by a .snyk ignore entry."""
     full_id = trail_name.split("-", 2)[2]

@@ -102,6 +102,12 @@ env:
   ANNOTATIONS_FILENAME: vuln_annotations.py
   ANNOTATIONS_URL:      https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/bin/vuln_annotations.py
 
+  STAMP_TIMES_FILENAME: stamp_vuln_times.py
+  STAMP_TIMES_URL:      https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/bin/stamp_vuln_times.py
+
+  SCAN_SUMMARY_FILENAME: print_artifact_scan_summary.py
+  SCAN_SUMMARY_URL:      https://raw.githubusercontent.com/cyber-dojo/snyk-scanning/main/bin/print_artifact_scan_summary.py
+
 jobs:
   find-snyk-vulns:
     runs-on: ubuntu-latest
@@ -262,6 +268,14 @@ jobs:
           FINGERPRINT="${{matrix.artifact_fingerprint}}"
           echo "VULN_ATTESTATION_NAME=snyk-${FINGERPRINT:0:10}" >> "${GITHUB_ENV}"
 
+      # The checkout is in the caller's context, so the action is named by its
+      # repo path rather than ./.github/actions/
+      - name: Get the vuln time stamping script
+        uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
+        with:
+          url: ${{env.STAMP_TIMES_URL}}
+          path: ${{env.STAMP_TIMES_FILENAME}}
+
       - name: Add times the vuln was first seen and is being measured at
         run: |
           kosli create flow ${KOSLI_FLOW} \
@@ -282,7 +296,7 @@ jobs:
           # age is measured at is never earlier than the trail created_at it is
           # measured against. Each vuln in the matrix gets its own stamp, which
           # keeps every vuln self-consistent.
-          ./bin/stamp_vuln_times.py trail.json "${VULN_JSON}" > ${VULN_FILENAME}
+          python3 "${STAMP_TIMES_FILENAME}" trail.json "${VULN_JSON}" > ${VULN_FILENAME}
 
       - name: Debug print one vuln
         if: env.KOSLI_DEBUG == 'true'
@@ -448,6 +462,12 @@ jobs:
             --name "${KOSLI_ATTESTATION_NAME}" \
             "${ANNOTATE_FLAGS[@]}"
 
+      - name: Get the scan summary script
+        uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
+        with:
+          url: ${{env.SCAN_SUMMARY_URL}}
+          path: ${{env.SCAN_SUMMARY_FILENAME}}
+
       - name: Write job summary (header)
         run: |
           # We are doing a get attestation with FLOW+FINGERPRINT
@@ -461,7 +481,7 @@ jobs:
             --debug=false \
             > attestation.json
 
-          ./bin/print_artifact_scan_summary.py "${VULNS_FILENAME}" attestation.json \
+          python3 "${SCAN_SUMMARY_FILENAME}" "${VULNS_FILENAME}" attestation.json \
             --compliant     "${COMPLIANT}" \
             --repo-name     "${{inputs.repo_name}}" \
             --artifact-name "${{inputs.artifact_name}}" \

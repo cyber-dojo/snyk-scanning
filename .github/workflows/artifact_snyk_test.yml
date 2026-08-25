@@ -269,12 +269,13 @@ jobs:
           echo "VULN_ATTESTATION_NAME=snyk-${FINGERPRINT:0:10}" >> "${GITHUB_ENV}"
 
       # The checkout is in the caller's context, so the action is named by its
-      # repo path rather than ./.github/actions/
+      # repo path rather than ./.github/actions/, and the script is fetched
+      # into the runner's temp dir rather than into the caller's checkout.
       - name: Get the vuln time stamping script
         uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
         with:
           url: ${{env.STAMP_TIMES_URL}}
-          path: ${{env.STAMP_TIMES_FILENAME}}
+          path: ${{runner.temp}}/${{env.STAMP_TIMES_FILENAME}}
 
       - name: Add times the vuln was first seen and is being measured at
         run: |
@@ -290,24 +291,26 @@ jobs:
             --set workflow_url="${WORKFLOW_URL}"
 
           kosli begin trail ${KOSLI_TRAIL}
-          kosli get trail ${KOSLI_TRAIL} --debug=false --output=json > trail.json
+          kosli get trail ${KOSLI_TRAIL} --debug=false --output=json > "${RUNNER_TEMP}/trail.json"
 
           # Stamped here, after the trail exists, so that the instant a vuln's
           # age is measured at is never earlier than the trail created_at it is
           # measured against. Each vuln in the matrix gets its own stamp, which
           # keeps every vuln self-consistent.
-          python3 "${STAMP_TIMES_FILENAME}" trail.json "${VULN_JSON}" > ${VULN_FILENAME}
+          python3 "${RUNNER_TEMP}/${STAMP_TIMES_FILENAME}" \
+            "${RUNNER_TEMP}/trail.json" \
+            "${VULN_JSON}" > "${RUNNER_TEMP}/${VULN_FILENAME}"
 
       - name: Debug print one vuln
         if: env.KOSLI_DEBUG == 'true'
         run:
-          jq . ${VULN_FILENAME}
+          jq . "${RUNNER_TEMP}/${VULN_FILENAME}"
 
       - name: Make snyk-vuln data attestation to Kosli
         run:
           kosli attest custom
             --annotate snyk_URL=${{matrix.vuln_url}}
-            --attestation-data ${VULN_FILENAME}
+            --attestation-data "${RUNNER_TEMP}/${VULN_FILENAME}"
             --name ${VULN_ATTESTATION_NAME}
             --type ${SNYK_CAT_NAME}
 
@@ -322,7 +325,8 @@ jobs:
 
           jq --arg url "${ATTESTATION_URL}" \
             '. + {"attestation_url": $url}' \
-            ${VULN_FILENAME} > tmp.json && mv tmp.json ${VULN_FILENAME}
+            "${RUNNER_TEMP}/${VULN_FILENAME}" > "${RUNNER_TEMP}/tmp.json" \
+            && mv "${RUNNER_TEMP}/tmp.json" "${RUNNER_TEMP}/${VULN_FILENAME}"
 
       # upload-artifact produces an "Artifacts produced during runtime" section
       # in the GitHub step summary. We would like to avoid this because the
@@ -337,7 +341,7 @@ jobs:
       - uses: actions/upload-artifact@v7
         with:
           name: ${{env.VULN_FILENAME}}
-          path: ${{env.VULN_FILENAME}}
+          path: ${{runner.temp}}/${{env.VULN_FILENAME}}
 
 
   attest-snyk-vulns:
@@ -361,45 +365,48 @@ jobs:
         with:
           pattern: vuln-${{inputs.repo_name}}-*.json
           merge-multiple: true
+          path: ${{runner.temp}}
 
       - uses: actions/download-artifact@v8
         with:
           name: ${{inputs.repo_name}}-${{env.SNYK_SARIF_FILENAME}}
+          path: ${{runner.temp}}
 
       - name: Set vuln output
         run: |
           if [ "${{needs.attest-individual-snyk-vulns.result}}" = "skipped" ]; then
             VULNS=[]
           else
-            VULNS="$(jq --compact-output --slurp . vuln-*.json)"
+            VULNS="$(jq --compact-output --slurp . "${RUNNER_TEMP}"/vuln-*.json)"
           fi
-          echo "${VULNS}" > "${VULNS_FILENAME}"
+          echo "${VULNS}" > "${RUNNER_TEMP}/${VULNS_FILENAME}"
 
       - name: Debug print vulns
         if: env.KOSLI_DEBUG == 'true'
         run:
-          jq . ${VULNS_FILENAME}
+          jq . "${RUNNER_TEMP}/${VULNS_FILENAME}"
 
       # The checkout is in the caller's context, so the action is named by its
-      # repo path rather than ./.github/actions/
+      # repo path rather than ./.github/actions/, and the files are fetched
+      # into the runner's temp dir rather than into the caller's checkout.
       - name: Get the rego policy file
         uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
         with:
           url: ${{env.REGO_POLICY_URL}}
-          path: ${{env.REGO_POLICY_FILENAME}}
+          path: ${{runner.temp}}/${{env.REGO_POLICY_FILENAME}}
 
       - name: Get the real .snyk file
         uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
         with:
           url: ${{inputs.raw_snyk_policy_url}}
-          path: ${{env.SNYK_POLICY_FILENAME}}
+          path: ${{runner.temp}}/${{env.SNYK_POLICY_FILENAME}}
           optional: 'true'
 
       - name: Get the rego params file
         uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
         with:
           url: ${{env.REGO_PARAMS_URL}}
-          path: ${{env.REGO_PARAMS_FILENAME}}
+          path: ${{runner.temp}}/${{env.REGO_PARAMS_FILENAME}}
 
       - name: Don't (re)attest the artifact in a build workflow
         if: github.repository == 'cyber-dojo/snyk-scanning' || github.repository == 'cyber-dojo/aws-prod-co-promotion'
@@ -410,63 +417,66 @@ jobs:
           kosli attest artifact ${{inputs.artifact_name}} \
             --name="${ARTIFACT_SLOT_NAME}"
 
+      # Fetched into the runner's temp dir, not the caller's checkout
       - name: Get the vuln annotations script
         uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
         with:
           url: ${{env.ANNOTATIONS_URL}}
-          path: ${{env.ANNOTATIONS_FILENAME}}
+          path: ${{runner.temp}}/${{env.ANNOTATIONS_FILENAME}}
 
       - name: Judge every vuln of the artifact in one evaluation
         run: |
-          jq '{vulns: .}' "${VULNS_FILENAME}" > "${POLICY_INPUT_FILENAME}"
+          jq '{vulns: .}' "${RUNNER_TEMP}/${VULNS_FILENAME}" \
+            > "${RUNNER_TEMP}/${POLICY_INPUT_FILENAME}"
 
           kosli evaluate input \
-            --input-file "${POLICY_INPUT_FILENAME}" \
-            --policy "${REGO_POLICY_FILENAME}" \
-            --params "@${REGO_PARAMS_FILENAME}" \
+            --input-file "${RUNNER_TEMP}/${POLICY_INPUT_FILENAME}" \
+            --policy "${RUNNER_TEMP}/${REGO_POLICY_FILENAME}" \
+            --params "@${RUNNER_TEMP}/${REGO_PARAMS_FILENAME}" \
             --debug=false \
             --no-assert \
-            --output=json > "${EVALUATION_FILENAME}"
+            --output=json > "${RUNNER_TEMP}/${EVALUATION_FILENAME}"
 
       - name: Debug print evaluation
         if: env.KOSLI_DEBUG == 'true'
         run:
-          jq . "${EVALUATION_FILENAME}"
+          jq . "${RUNNER_TEMP}/${EVALUATION_FILENAME}"
 
       - name: Attest the decision, annotated pass or fail per vuln
         run: |
-          COMPLIANT="$(jq '.allow' "${EVALUATION_FILENAME}")"
+          COMPLIANT="$(jq '.allow' "${RUNNER_TEMP}/${EVALUATION_FILENAME}")"
           echo "COMPLIANT=${COMPLIANT}" >> "${GITHUB_ENV}"
 
           # One annotation per vuln, each naming its status and pointing at that
           # vuln's own attestation. The script exits non-zero, and so fails this
           # step, rather than label a vuln whose verdict it cannot place.
-          python3 "${ANNOTATIONS_FILENAME}" \
-            "${VULNS_FILENAME}" \
-            "${EVALUATION_FILENAME}" > annotations.txt
+          python3 "${RUNNER_TEMP}/${ANNOTATIONS_FILENAME}" \
+            "${RUNNER_TEMP}/${VULNS_FILENAME}" \
+            "${RUNNER_TEMP}/${EVALUATION_FILENAME}" > "${RUNNER_TEMP}/annotations.txt"
 
           ANNOTATE_FLAGS=()
           while IFS= read -r annotation; do
             ANNOTATE_FLAGS+=(--annotate "${annotation}")
-          done < annotations.txt
+          done < "${RUNNER_TEMP}/annotations.txt"
 
           kosli attest decision \
             --compliant "${COMPLIANT}" \
             --control "SDLC-CTRL-0022" \
-            --attachments "${REGO_POLICY_FILENAME}" \
-            --attachments "${REGO_PARAMS_FILENAME}" \
-            --attachments "${SNYK_SARIF_FILENAME}"  \
-            --attachments "${SNYK_POLICY_FILENAME}" \
-            --attachments "${POLICY_INPUT_FILENAME}" \
-            --attachments "${EVALUATION_FILENAME}" \
+            --attachments "${RUNNER_TEMP}/${REGO_POLICY_FILENAME}" \
+            --attachments "${RUNNER_TEMP}/${REGO_PARAMS_FILENAME}" \
+            --attachments "${RUNNER_TEMP}/${SNYK_SARIF_FILENAME}"  \
+            --attachments "${RUNNER_TEMP}/${SNYK_POLICY_FILENAME}" \
+            --attachments "${RUNNER_TEMP}/${POLICY_INPUT_FILENAME}" \
+            --attachments "${RUNNER_TEMP}/${EVALUATION_FILENAME}" \
             --name "${KOSLI_ATTESTATION_NAME}" \
             "${ANNOTATE_FLAGS[@]}"
 
+      # Fetched into the runner's temp dir, not the caller's checkout
       - name: Get the scan summary script
         uses: cyber-dojo/snyk-scanning/.github/actions/fetch-url-to-file@main
         with:
           url: ${{env.SCAN_SUMMARY_URL}}
-          path: ${{env.SCAN_SUMMARY_FILENAME}}
+          path: ${{runner.temp}}/${{env.SCAN_SUMMARY_FILENAME}}
 
       - name: Write job summary (header)
         run: |
@@ -479,9 +489,11 @@ jobs:
           kosli get attestation "${ATTESTATION_SLOT_NAME}" \
             --output json \
             --debug=false \
-            > attestation.json
+            > "${RUNNER_TEMP}/attestation.json"
 
-          python3 "${SCAN_SUMMARY_FILENAME}" "${VULNS_FILENAME}" attestation.json \
+          python3 "${RUNNER_TEMP}/${SCAN_SUMMARY_FILENAME}" \
+            "${RUNNER_TEMP}/${VULNS_FILENAME}" \
+            "${RUNNER_TEMP}/attestation.json" \
             --compliant     "${COMPLIANT}" \
             --repo-name     "${{inputs.repo_name}}" \
             --artifact-name "${{inputs.artifact_name}}" \
@@ -492,4 +504,4 @@ jobs:
       - name: Set output vulns
         id: set-vulns
         run:
-          echo "vulns=$(jq --compact-output . ${VULNS_FILENAME})" >> ${GITHUB_OUTPUT}
+          echo "vulns=$(jq --compact-output . "${RUNNER_TEMP}/${VULNS_FILENAME}")" >> ${GITHUB_OUTPUT}

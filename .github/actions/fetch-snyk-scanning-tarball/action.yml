@@ -1,0 +1,48 @@
+name: Fetch snyk-scanning Tarball
+description: Unpack one commit of snyk-scanning outside the caller's checkout
+
+inputs:
+  ref:
+    description: The commit SHA to unpack
+    required: true
+  dir:
+    description: Directory the repo contents are unpacked into
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        REF: ${{inputs.ref}}
+        DIR: ${{inputs.dir}}
+      run: |
+        # One tarball at one commit, so every file the workflow reads comes
+        # from the same version of this repo. Fetching each file separately
+        # from a branch straddles a push, which can pair a rego policy with
+        # params from a different commit.
+        #
+        # The dir is outside the caller's checkout because the jobs using it
+        # checkout the caller's repo, and a file written relative to the
+        # working directory would land in that tree.
+        #
+        # --location because the API tarball endpoint redirects to codeload.
+        # --retry-all-errors is what retries a mid-transfer reset (curl exit
+        # 35); --retry alone does not cover that class.
+        mkdir -p "${DIR}"
+
+        curl \
+          --fail-with-body \
+          --location \
+          --retry 5 \
+          --retry-all-errors \
+          --retry-delay 2 \
+          --connect-timeout 10 \
+          --output "${DIR}.tar.gz" \
+          "https://api.github.com/repos/cyber-dojo/snyk-scanning/tarball/${REF}"
+
+        # GitHub wraps the tree in one <owner>-<repo>-<sha> directory
+        tar --extract --gzip \
+          --file "${DIR}.tar.gz" \
+          --directory "${DIR}" \
+          --strip-components=1

@@ -120,21 +120,14 @@ def test_c7f2a307():
 
 
 def test_c7f2a30b():
-    """rego_result flags a vuln whose first_seen_ts is ahead of now_ts as clock skew.
+    """rego_result refuses a vuln whose first_seen_ts is ahead of now_ts.
 
-    now_ts comes from the GitHub runner and first_seen_ts from the Kosli server,
-    so skew between the two can put first_seen_ts ahead and leave the age
-    unmeasurable. age_days is None because no age can be stated, and
-    days_remaining is the sentinel that sorts the vuln above every measurable
-    one. Asserting the literal pins the value the Slack workflow reads.
+    stamp_vuln_times.py fails the scan on that ordering, so no vuln file can
+    carry it. A deadline for it would put a number on an age no clock measured.
     """
     data = _high_vuln_no_ignore(first_seen_ts=NOW_TS + 76)
-    result = find_expiring_vulns.rego_result(data, "aws-prod", NOW_TS, PROD_MAX_DAYS)
-    assert result is not None
-    assert result["mechanism"] == "clock_skew"
-    assert result["age_days"] is None
-    assert result["days_remaining"] == -99999
-    assert result["limit_days"] == 2
+    with pytest.raises(ValueError, match="cannot be measured"):
+        find_expiring_vulns.rego_result(data, "aws-prod", NOW_TS, PROD_MAX_DAYS)
 
 
 def _suppressed_vuln(trail_name, severity, secs_remaining):

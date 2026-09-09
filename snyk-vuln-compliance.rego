@@ -8,12 +8,12 @@ default allow := false
 
 seconds_per_day := 60 * 60 * 24
 
-# first_seen_ts is the per-vuln trail created_at, set by `kosli begin trail`
-# before now_ts is stamped, so job ordering cannot put first_seen_ts ahead of
-# now_ts. The two readings come from different clocks (the GitHub runner and
-# the Kosli server), so skew between them can. age_days is undefined for such a
-# vuln, which stops age_within_limit firing and leaves the vuln non-compliant:
-# an age that cannot be measured must not satisfy a severity limit.
+# stamp_vuln_times.py fails the scan when first_seen_ts is ahead of now_ts, so
+# that ordering does not reach here. The guard is the backstop if it ever does:
+# age_days stays undefined, which stops age_within_limit firing and denies the
+# vuln with no violation naming it, and both vuln_annotations.py and
+# vuln_verdicts.py refuse a denial they cannot attribute. An age that cannot be
+# measured must not satisfy a severity limit.
 age_days(vuln) := days if {
     days := (vuln.now_ts - vuln.first_seen_ts) / seconds_per_day
     days >= 0
@@ -68,19 +68,29 @@ allow if {
 
 # Violations provide diagnostics only -- they do not drive the allow decision.
 #
-# Every message begins with its vuln's full_id followed by a colon. full_id
-# holds no colon, so the caller recovers the set of failing vuln ids by taking
-# the first colon-delimited field of each message. That is what lets a single
-# evaluation label each vuln of an artifact pass or fail.
+# Every message begins with its vuln's full_id followed by a colon and a space.
+# A vuln id can hold colons (a licence finding is
+# "snyk:lic:pip:astroid:LGPL-2.1") but never a colon followed by a space, so the
+# caller recovers each failing vuln id by partitioning a message on the first
+# ": ". That is what lets a single evaluation label each vuln of an artifact
+# pass or fail.
 
 # Case 1 violation: no ignore entry and vulnerability age exceeds the threshold for its severity
+#
+# The age is unrounded: the daily scans measure it at close to the same
+# wall-clock time each run, so a vuln crosses its limit within a second of a
+# whole number of days and a rounded age hides the margin entirely.
+#
+# %v because the age is an int for a whole-day age and a float otherwise, and
+# each fixed-type verb errors on the other: %d renders %!d(float64=...), %.6f
+# renders %!f(int=...).
 violations contains msg if {
     some vuln in input.vulns
     vuln.ignore_expires_exists == false
     not age_within_limit(vuln)
     msg := sprintf(
-        "%v: %v severity vuln age %d days exceeds %d day limit",
-        [vuln.full_id, vuln.severity, floor(age_days(vuln)), max_days_by_severity[vuln.severity]],
+        "%v: %v severity vuln age %v days exceeds %d day limit",
+        [vuln.full_id, vuln.severity, age_days(vuln), max_days_by_severity[vuln.severity]],
     )
 }
 
@@ -91,21 +101,5 @@ violations contains msg if {
     msg := sprintf(
         "%v: snyk ignore entry expired at %v",
         [vuln.full_id, vuln.ignore_expires],
-    )
-}
-
-# Case 3 violation: no ignore entry and first_seen_ts is ahead of now_ts. That
-# ordering is only reachable through skew between the two clocks the timestamps
-# come from, so the message names it as the thing to go and fix. age_days is
-# undefined for such a vuln, which is what makes it non-compliant and is also
-# why the Case 1 message cannot be built, so this rule carries the diagnostic
-# for that deny. Both timestamps are named to show the size of the skew.
-violations contains msg if {
-    some vuln in input.vulns
-    vuln.ignore_expires_exists == false
-    vuln.first_seen_ts > vuln.now_ts
-    msg := sprintf(
-        "%v: first_seen_ts %d is ahead of now_ts %d, indicating clock skew between the GitHub runner and the Kosli server, so the vuln age cannot be measured",
-        [vuln.full_id, vuln.first_seen_ts, vuln.now_ts],
     )
 }

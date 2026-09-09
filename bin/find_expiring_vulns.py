@@ -45,26 +45,16 @@ def dot_snyk_result(data, env, now_ts):
     }
 
 
-# days_remaining for a vuln whose age cannot be measured. Every consumer treats
-# days_remaining as a number -- print_expiring_vulns_summary.py sorts on it and
-# rounds it, and check-expiry-and-notify.yml pipes it through jq's ceil -- so the
-# unmeasurable case needs a numeric stand-in rather than null. This one sorts
-# above every measurable vuln and is conspicuous enough to read as "not a real
-# deadline" wherever it surfaces.
-_CLOCK_SKEW_DAYS_REMAINING = -99999
-
-
 def rego_result(data, env, now_ts, max_days):
     """Return a result dict for a vuln tracked by the rego age limit (no .snyk ignore), else None.
 
     days_remaining is limit - age_days: positive while still within the age limit,
     zero or negative once the age has reached or exceeded the limit (non-compliant).
 
-    now_ts is stamped on the GitHub runner and first_seen_ts is the trail
-    created_at from the Kosli server, so skew between the two clocks can put
-    first_seen_ts ahead of now_ts and leave the age unmeasurable. Such a vuln
-    reports mechanism clock_skew with no age_days, matching the rego, which holds
-    it non-compliant rather than granting it the grace a zero age would.
+    Raises ValueError when first_seen_ts is ahead of now_ts. stamp_vuln_times.py
+    fails the scan on that ordering, so no vuln file reaching this report can
+    carry it; treating it as a deadline would put a number on an age no clock
+    measured.
     """
     if data.get("ignore_expires_exists"):
         return None
@@ -72,23 +62,19 @@ def rego_result(data, env, now_ts, max_days):
     limit = max_days.get(severity, 0)
     age_secs = now_ts - data["first_seen_ts"]
     if age_secs < 0:
-        mechanism = "clock_skew"
-        age_days = None
-        days_remaining = _CLOCK_SKEW_DAYS_REMAINING
-    else:
-        mechanism = "rego_limit"
-        age_days = age_secs / 86400
-        days_remaining = limit - age_days
+        raise ValueError(
+            f'{data["full_id"]}: first_seen_ts {data["first_seen_ts"]} is ahead of '
+            f"now_ts {now_ts}, so the vuln age cannot be measured")
     return {
         "env": env,
         "trail_name": data["trail_name"],
         "full_id": data["full_id"],
         "severity": data["severity"],
         "vuln_url": data["vuln_url"],
-        "mechanism": mechanism,
-        "days_remaining": days_remaining,
+        "mechanism": "rego_limit",
+        "days_remaining": limit - age_secs / 86400,
         "ignore_expires": None,
-        "age_days": age_days,
+        "age_days": age_secs / 86400,
         "limit_days": limit,
         "artifact": extract_artifact_name(data["trail_name"]),
     }
@@ -183,7 +169,11 @@ def main():
         result = dot_snyk_result(data, args.env, now_ts)
         if result:
             vulns.append(result)
-        result = rego_result(data, args.env, now_ts, max_days)
+        try:
+            result = rego_result(data, args.env, now_ts, max_days)
+        except ValueError as error:
+            print(error, file=sys.stderr)
+            sys.exit(45)
         if result:
             vulns.append(result)
 

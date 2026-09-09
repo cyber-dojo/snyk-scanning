@@ -7,10 +7,10 @@
       "severity": "high",
       "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
       "mechanism": "rego_limit",
-      "days_remaining": 0.5,
+      "days_remaining": 3.5,
       "ignore_expires": null,
       "age_days": 1.5,
-      "limit_days": 2,
+      "limit_days": 5,
       "artifact": "runner"
     }
   ]

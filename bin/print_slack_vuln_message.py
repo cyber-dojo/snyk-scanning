@@ -12,14 +12,7 @@ def days_line(vuln):
 
     days_remaining is rounded up, so a vuln with 2.3 days of grace reads as 3:
     a reader acting on the message has until the end of that day.
-
-    A clock_skew vuln has no measurable age, so its days_remaining is a sentinel
-    that sorts it above every real deadline rather than a count of days. Printing
-    it would claim tens of thousands of days of non-compliance, so the line says
-    the count is unknown and names the cause instead.
     """
-    if vuln["mechanism"] == "clock_skew":
-        return "Days non-compliant: unknown (clock skew)"
     days = math.ceil(vuln["days_remaining"])
     if days > 0:
         return f"Days till non-compliant: {days}"

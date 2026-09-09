@@ -6,21 +6,16 @@ import json
 import re
 import sys
 
+# One reader of the rego's message format, so the annotations and the verdict
+# record cannot disagree about which vulns failed.
+from vuln_verdicts import failing_ids
+
 # The Kosli CLI restricts annotation keys to [A-Za-z0-9_], so every other
 # character of a vuln id becomes an underscore. The UI's humanize filter renders
 # each underscore as a space. The key is the only place a readable vuln
 # identifier can go, because the UI renders an annotation value that is a URL as
 # a link whose visible text is the URL itself.
 DISALLOWED_IN_KEY = re.compile(r'[^A-Za-z0-9_]')
-
-
-def failing_ids(evaluation):
-    """Return the set of vuln ids named by the evaluation's violations.
-
-    Every violation message begins with its vuln's full_id followed by a colon,
-    and a compliant evaluation carries violations as null.
-    """
-    return {message.split(":")[0] for message in evaluation.get("violations") or []}
 
 
 def annotation_key(status, vuln):

@@ -27,6 +27,47 @@ The inner trail-level attestations (one per Snyk vulnerability) _always_ take pl
 artifact-level attestation carries that verdict, plus one annotation per vulnerability whose key
 says `pass` or `fail` and whose value links to that vulnerability's own attestation.
 
+### Why a control is red
+
+A `decision` attestation's payload is only its `is_compliant`, so the reason the Rego gave
+travels beside it:
+
+- **`description`**: the one line that shows without opening anything, for example
+  `1 of 10 vulns failing: SNYK-ALPINE324-UTILLINUX-19533434 (high) -- high severity vuln age
+  2.000007091046297 days exceeds 2 day limit`.
+- **`user_data`**: the verdict record from `bin/vuln_verdicts.py`, holding the profile and limits
+  judged against, the counts, and per vulnerability its status, the reasons the Rego named, its
+  age, its limit, both instants and a link to its own attestation. Queryable through the API.
+- **`attachments`**: the Rego policy, the params profile, the sarif, the `.snyk` file, the JSON
+  handed to the policy, the raw evaluation and the verdict record, in the evidence vault.
+
+Each per-vulnerability attestation also carries `age_days` and `limit_days`, so one per-vuln
+record shows the arithmetic behind its own verdict.
+
+Ages are unrounded. The daily scans measure at close to the same wall-clock time each run, so a
+vulnerability crosses its limit within a second of a whole number of days, and a rounded age
+hides the margin.
+
+Both ends of the age come off one clock, the Kosli server's. `kosli begin trail` touches the
+vulnerability's trail, and the read that follows yields both `created_at` (when the vulnerability
+was first seen) and `last_modified_at` (this run's instant). No runner clock enters the
+measurement, so there is no skew to absorb and a negative age is impossible rather than merely
+unlikely.
+
+If the server ever did report a `last_modified_at` earlier than the `created_at` of the same
+object, `stamp_vuln_times.py` raises `TrailTimesOutOfOrder` and exits non-zero rather than record
+an unmeasurable age as a verdict. That is a backstop against a broken invariant, not an expected
+case.
+
+What a failed scan does and does not do: the artifact-level decision is attested in the same job
+as the artifact slot it hangs off, so a failed scan writes neither. The per-artifact trail is
+named `{repo_name}-{artifact_fingerprint}` and persists across runs, so a fingerprint an earlier
+run already scanned keeps that run's verdict, and the environment's compliance does not change.
+Only a fingerprint never scanned before leaves no verdict for `kosli-aws-policy`'s
+SDLC-CTRL-0022 rule to miss. The signal is therefore the workflow failure and its Slack alert,
+which reads `Snyk scan FAILED for <env>` with the failing step's message on the job's stderr, not the
+environment going red.
+
 ## Workflows
 
 ### `aws-beta.yml` / `aws-prod.yml`
@@ -47,36 +88,35 @@ Slack.
 The per-artifact flow holds one trail per artifact currently running in the environment. Trail
 names have the form `{repo_name}-{artifact_fingerprint}`. Each trail contains one `decision`
 artifact-level attestation named `{repo_name}.snyk-container-scan` with the sarif output, Rego
-policy file, Rego params file, `.snyk` policy file, the JSON handed to the policy, and the
-policy's verdict attached.
+policy file, Rego params file, `.snyk` policy file, the JSON handed to the policy, the
+policy's verdict and the verdict record attached.
 
 The per-vuln flow holds one trail per vulnerability found across all scanned artifacts. Trail
 names have the form `{repo_name}-{severity}-{snyk_id}`, where `snyk_id` is the Snyk rule id
 (for example `SNYK-ALPINE322-ZLIB-16078399`), not a CVE id. Each trail contains one custom
 attestation of type `single-snyk-vuln`, named `snyk-{first 10 characters of the artifact
-fingerprint}`. That attestation holds the data the compliance decision is made from, and its URL
-is what the matching annotation on the per-artifact attestation links to.
+fingerprint}`. That attestation holds the data the compliance decision is made from, including
+the vuln's `age_days` and the `limit_days` it was judged against, and its URL is what the
+matching annotation on the per-artifact attestation links to.
 
 ## Rego compliance params
 
-Each environment has a `rego.params.{env}.json` file that sets the maximum number of days a
-vulnerability may exist in that environment before it is considered non-compliant, by severity. aws-prod has a slightly stricter limit for critical vulnerabilities (0 days, so any critical vuln is immediately non-compliant), reflecting the higher risk of a production environment.
+Each environment has a `rego.params.{env}.json` file setting the maximum number of days a
+vulnerability may exist in that environment before it is non-compliant, by severity:
 
-Example `rego.params.aws-prod.json`:
+| Profile | critical | high | medium | low |
+|---|---|---|---|---|
+| `aws-beta` | 1 | 2 | 4 | 10 |
+| `aws-prod` | 1 | 5 | 10 | 30 |
 
-```json
-{
-    "max_days_by_severity":
-    {
-        "critical": 0,
-        "high":     2,
-        "medium":   4,
-        "low":      10
-    }
-}
-```
+When a new low severity vulnerability appears in aws-prod you have 30 days to either fix it or
+add an entry to the relevant `.snyk` file.
 
-What this means: when a new low severity vulnerability appears in aws-prod then you have 10 days to either fix it, or to add entries to the relevant .snyk files.
+aws-prod is the more lenient of the two on high, medium and low. `kosli_env` defaults to
+`aws-beta`, so the server build judges against the aws-beta profile: a vulnerability that will
+eventually breach an aws-prod limit therefore fails the build first, days before the day it
+could turn aws-prod non-compliant. `tests/test_rego_params.sh` holds `beta <= prod` for every
+severity, so that ordering cannot be lost to an edit of a params file.
 
 
 ### `env_snyk_test.yml` (reusable)

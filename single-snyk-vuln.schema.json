@@ -60,6 +60,14 @@
       "type": "string",
       "description": "Human-readable UTC datetime when this vulnerability was first seen in the repo"
     },
+    "age_days": {
+      "type": "number",
+      "description": "Days between first_seen and now"
+    },
+    "limit_days": {
+      "type": "number",
+      "description": "The max_days_by_severity limit for this severity in the policy profile the scan was judged against"
+    },
     "trail_name": {
       "type": "string",
       "description": "Where this vuln data is attested to"
@@ -80,6 +88,8 @@
     "ignore_forever",
     "first_seen_ts",
     "first_seen",
+    "age_days",
+    "limit_days",
     "trail_name"
   ]
 }

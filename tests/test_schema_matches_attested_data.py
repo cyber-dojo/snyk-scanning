@@ -18,7 +18,8 @@ COMBINE_DIR = os.path.join(MY_DIR, "combine-snyk")
 # at" step injects into each vuln dict after combine_snyk.py and before the data
 # is attested. now_ts is stamped there, alongside first_seen_ts, so that it is
 # never earlier than the trail created_at the age is measured against.
-WORKFLOW_ADDED_KEYS = {"first_seen_ts", "first_seen", "now_ts", "now"}
+WORKFLOW_ADDED_KEYS = {"first_seen_ts", "first_seen", "now_ts", "now",
+                       "age_days", "limit_days"}
 
 
 def attested_vuln_keys():

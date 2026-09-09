@@ -47,13 +47,6 @@ test_most_urgent_vuln_exactly_on_its_boundary_is_not_compliant()
   assert_stderr_equals ""
 }
 
-test_clock_skew_vuln_is_not_compliant()
-{
-  run_symbol "${CLOCK_SKEW}"
-  assert_status_equals 0
-  assert_stdout_equals ":x:"
-  assert_stderr_equals ""
-}
 
 # Only the first vuln decides. A later vuln past its boundary cannot be first,
 # because the report sorts by urgency, so a trailing compliant vuln must not
@@ -111,17 +104,6 @@ readonly ON_BOUNDARY="$(jq --null-input '
       artifact: "creator",
       mechanism: "rego_limit",
       days_remaining: 0            # <<< the limit day, which the rego denies
-    }
-  ]')"
-
-readonly CLOCK_SKEW="$(jq --null-input '
-  [
-    {
-      full_id: "SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-      severity: "high",
-      artifact: "runner",
-      mechanism: "clock_skew",     # <<< age unmeasurable, so never compliant
-      days_remaining: -99999       # <<< the sentinel, which is below zero
     }
   ]')"
 

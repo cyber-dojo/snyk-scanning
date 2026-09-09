@@ -142,16 +142,37 @@ test_deny_medium_vuln_at_age_limit()
   assert_violation_message "${VULN_ID}: medium severity vuln age ${MEDIUM_LIMIT_BETA} days exceeds ${MEDIUM_LIMIT_BETA} day limit"
 }
 
-test_deny_vuln_age_message_uses_whole_days_for_fractional_age()
+test_deny_vuln_age_message_reports_a_fractional_age_in_full()
 {
-  # 9.5 days old (fractional) over the 4-day medium limit -- the violation message
-  # must report a whole number of days, not a Go %d-on-float error token.
+  # 9.5 days old: a float age renders as a number, not a Go %d-on-float token.
   local -r first_seen_ts=$((NOW_TS - 9 * SECONDS_PER_DAY - SECONDS_PER_DAY / 2))
   local input
   input=$(make_input "$(make_vuln "${VULN_ID}" "medium" "${first_seen_ts}" false 0 "")")
   evaluate_rego "${input}" "${PARAMS_BETA}"
   assert_deny
-  assert_violation_message "${VULN_ID}: medium severity vuln age 9 days exceeds ${MEDIUM_LIMIT_BETA} day limit"
+  assert_violation_message "${VULN_ID}: medium severity vuln age 9.5 days exceeds ${MEDIUM_LIMIT_BETA} day limit"
+}
+
+# The daily scans decide on a margin this small, so the message has to show it.
+test_deny_vuln_just_over_the_limit_shows_the_sub_second_margin()
+{
+  local -r high_limit="$(jq '.max_days_by_severity.high' "${PARAMS_BETA}")"
+  local -r first_seen_ts=$((NOW_TS - high_limit * SECONDS_PER_DAY - 1))
+  local input
+  input=$(make_input "$(make_vuln "${VULN_ID}" "high" "${first_seen_ts}" false 0 "")")
+  evaluate_rego "${input}" "${PARAMS_BETA}"
+  assert_deny
+  assert_violation_message "${VULN_ID}: high severity vuln age 2.0000115740740743 days exceeds ${high_limit} day limit"
+}
+
+test_allow_vuln_just_under_the_limit()
+{
+  local -r high_limit="$(jq '.max_days_by_severity.high' "${PARAMS_BETA}")"
+  local -r first_seen_ts=$((NOW_TS - high_limit * SECONDS_PER_DAY + 1))
+  local input
+  input=$(make_input "$(make_vuln "${VULN_ID}" "high" "${first_seen_ts}" false 0 "")")
+  evaluate_rego "${input}" "${PARAMS_BETA}"
+  assert_allow
 }
 
 test_deny_critical_vuln_at_age_limit_on_beta()
@@ -165,22 +186,22 @@ test_deny_critical_vuln_at_age_limit_on_beta()
   assert_violation_message "${VULN_ID}: critical severity vuln age ${CRITICAL_LIMIT_BETA} days exceeds ${CRITICAL_LIMIT_BETA} day limit"
 }
 
-test_deny_critical_vuln_on_prod_day_zero()
+test_deny_critical_vuln_at_age_limit_on_prod()
 {
-  # 0 days old: critical on aws-prod has max=0, so even day zero is non-compliant
+  local -r first_seen_ts=$((NOW_TS - CRITICAL_LIMIT_PROD * SECONDS_PER_DAY))
   local input
-  input=$(make_input "$(make_vuln "${VULN_ID}" "critical" "${NOW_TS}" false 0 "")")
+  input=$(make_input "$(make_vuln "${VULN_ID}" "critical" "${first_seen_ts}" false 0 "")")
   evaluate_rego "${input}" "${PARAMS_PROD}"
   assert_deny
-  assert_violation_message "${VULN_ID}: critical severity vuln age 0 days exceeds ${CRITICAL_LIMIT_PROD} day limit"
+  assert_violation_message "${VULN_ID}: critical severity vuln age ${CRITICAL_LIMIT_PROD} days exceeds ${CRITICAL_LIMIT_PROD} day limit"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# No ignore, first_seen_ts ahead of now_ts => non-compliant.
-# now_ts is stamped after `kosli begin trail` sets first_seen_ts, so job
-# ordering cannot put first_seen_ts ahead, but the two readings come from
-# different clocks (the GitHub runner and the Kosli server) and skew between
-# them can. A negative age must not satisfy a severity limit.
+# No ignore, first_seen_ts ahead of now_ts. stamp_vuln_times.py fails the scan
+# on that ordering, so it does not reach the rego. These pin the backstop if it
+# ever does: denied, and named by nothing, which is what vuln_annotations.py and
+# vuln_verdicts.py refuse rather than label. A negative age must not satisfy a
+# severity limit.
 
 test_deny_critical_vuln_on_prod_when_first_seen_is_ahead_of_now()
 {
@@ -191,10 +212,8 @@ test_deny_critical_vuln_on_prod_when_first_seen_is_ahead_of_now()
   assert_deny
 }
 
-# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-# The same skew, at a severity whose limit is above zero. Critical (limit 0)
-# denies on age alone, so only a severity with room to spare can show a
-# negative age wrongly satisfying its limit.
+# The same skew at another severity, and on the profile the build gate uses, so
+# the backstop is pinned on both profiles rather than one.
 
 test_deny_medium_vuln_on_beta_when_first_seen_is_ahead_of_now()
 {
@@ -203,8 +222,7 @@ test_deny_medium_vuln_on_beta_when_first_seen_is_ahead_of_now()
   input=$(make_input "$(make_vuln "${VULN_ID}" "medium" "${first_seen_ts}" false 0 "")")
   evaluate_rego "${input}" "${PARAMS_BETA}"
   assert_deny
-  assert_violation_count 1
-  assert_violation_message "${VULN_ID}: first_seen_ts ${first_seen_ts} is ahead of now_ts ${NOW_TS}, indicating clock skew between the GitHub runner and the Kosli server, so the vuln age cannot be measured"
+  assert_violation_count 0
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -

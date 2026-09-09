@@ -33,17 +33,6 @@ test_vuln_past_its_limit_counts_the_days_it_has_been_non_compliant()
   assert_stderr_equals ""
 }
 
-# A clock_skew vuln carries the sentinel days_remaining that sorts it above every
-# real deadline. Printing that number would claim tens of thousands of days of
-# non-compliance, so the message says the count is unknown and names the cause.
-
-test_clock_skew_vuln_reports_unknown_days_and_names_the_cause()
-{
-  run_message "${ONE_RUNNER_HIGH_CLOCK_SKEW}"
-  assert_status_equals 0
-  assert_stdout_equals "${EXPECTED_CLOCK_SKEW}"
-  assert_stderr_equals ""
-}
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
@@ -66,12 +55,6 @@ Vuln: SNYK-GOLANG-NETHTTP-3321444
 Severity: high
 Repo: creator
 Mechanism: rego_limit'
-
-readonly EXPECTED_CLOCK_SKEW='Days non-compliant: unknown (clock skew)
-Vuln: SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666
-Severity: high
-Repo: runner
-Mechanism: clock_skew'
 
 # Every fixture is built through jq so that the fields each test turns on can be
 # marked with # <<<: jq programs take comments, JSON does not.
@@ -107,23 +90,6 @@ readonly ONE_CREATOR_HIGH_PAST_LIMIT="$(jq --null-input '
       age_days: 8.0,
       limit_days: 7,
       artifact: "creator"
-    }
-  ]')"
-
-readonly ONE_RUNNER_HIGH_CLOCK_SKEW="$(jq --null-input '
-  [
-    {
-      env: "aws-prod",
-      trail_name: "runner-high-SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-      full_id: "SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-      severity: "high",
-      vuln_url: "https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-      mechanism: "clock_skew",   # <<< selects the unknown-days line
-      days_remaining: -99999,    # <<< the sentinel that must not be counted
-      ignore_expires: null,
-      age_days: null,
-      limit_days: 2,
-      artifact: "runner"
     }
   ]')"
 

@@ -34,20 +34,6 @@ test_sorted_by_severity_then_days_remaining()
   assert_stderr_equals ""
 }
 
-# A clock_skew vuln carries no measurable age, so its days_remaining is the
-# sentinel find_expiring_vulns.py uses to sort it above every real deadline. The
-# table shows "?" in place of that number, because the sentinel is a sort device
-# and not a count of days anyone can act on, and labels the mechanism "skew" so
-# the row is not read as a .snyk expiry.
-
-test_clock_skew_vuln_shows_no_day_count_and_its_own_mechanism_label()
-{
-  run_summary aws-prod "${ONE_RUNNER_HIGH_PROD_CLOCK_SKEW}"
-  assert_status_equals 0
-  assert_stdout_equals "$(cat "${my_dir}/print-expiring-vulns-summary/expected/clock-skew-vuln.txt")"
-  assert_stderr_equals ""
-}
-
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 run_summary()
@@ -139,23 +125,6 @@ readonly CREATOR_MIXED_BETA="$(jq --null-input '
       age_days: null,
       limit_days: null,
       artifact: "creator"
-    }
-  ]')"
-
-readonly ONE_RUNNER_HIGH_PROD_CLOCK_SKEW="$(jq --null-input '
-  [
-    {
-      env: "aws-prod",
-      trail_name: "runner-high-SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-      full_id: "SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-      severity: "high",
-      vuln_url: "https://security.snyk.io/vuln/SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666",
-      mechanism: "clock_skew",   # <<< selects the skew label and the "?" day count
-      days_remaining: -99999,    # <<< the sentinel that must not reach the table
-      ignore_expires: null,
-      age_days: null,            # <<< no age can be stated for this vuln
-      limit_days: 2,
-      artifact: "runner"
     }
   ]')"
 

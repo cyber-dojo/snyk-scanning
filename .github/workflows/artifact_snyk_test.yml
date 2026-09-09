@@ -116,6 +116,7 @@ env:
   SNYK_SCANNING_ANNOTATIONS_FILE:  /tmp/snyk-scanning/bin/vuln_annotations.py
   SNYK_SCANNING_STAMP_TIMES_FILE:  /tmp/snyk-scanning/bin/stamp_vuln_times.py
   SNYK_SCANNING_SCAN_SUMMARY_FILE: /tmp/snyk-scanning/bin/print_artifact_scan_summary.py
+  SNYK_SCANNING_VERDICTS_FILE:     /tmp/snyk-scanning/bin/vuln_verdicts.py
 
 jobs:
   find-snyk-vulns:
@@ -314,13 +315,16 @@ jobs:
           kosli begin trail ${KOSLI_TRAIL}
           kosli get trail ${KOSLI_TRAIL} --debug=false --output=json > "${TMP_TRAIL_FILE}"
 
-          # Stamped here, after the trail exists, so that the instant a vuln's
-          # age is measured at is never earlier than the trail created_at it is
-          # measured against. Each vuln in the matrix gets its own stamp, which
-          # keeps every vuln self-consistent.
+          # Both ends of the age come out of this one trail read: created_at is
+          # when the vuln was first seen, and last_modified_at is this run's
+          # instant, because `kosli begin trail` above just touched the trail.
+          # One clock, the Kosli server's, so no runner clock enters the
+          # measurement and the age cannot come out negative. Each vuln in the
+          # matrix reads its own trail, which keeps every vuln self-consistent.
           python3 "${SNYK_SCANNING_STAMP_TIMES_FILE}" \
             "${TMP_TRAIL_FILE}" \
-            "${VULN_JSON}" > "${TMP_VULN_FILE}"
+            "${VULN_JSON}" \
+            --params-file "${SNYK_SCANNING_REGO_PARAMS_FILE}" > "${TMP_VULN_FILE}"
 
       - name: Debug print one vuln
         if: env.KOSLI_DEBUG == 'true'
@@ -367,7 +371,15 @@ jobs:
 
   attest-snyk-vulns:
     needs: [find-snyk-vulns, attest-individual-snyk-vulns]
-    if: always() && inputs.attest_to_kosli && needs.find-snyk-vulns.result == 'success'
+    # always() is what lets a skipped attest-individual-snyk-vulns (an artifact
+    # with no vulns) still reach this job. A failed one must not: its matrix
+    # uploads one vuln file per leg, so a missing leg would be judged here as
+    # though the artifact had no such vuln, and could attest a compliant
+    # decision for an artifact whose worst vuln never got measured.
+    if: >-
+      always() && inputs.attest_to_kosli
+      && needs.find-snyk-vulns.result == 'success'
+      && contains(fromJSON('["success","skipped"]'), needs.attest-individual-snyk-vulns.result)
     outputs:
       vulns: ${{steps.set-vulns.outputs.vulns}}
     runs-on: ubuntu-latest
@@ -376,6 +388,7 @@ jobs:
       TMP_POLICY_INPUT_FILE: /tmp/policy_input.json
       TMP_EVALUATION_FILE: /tmp/evaluation.json
       TMP_ANNOTATIONS_TXT: /tmp/annotations.txt
+      TMP_VERDICTS_FILE: /tmp/verdicts.json
       TMP_ATTESTATION_FILE: /tmp/attestation.json
       KOSLI_FINGERPRINT: ${{needs.find-snyk-vulns.outputs.fingerprint}}
       KOSLI_ATTESTATION_NAME: ${{inputs.kosli_attestation_name}}
@@ -467,15 +480,29 @@ jobs:
             ANNOTATE_FLAGS+=(--annotate "${annotation}")
           done < "${TMP_ANNOTATIONS_TXT}"
 
+          # A decision's payload is only its is_compliant, so the reason each
+          # vuln failed rides on --user-data, which the API can query, and its
+          # summary on --description.
+          python3 "${SNYK_SCANNING_VERDICTS_FILE}" \
+            "${TMP_VULNS_FILE}" \
+            "${TMP_EVALUATION_FILE}" \
+            --params-profile "${{inputs.kosli_env}}" \
+            --params-file "${SNYK_SCANNING_REGO_PARAMS_FILE}" > "${TMP_VERDICTS_FILE}"
+
+          DESCRIPTION="$(jq --raw-output '.summary' "${TMP_VERDICTS_FILE}")"
+
           kosli attest decision \
             --compliant "${COMPLIANT}" \
             --control "SDLC-CTRL-0022" \
+            --description "${DESCRIPTION}" \
+            --user-data "${TMP_VERDICTS_FILE}" \
             --attachments "${SNYK_SCANNING_REGO_POLICY_FILE}" \
             --attachments "${SNYK_SCANNING_REGO_PARAMS_FILE}" \
             --attachments "${TMP_SNYK_SARIF_FILE}"  \
             --attachments "${CALLER_SNYK_POLICY_FILE}" \
             --attachments "${TMP_POLICY_INPUT_FILE}" \
             --attachments "${TMP_EVALUATION_FILE}" \
+            --attachments "${TMP_VERDICTS_FILE}" \
             --name "${KOSLI_ATTESTATION_NAME}" \
             "${ANNOTATE_FLAGS[@]}"
 

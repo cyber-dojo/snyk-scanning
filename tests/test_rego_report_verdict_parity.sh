@@ -87,13 +87,13 @@ test_agree_expired_ignore_fails_a_vuln_inside_its_age_limit()
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 # Clock skew puts first_seen_ts ahead of now_ts and leaves the age unmeasurable.
-# The rego has no age_days to compare, the report has no age to subtract, and
-# both must land on non-compliant rather than on a day zero that a limit above
-# zero would forgive.
+# Neither side may turn that into a verdict: the rego denies while naming no
+# vuln, which its callers refuse rather than label, and the report exits
+# non-zero instead of quoting a deadline.
 
-test_agree_clock_skew_fails_a_vuln_whose_age_cannot_be_measured()
+test_agree_neither_side_gives_a_verdict_for_an_unmeasurable_age()
 {
-  assert_verdicts_agree "${GOLANG_ID}" \
+  assert_both_refuse \
     "$(make_vuln "${GOLANG_ID}" medium $((NOW_TS + 76)) false 0 "" false)"
 }
 
@@ -123,14 +123,7 @@ assert_verdicts_agree()
   local -r evaluation_file="${outputDir}/evaluation.json"
   local -r report_file="${outputDir}/report.json"
 
-  rm -rf "${vuln_dir}"
-  mkdir -p "${vuln_dir}"
-  local index=0
-  local vuln
-  for vuln in "$@"; do
-    index=$((index + 1))
-    echo "${vuln}" > "${vuln_dir}/vuln-${index}.json"
-  done
+  write_vuln_files "${vuln_dir}" "$@"
 
   # The policy input is built from the vuln files the same way the workflow
   # builds it, so both sides are reading one set of facts.
@@ -157,6 +150,49 @@ assert_verdicts_agree()
     "${expected_failing_ids}" "${rego_failing_ids}"
   assertEquals "report failing ids$(dump_parity "${evaluation_file}" "${report_file}")" \
     "${expected_failing_ids}" "${report_failing_ids}"
+}
+
+# Assert that neither implementation reaches a verdict for the given vulns.
+assert_both_refuse()
+{
+  local -r vuln_dir="${SHUNIT_TMPDIR}/parity-vulns"
+  local -r evaluation_file="${outputDir}/evaluation.json"
+  local -r report_file="${outputDir}/report.json"
+
+  write_vuln_files "${vuln_dir}" "$@"
+
+  jq --slurp '{vulns: .}' "${vuln_dir}"/vuln-*.json | kosli evaluate input \
+    --policy "${repo_dir}/snyk-vuln-compliance.rego" \
+    --params "@${PARAMS}" \
+    --output json \
+    >"${evaluation_file}" 2>"${stderrF}"
+
+  (cd "${repo_dir}" && ./bin/find_expiring_vulns.py \
+    --env "${KOSLI_ENV}" \
+    --vuln-dir "${vuln_dir}" \
+    >"${report_file}" 2>>"${stderrF}")
+  local -r report_status=$?
+
+  assertEquals "rego allow$(dump_parity "${evaluation_file}" "${report_file}")" \
+    "false" "$(jq '.allow' "${evaluation_file}")"
+  assertEquals "rego violation count$(dump_parity "${evaluation_file}" "${report_file}")" \
+    "0" "$(jq '[.violations[]?] | length' "${evaluation_file}")"
+  assertNotEquals "report status$(dump_parity "${evaluation_file}" "${report_file}")" \
+    "0" "${report_status}"
+}
+
+write_vuln_files()
+{
+  local -r vuln_dir="${1}"
+  shift
+  rm -rf "${vuln_dir}"
+  mkdir -p "${vuln_dir}"
+  local index=0
+  local vuln
+  for vuln in "$@"; do
+    index=$((index + 1))
+    echo "${vuln}" > "${vuln_dir}/vuln-${index}.json"
+  done
 }
 
 # Show both verdicts side by side, so a disagreement says which side moved.

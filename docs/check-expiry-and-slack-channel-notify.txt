@@ -17,8 +17,8 @@ vuln-*.json file per vulnerability.
 Two expiry mechanisms
 ---------------------
 Each vuln-*.json file is the per-vuln matrix data from artifact_snyk_test.yml,
-with first_seen_ts (the trail's created_at) added. find_expiring_vulns.py reads
-these fields:
+with first_seen_ts (the trail's created_at) and now_ts (the same trail's
+last_modified_at) added. find_expiring_vulns.py reads these fields:
 
   first_seen_ts          unix timestamp the per-vuln trail was first created
   severity               "critical" | "high" | "medium" | "low"
@@ -33,10 +33,10 @@ these fields:
 The rego policy (snyk-vuln-compliance.rego) uses max_days_by_severity from
 rego.params.{env}.json:
 
-  aws-beta:  critical=1, high=2, medium=4, low=10
-  aws-prod:  critical=0, high=2, medium=4, low=10
+  aws-beta:  critical=1, high=2, medium=4,  low=10
+  aws-prod:  critical=1, high=5, medium=10, low=30
 
-Each tracked vuln is reported under exactly one of three mechanisms:
+Each tracked vuln is reported under exactly one of two mechanisms:
 
   dot_snyk_expiry -- the vuln has a .snyk ignore entry with an expiry date.
     days_remaining = (ignore_expires_ts - now_ts) / 86400
@@ -47,12 +47,12 @@ Each tracked vuln is reported under exactly one of three mechanisms:
     age_days = (now_ts - first_seen_ts) / 86400
     days_remaining = max_days_by_severity[severity] - age_days
 
-  clock_skew -- first_seen_ts is ahead of now_ts, so no age can be measured.
-    The two timestamps come from different clocks (the GitHub runner stamps
-    now_ts, the Kosli server sets the trail created_at). age_days is null and
-    days_remaining is a sentinel (-99999) that sorts the vuln above every real
-    deadline. The rego denies such a vuln, so the report must not present it as
-    having grace left.
+first_seen_ts ahead of now_ts means no age can be measured. Both timestamps come
+from one read of one trail (created_at and last_modified_at), so that ordering
+would mean the server reported a last_modified_at earlier than the created_at of
+the same object. stamp_vuln_times.py fails the scan on it, so no vuln file
+reaching this report carries it, and the report exits 45 rather than quote a
+deadline it cannot compute.
 
 days_remaining is positive while the vuln is still compliant and zero or negative
 once it is already non-compliant. Both compliant and already-non-compliant vulns
@@ -117,7 +117,7 @@ object to stdout and exits 0:
         "full_id":        "SNYK-GOLANG-...",
         "severity":       "high",
         "vuln_url":       "https://security.snyk.io/vuln/...",
-        "mechanism":      "dot_snyk_expiry" | "rego_limit" | "clock_skew",
+        "mechanism":      "dot_snyk_expiry" | "rego_limit",
         "days_remaining": 19.8,
         "ignore_expires": "2026-06-01 10:53:10+00:00" | null,
         "age_days":       5.16 | null,
@@ -153,10 +153,8 @@ Markdown to stdout for the GitHub step summary:
   | Artifact | Days remaining | Mechanism | Vuln ID |
 
   (or "No vulnerabilities." when that severity has none). Rows are sorted by
-  days_remaining ascending. Mechanism is displayed as "rego" (rego_limit),
-  "skew" (clock_skew) or ".snyk" (dot_snyk_expiry). A clock_skew row shows "?"
-  for Days remaining, because its sentinel is a sort device and not a count of
-  days anyone can act on. Vuln ID is a Markdown link [full_id](vuln_url).
+  days_remaining ascending. Mechanism is displayed as "rego" (rego_limit) or
+  ".snyk" (dot_snyk_expiry). Vuln ID is a Markdown link [full_id](vuln_url).
 
 Example output:
 
@@ -200,9 +198,7 @@ CLI:
 
 Prints "No Snyk vulnerabilities :-)" when the list is empty, otherwise the first
 vuln's days line, full_id, severity, repo (artifact) and mechanism. The days line
-rounds up, so 2.3 days of grace reads as 3. A clock_skew vuln has no measurable
-age, so its line reads "Days non-compliant: unknown (clock skew)" rather than
-counting the sentinel.
+rounds up, so 2.3 days of grace reads as 3.
 
 
 What this workflow does NOT do

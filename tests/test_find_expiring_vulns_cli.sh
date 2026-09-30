@@ -5,31 +5,32 @@ readonly repo_dir="${my_dir}/.."
 readonly fixture_dir="${my_dir}/find-expiring-vulns"
 
 # The fixture vuln is 1.5 days old measured between its own now_ts and
-# first_seen_ts, so it sits inside the aws-prod limit for high severity.
-# Wall clock cannot produce that age, which is what pins the clock the report
-# reads. The vuln is the one that exposed this: on 2026-08-22 the aws-prod
-# attestation for runner passed it at an age of 1.99693 days while the Slack
-# alert called the same vuln file non-compliant.
+# first_seen_ts, so it sits inside the aws-prod limit for high severity. Its
+# vuln_reports entry is the output of kosli evaluate input --output-rule
+# vuln_reports on that vuln, so the row carries the rego's own arithmetic. The
+# vuln is the one where, on 2026-08-22, the aws-prod attestation for runner
+# passed it at an age of 1.99693 days while the Slack alert called it
+# non-compliant.
 
-test_age_is_measured_from_the_attested_now_ts()
+test_the_deadline_is_the_one_the_rego_reported()
 {
-  run_find_expiring_vulns aws-prod vulns-runner-high-within-limit
+  run_find_expiring_vulns aws-prod reports-runner-high-within-limit
   assert_status_equals 0
   assert_stdout_equals "$(cat "${fixture_dir}/expected/runner-high-within-limit.json")"
   assert_stderr_equals ""
 }
 
 # The same vuln in the aws-prod run of 2026-08-20, where first_seen_ts landed
-# 75.8 seconds ahead of now_ts. stamp_vuln_times.py fails the scan on that
-# ordering, so no vuln file can carry it. Reporting a deadline for it would put
-# a number on an age no clock measured, so the report refuses it too.
+# 75.8 seconds ahead of now_ts. The rego measures no age for it, so gives it no
+# vuln_reports entry. Reporting a deadline for it would put a number on an age
+# no clock measured, so the report refuses it.
 
-test_first_seen_ahead_of_now_is_refused()
+test_a_vuln_with_no_report_is_refused()
 {
-  run_find_expiring_vulns aws-prod vulns-runner-high-first-seen-ahead
+  run_find_expiring_vulns aws-prod reports-runner-high-first-seen-ahead
   assert_status_equals 45
   assert_stdout_equals ""
-  assert_stderr_includes "is ahead of now_ts"
+  assert_stderr_includes "SNYK-GOLANG-GITHUBCOMMOBYGOARCHIVE-18958666: no vuln_reports entry"
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -39,10 +40,6 @@ run_find_expiring_vulns()
   local -r kosli_env="${1}"
   local -r vuln_dirname="${2}"
   local -r raw="${SHUNIT_TMPDIR}/raw.json"
-  # find_expiring_vulns.py reads rego.params.<env>.json from the current
-  # directory, so run it from the repo root. That makes limit_days in the
-  # expected file the real aws-prod limit, which test_rego_params.sh pins.
-  #
   # Captured before jq rather than piped into it, so the status and stderr are
   # the script's own and a refusal is not read as a success.
   (cd "${repo_dir}" && python3 ./bin/find_expiring_vulns.py \

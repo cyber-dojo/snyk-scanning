@@ -5,10 +5,10 @@
 # most urgent one is the first, and the symbol reports whether that one has
 # reached its boundary.
 #
-# The symbol is the compliance claim a reader sees first, so it uses the same
-# days_remaining <= 0 test the rego's verdict is held to in
-# tests/test_rego_report_verdict_parity.sh. Rounding is deliberately absent: the
-# rendered day counts round, this decision does not.
+# The symbol is the compliance claim a reader sees first. It reads
+# days_remaining from the rego's vuln_reports and calls a vuln non-compliant at
+# days_remaining <= 0. Rounding is deliberately absent: the rendered day counts
+# round, this decision does not.
 
 readonly my_dir="$(cd "$(dirname "${0}")" && pwd)"
 

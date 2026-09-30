@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Read vuln-*.json files and print them as JSON sorted by days_remaining ascending, including vulns already non-compliant (zero or negative days_remaining)."""
+"""Read *-vuln-reports.json files and print their vulns as JSON sorted by days_remaining ascending, including vulns already non-compliant (zero or negative days_remaining)."""
 
 import argparse
 import glob
@@ -18,66 +18,40 @@ def extract_artifact_name(trail_name):
     return trail_name
 
 
-def dot_snyk_result(data, env, now_ts):
-    """Return a result dict for a vuln whose .snyk ignore entry has an expiry date, else None.
-
-    days_remaining is the days until the ignore expires: positive while the ignore
-    is still active, zero or negative once it has already expired (non-compliant).
-    """
-    if not data.get("ignore_expires_exists"):
-        return None
-    if data.get("ignore_forever"):
-        # No expiry date -- suppressed forever, so it never appears in an expiry report.
-        return None
-    secs_remaining = data["ignore_expires_ts"] - now_ts
+def vuln_result(vuln, report, env):
+    """Return the expiry row for one vuln, its deadline taken from the rego's vuln_reports entry for it."""
     return {
         "env": env,
-        "trail_name": data["trail_name"],
-        "full_id": data["full_id"],
-        "severity": data["severity"],
-        "vuln_url": data["vuln_url"],
-        "mechanism": "dot_snyk_expiry",
-        "days_remaining": secs_remaining / 86400,
-        "ignore_expires": data["ignore_expires"],
-        "age_days": None,
-        "limit_days": None,
-        "artifact": extract_artifact_name(data["trail_name"]),
+        "trail_name": vuln["trail_name"],
+        "full_id": vuln["full_id"],
+        "severity": vuln["severity"],
+        "vuln_url": vuln["vuln_url"],
+        "mechanism": report["mechanism"],
+        "days_remaining": report["days_remaining"],
+        "ignore_expires": report.get("ignore_expires"),
+        "age_days": report.get("age_days"),
+        "limit_days": report.get("limit_days"),
+        "artifact": extract_artifact_name(vuln["trail_name"]),
     }
 
 
-def rego_result(data, env, now_ts, max_days):
-    """Return a result dict for a vuln tracked by the rego age limit (no .snyk ignore), else None.
+def artifact_results(reports, env):
+    """Return the expiry rows for one artifact's vuln-reports file, in the file's vuln order.
 
-    days_remaining is limit - age_days: positive while still within the age limit,
-    zero or negative once the age has reached or exceeded the limit (non-compliant).
+    A vuln ignored forever has no deadline, so it gets no row.
 
-    Raises ValueError when first_seen_ts is ahead of now_ts. stamp_vuln_times.py
-    fails the scan on that ordering, so no vuln file reaching this report can
-    carry it; treating it as a deadline would put a number on an age no clock
-    measured.
+    Raises ValueError for a vuln with no vuln_reports entry. The rego reports
+    every vuln whose deadline it can measure, so a missing entry is an age it
+    could not measure, and a row for it would put a number on nothing.
     """
-    if data.get("ignore_expires_exists"):
-        return None
-    severity = data["severity"]
-    limit = max_days.get(severity, 0)
-    age_secs = now_ts - data["first_seen_ts"]
-    if age_secs < 0:
-        raise ValueError(
-            f'{data["full_id"]}: first_seen_ts {data["first_seen_ts"]} is ahead of '
-            f"now_ts {now_ts}, so the vuln age cannot be measured")
-    return {
-        "env": env,
-        "trail_name": data["trail_name"],
-        "full_id": data["full_id"],
-        "severity": data["severity"],
-        "vuln_url": data["vuln_url"],
-        "mechanism": "rego_limit",
-        "days_remaining": limit - age_secs / 86400,
-        "ignore_expires": None,
-        "age_days": age_secs / 86400,
-        "limit_days": limit,
-        "artifact": extract_artifact_name(data["trail_name"]),
-    }
+    results = []
+    for vuln in reports["vulns"]:
+        report = reports["vuln_reports"].get(vuln["full_id"])
+        if report is None:
+            raise ValueError(f'{vuln["full_id"]}: no vuln_reports entry, so its deadline cannot be known')
+        if report["mechanism"] != "dot_snyk_forever":
+            results.append(vuln_result(vuln, report, env))
+    return results
 
 
 _SEVERITY_RANK = {"critical": 0, "high": 1, "medium": 2, "low": 3}
@@ -140,42 +114,28 @@ example output (2 vulns, sorted by days_remaining ascending):
 
 
 def main():
-    """Parse args, read vuln JSON files from this run, print sorted JSON to stdout."""
+    """Parse args, read the vuln-reports files from this run, print sorted JSON to stdout, or exit 45 naming a vuln with no report."""
     parser = argparse.ArgumentParser(
-        description="Read vuln-*.json files and print them as JSON sorted by days_remaining ascending, including vulns already non-compliant (zero or negative days_remaining).",
+        description=__doc__,
         epilog=_EXAMPLE,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--env", required=True,
                         help="Environment name, e.g. aws-beta")
     parser.add_argument("--vuln-dir", required=True,
-                        help="Directory to read vuln-*.json files from")
+                        help="Directory to read *-vuln-reports.json files from")
     args = parser.parse_args()
-
-    params_file = f"rego.params.{args.env}.json"
-    with open(params_file) as f:
-        params = json.load(f)
-    max_days = params["max_days_by_severity"]
 
     vulns = []
 
-    for path in sorted(glob.glob(os.path.join(args.vuln_dir, "vuln-*.json"))):
+    for path in sorted(glob.glob(os.path.join(args.vuln_dir, "*-vuln-reports.json"))):
         with open(path) as f:
-            data = json.load(f)
-        # Age is measured against the now_ts stamped into the attested data, the
-        # same instant the rego divides by, so this report and the per-vuln
-        # attestation reach the same verdict from the same vuln file.
-        now_ts = data["now_ts"]
-        result = dot_snyk_result(data, args.env, now_ts)
-        if result:
-            vulns.append(result)
+            reports = json.load(f)
         try:
-            result = rego_result(data, args.env, now_ts, max_days)
+            vulns.extend(artifact_results(reports, args.env))
         except ValueError as error:
             print(error, file=sys.stderr)
             sys.exit(45)
-        if result:
-            vulns.append(result)
 
     vulns.sort(key=sort_key)
     print(json.dumps({"vulns": vulns}))

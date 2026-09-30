@@ -9,50 +9,46 @@ Slack message to the cyber-dojo-alerts channel and writes a GitHub step summary.
 It makes NO Kosli calls and has no effect on compliance status.
 
 It is called once per environment by aws-beta.yml and aws-prod.yml, after that
-environment's scan has run. The per-vuln data it reports on is produced earlier
-in the same GitHub Actions run by artifact_snyk_test.yml, which uploads one
-vuln-*.json file per vulnerability.
+environment's scan has run. The data it reports on is produced earlier in the
+same GitHub Actions run by artifact_snyk_test.yml, which uploads one
+<repo>-vuln-reports.json file per artifact.
 
 
 Two expiry mechanisms
 ---------------------
-Each vuln-*.json file is the per-vuln matrix data from artifact_snyk_test.yml,
-with first_seen_ts (the trail's created_at) and now_ts (the same trail's
-last_modified_at) added. find_expiring_vulns.py reads these fields:
+Each <repo>-vuln-reports.json file holds one artifact's policy input and the
+vuln_reports rule from the same kosli evaluate input (--output-rule
+vuln_reports) that decides the artifact's snyk decision attestation:
 
-  first_seen_ts          unix timestamp the per-vuln trail was first created
-  severity               "critical" | "high" | "medium" | "low"
-  ignore_expires_exists  true if the .snyk file has an ignore entry for this vuln
-  ignore_forever         true if that ignore entry has no expiry date
-  ignore_expires_ts      unix timestamp of that ignore entry's expiry (0 if none)
-  ignore_expires         string form of that expiry (empty if none)
-  full_id                e.g. "SNYK-ALPINE322-ZLIB-16078399"
-  vuln_url               e.g. "https://security.snyk.io/vuln/SNYK-..."
-  trail_name             e.g. "creator-medium-SNYK-ALPINE322-ZLIB-16078399"
+  {
+    "vulns":        [ the per-vuln matrix data, with first_seen_ts and now_ts ],
+    "vuln_reports": { full_id: { mechanism, days_remaining, ... } }
+  }
 
-The rego policy (snyk-vuln-compliance.rego) uses max_days_by_severity from
-rego.params.{env}.json:
+The deadline arithmetic lives only in the rego (snyk-vuln-compliance.rego),
+which uses max_days_by_severity from rego.params.{env}.json:
 
   aws-beta:  critical=1, high=2, medium=4,  low=10
   aws-prod:  critical=1, high=5, medium=10, low=30
 
-Each tracked vuln is reported under exactly one of two mechanisms:
+Each vuln gets a vuln_reports entry under one of three mechanisms:
 
   dot_snyk_expiry -- the vuln has a .snyk ignore entry with an expiry date.
     days_remaining = (ignore_expires_ts - now_ts) / 86400
-    (A .snyk ignore entry with no expiry date is "ignore forever": compliant
-    regardless of age and never reported.)
+
+  dot_snyk_forever -- the .snyk ignore entry has no expiry date: compliant
+    regardless of age, no deadline, and not reported.
 
   rego_limit -- the vuln has no .snyk ignore entry, so the rego age limit applies.
     age_days = (now_ts - first_seen_ts) / 86400
     days_remaining = max_days_by_severity[severity] - age_days
 
-first_seen_ts ahead of now_ts means no age can be measured. Both timestamps come
-from one read of one trail (created_at and last_modified_at), so that ordering
-would mean the server reported a last_modified_at earlier than the created_at of
-the same object. stamp_vuln_times.py fails the scan on it, so no vuln file
-reaching this report carries it, and the report exits 45 rather than quote a
-deadline it cannot compute.
+first_seen_ts ahead of now_ts means no age can be measured, and the rego gives
+that vuln no vuln_reports entry. Both timestamps come from one read of one trail
+(created_at and last_modified_at), so that ordering would mean the server
+reported a last_modified_at earlier than the created_at of the same object.
+stamp_vuln_times.py fails the scan on it, and the report exits 45 on any vuln
+with no entry rather than quote a deadline nobody computed.
 
 days_remaining is positive while the vuln is still compliant and zero or negative
 once it is already non-compliant. Both compliant and already-non-compliant vulns
@@ -71,7 +67,7 @@ env block:
 
 Single job: check-expiry (runs-on: ubuntu-latest)
   1. actions/checkout@v6
-  2. actions/download-artifact@v8 -- pattern vuln-*.json, merge-multiple, into vulns/
+  2. actions/download-artifact@v8 -- pattern *-vuln-reports.json, merge-multiple, into vulns/
   3. Find vulns:
        ./bin/find_expiring_vulns.py --env <kosli_env> --vuln-dir vulns
        Then, into GITHUB_ENV:
@@ -104,10 +100,10 @@ bin/find_expiring_vulns.py
 CLI:
   ./bin/find_expiring_vulns.py --env <env> --vuln-dir <dir>
 
-Reads rego.params.{env}.json for the severity limits, globs vuln-*.json in
-<dir>, and for each file emits at most one result (dot_snyk_result OR
-rego_result, depending on whether a .snyk ignore entry exists). Writes a JSON
-object to stdout and exits 0:
+Globs *-vuln-reports.json in <dir> and joins each vuln to its vuln_reports
+entry by full_id, leaving out dot_snyk_forever vulns. It does no deadline
+arithmetic of its own. Writes a JSON object to stdout and exits 0, or exits 45
+naming a vuln with no vuln_reports entry:
 
   {
     "vulns": [
@@ -132,8 +128,8 @@ soonest-to-expire (or most-overdue) vuln is first. Ties are broken by severity
 rather than by the raw fractional day count, because vulns sharing one .snyk
 ignore entry differ by a few seconds of jitter that would otherwise decide the
 order. "artifact" is the trail_name segment before the first -severity- part.
-now_ts is read from each vuln's attested data, not from this script's clock, so
-this report measures an age against exactly the same two points the rego does.
+Every number in a row comes from the evaluation that decided the attestation,
+so the report and the decision cannot disagree.
 
 
 bin/print_expiring_vulns_summary.py
@@ -205,7 +201,7 @@ What this workflow does NOT do
 ------------------------------
 - It does not run Snyk scans.
 - It does not create or modify any Kosli trails, attestations, or flows.
-- It makes no Kosli calls at all; it reads the run's local vuln-*.json files.
+- It makes no Kosli calls at all; it reads the run's local *-vuln-reports.json files.
 - It does not affect the compliance status of any artifact or environment.
 
 

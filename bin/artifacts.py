@@ -22,6 +22,7 @@ def print_help():
               "flow_name": "languages-start-points-ci",
               "git_commit": "88366281011d1aa83c5db4280aa8a6daa0be8541",
               "repo_name": "languages-start-points",
+              "component_name": "languages-start-points",
               "snapshot_index": 3600,
               "snapshot_artifact_url": "https://app.kosli.com/cyber-dojo/environments/aws-prod/snapshots/3600?fingerprint=1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a",
               "raw_snyk_policy_url": "https://raw.githubusercontent.com/cyber-dojo/languages-start-points/commit/88366281011d1aa83c5db4280aa8a6daa0be8541/.snyk"
@@ -61,6 +62,7 @@ def artifacts(raw, fetch=None):
                         "flow_name": flow_name,
                         "git_commit": git_commit,
                         "repo_name": repo_name,
+                        "component_name": component_name(artifact_name),
                         "snapshot_index": snapshot_index,
                         "snapshot_artifact_url": f"{html_url}?fingerprint={fingerprint}",
                         "raw_snyk_policy_url": raw_url
@@ -72,6 +74,16 @@ def artifacts(raw, fetch=None):
                 sys.exit(45)
 
     return result
+
+
+def component_name(artifact_name):
+    """
+    Return the artifact's image name, eg 'creator' for
+    '244531986313.dkr.ecr.eu-central-1.amazonaws.com/creator:9c517d0@sha256:...'.
+    One repo can build several artifacts (web builds web and creator), so the
+    image name, not repo_name, is what tells one artifact from another.
+    """
+    return artifact_name.split("/")[-1].split(":")[0]
 
 
 def parse_commit_url(commit_url):

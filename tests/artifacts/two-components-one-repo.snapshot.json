@@ -1,0 +1,40 @@
+{
+  "index": 8480,
+  "html_url": "https://app.kosli.com/cyber-dojo/environments/aws-beta/snapshots/8480",
+  "artifacts": [
+    {
+      "name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/creator:9c517d0@sha256:24513abaa707a9c6a17b17ae8619fc2e71d3df56580ab2b220a4b47625de89d7",
+      "fingerprint": "24513abaa707a9c6a17b17ae8619fc2e71d3df56580ab2b220a4b47625de89d7",
+      "annotation": {"type": "unchanged", "was": 1, "now": 1},
+      "flows": [
+        {
+          "flow_name": "creator-ci",
+          "git_commit": "9c517d0ff8ad90e392c6f860bd234955449542de",
+          "commit_url": "https://github.com/cyber-dojo/web/commit/9c517d0ff8ad90e392c6f860bd234955449542de"
+        },
+        {
+          "flow_name": "snyk-aws-beta-per-artifact",
+          "git_commit": "9dd50c00dae4241dd83b463999f666a4ec604dd4",
+          "commit_url": "https://github.com/cyber-dojo/snyk-scanning/commit/9dd50c00dae4241dd83b463999f666a4ec604dd4"
+        }
+      ]
+    },
+    {
+      "name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/web:9c517d0@sha256:6565047e72e7be75a767703003c441b83d3e42ec9788d2d7eee565c2f6399dda",
+      "fingerprint": "6565047e72e7be75a767703003c441b83d3e42ec9788d2d7eee565c2f6399dda",
+      "annotation": {"type": "unchanged", "was": 3, "now": 3},
+      "flows": [
+        {
+          "flow_name": "web-ci",
+          "git_commit": "9c517d0ff8ad90e392c6f860bd234955449542de",
+          "commit_url": "https://github.com/cyber-dojo/web/commit/9c517d0ff8ad90e392c6f860bd234955449542de"
+        },
+        {
+          "flow_name": "snyk-aws-beta-per-artifact",
+          "git_commit": "9dd50c00dae4241dd83b463999f666a4ec604dd4",
+          "commit_url": "https://github.com/cyber-dojo/snyk-scanning/commit/9dd50c00dae4241dd83b463999f666a4ec604dd4"
+        }
+      ]
+    }
+  ]
+}

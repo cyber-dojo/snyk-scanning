@@ -10,7 +10,7 @@ import yaml
 # trail created_at it is measured against.
 if __name__ == "__main__":  # pragma: no cover
     snyk_version = sys.argv[1]
-    repo_name = sys.argv[2]
+    component_name = sys.argv[2]
     sarif_filename = sys.argv[3]
     snyk_policy_filename = sys.argv[4]
     stale_filename = sys.argv[5]
@@ -32,7 +32,7 @@ if __name__ == "__main__":  # pragma: no cover
             severity = short_text.split(' ')[0].lower()  # eg "medium"
             assert severity in ["critical", "high", "medium", "low"]
             
-            trail_name = f"{repo_name}-{severity}-{full_id}"
+            trail_name = f"{component_name}-{severity}-{full_id}"
 
             vulns[full_id] = {
                 'version': snyk_version,

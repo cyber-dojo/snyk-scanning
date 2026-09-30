@@ -1,0 +1,24 @@
+[
+  {
+    "artifact_name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/creator:9c517d0@sha256:24513abaa707a9c6a17b17ae8619fc2e71d3df56580ab2b220a4b47625de89d7",
+    "artifact_fingerprint": "24513abaa707a9c6a17b17ae8619fc2e71d3df56580ab2b220a4b47625de89d7",
+    "flow_name": "creator-ci",
+    "git_commit": "9c517d0ff8ad90e392c6f860bd234955449542de",
+    "repo_name": "web",
+    "component_name": "creator",
+    "snapshot_index": 8480,
+    "snapshot_artifact_url": "https://app.kosli.com/cyber-dojo/environments/aws-beta/snapshots/8480?fingerprint=24513abaa707a9c6a17b17ae8619fc2e71d3df56580ab2b220a4b47625de89d7",
+    "raw_snyk_policy_url": "https://raw.githubusercontent.com/cyber-dojo/web/9c517d0ff8ad90e392c6f860bd234955449542de/.snyk"
+  },
+  {
+    "artifact_name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/web:9c517d0@sha256:6565047e72e7be75a767703003c441b83d3e42ec9788d2d7eee565c2f6399dda",
+    "artifact_fingerprint": "6565047e72e7be75a767703003c441b83d3e42ec9788d2d7eee565c2f6399dda",
+    "flow_name": "web-ci",
+    "git_commit": "9c517d0ff8ad90e392c6f860bd234955449542de",
+    "repo_name": "web",
+    "component_name": "web",
+    "snapshot_index": 8480,
+    "snapshot_artifact_url": "https://app.kosli.com/cyber-dojo/environments/aws-beta/snapshots/8480?fingerprint=6565047e72e7be75a767703003c441b83d3e42ec9788d2d7eee565c2f6399dda",
+    "raw_snyk_policy_url": "https://raw.githubusercontent.com/cyber-dojo/web/9c517d0ff8ad90e392c6f860bd234955449542de/.snyk"
+  }
+]

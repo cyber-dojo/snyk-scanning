@@ -1,7 +1,7 @@
 [
   {
     "version": "1.0.0",
-    "artifact_name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/test-repo:abc1234@sha256:1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a",
+    "artifact_name": "244531986313.dkr.ecr.eu-central-1.amazonaws.com/runner:abc1234@sha256:1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a",
     "artifact_fingerprint": "1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a",
     "full_id": "SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804",
     "severity": "medium",
@@ -10,6 +10,6 @@
     "ignore_expires_ts": 0,
     "ignore_expires_exists": true,
     "ignore_forever": true,
-    "trail_name": "test-repo-medium-SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804"
+    "trail_name": "runner-medium-SNYK-GOLANG-GOLANGORGXCRYPTOSSHAGENT-14059804"
   }
 ]

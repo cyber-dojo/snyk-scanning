@@ -296,6 +296,94 @@ test_every_violation_message_starts_with_its_vuln_id()
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+# The vuln_reports rule gives, per vuln, the deadline arithmetic behind its
+# verdict, so the expiry report reads it rather than recomputing it.
+
+test_vuln_reports_gives_days_remaining_for_vuln_within_age_limit()
+{
+  # three days below the medium limit, no ignore: the age limit sets the deadline
+  local -r age_days=$((MEDIUM_LIMIT_BETA - 3))
+  local -r first_seen_ts=$((NOW_TS - age_days * SECONDS_PER_DAY))
+  local input
+  input=$(make_input "$(make_vuln "${VULN_ID}" "medium" "${first_seen_ts}" false 0 "")")
+  evaluate_rego_with_vuln_reports "${input}" "${PARAMS_BETA}"
+  assert_allow
+  local -r expected="$(jq --null-input --sort-keys --compact-output \
+    --arg     full_id    "${VULN_ID}" \
+    --argjson age_days   "${age_days}" \
+    --argjson limit_days "${MEDIUM_LIMIT_BETA}" \
+    '{($full_id): {
+        mechanism:      "rego_limit",
+        age_days:       $age_days,
+        limit_days:     $limit_days,
+        days_remaining: 3
+     }}')"
+  local -r actual="$(jq --sort-keys --compact-output '.vuln_reports' "${stdoutF}")"
+  assertEquals "vuln_reports:$(dump_sss)" "${expected}" "${actual}"
+}
+
+test_vuln_reports_gives_days_remaining_for_vuln_with_active_ignore()
+{
+  # over the medium limit, but the .snyk ignore expires in two days: the ignore sets the deadline
+  local -r first_seen_ts=$((NOW_TS - (MEDIUM_LIMIT_BETA + 5) * SECONDS_PER_DAY))
+  local -r ignore_expires_ts=$((NOW_TS + 2 * SECONDS_PER_DAY))
+  local -r ignore_expires="2025-06-02 00:00:00+00:00"
+  local input
+  input=$(make_input "$(make_vuln "${VULN_ID}" "medium" "${first_seen_ts}" true "${ignore_expires_ts}" "${ignore_expires}")")
+  evaluate_rego_with_vuln_reports "${input}" "${PARAMS_BETA}"
+  assert_allow
+  local -r expected="$(jq --null-input --sort-keys --compact-output \
+    --arg full_id        "${VULN_ID}" \
+    --arg ignore_expires "${ignore_expires}" \
+    '{($full_id): {
+        mechanism:      "dot_snyk_expiry",
+        ignore_expires: $ignore_expires,
+        days_remaining: 2
+     }}')"
+  local -r actual="$(jq --sort-keys --compact-output '.vuln_reports' "${stdoutF}")"
+  assertEquals "vuln_reports:$(dump_sss)" "${expected}" "${actual}"
+}
+
+test_vuln_reports_gives_negative_days_remaining_for_vuln_with_expired_ignore()
+{
+  # 5 days old, but the .snyk ignore expired three days ago: its deadline has passed
+  local -r first_seen_ts=$((NOW_TS - 5 * SECONDS_PER_DAY))
+  local -r ignore_expires_ts=$((NOW_TS - 3 * SECONDS_PER_DAY))
+  local -r ignore_expires="2025-05-28 00:00:00+00:00"
+  local input
+  input=$(make_input "$(make_vuln "${VULN_ID}" "medium" "${first_seen_ts}" true "${ignore_expires_ts}" "${ignore_expires}")")
+  evaluate_rego_with_vuln_reports "${input}" "${PARAMS_BETA}"
+  assert_deny
+  local -r expected="$(jq --null-input --sort-keys --compact-output \
+    --arg full_id        "${VULN_ID}" \
+    --arg ignore_expires "${ignore_expires}" \
+    '{($full_id): {
+        mechanism:      "dot_snyk_expiry",
+        ignore_expires: $ignore_expires,
+        days_remaining: -3
+     }}')"
+  local -r actual="$(jq --sort-keys --compact-output '.vuln_reports' "${stdoutF}")"
+  assertEquals "vuln_reports:$(dump_sss)" "${expected}" "${actual}"
+}
+
+test_vuln_reports_gives_no_deadline_for_vuln_with_forever_ignore()
+{
+  # well over the medium limit, but ignored forever (.snyk entry has no expiry): there is no deadline
+  local -r first_seen_ts=$((NOW_TS - (MEDIUM_LIMIT_BETA + 5) * SECONDS_PER_DAY))
+  local input
+  input=$(make_input "$(make_vuln "${VULN_ID}" "medium" "${first_seen_ts}" true 0 "" true)")
+  evaluate_rego_with_vuln_reports "${input}" "${PARAMS_BETA}"
+  assert_allow
+  local -r expected="$(jq --null-input --sort-keys --compact-output \
+    --arg full_id "${VULN_ID}" \
+    '{($full_id): {
+        mechanism: "dot_snyk_forever"
+     }}')"
+  local -r actual="$(jq --sort-keys --compact-output '.vuln_reports' "${stdoutF}")"
+  assertEquals "vuln_reports:$(dump_sss)" "${expected}" "${actual}"
+}
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 evaluate_rego()
 {
@@ -304,6 +392,19 @@ evaluate_rego()
   echo "${input_json}" | kosli evaluate input \
     --policy "${rego_dir}/snyk-vuln-compliance.rego" \
     --params "@${params_file}" \
+    --output json \
+    >${stdoutF} 2>${stderrF}
+  echo $? >${statusF}
+}
+
+evaluate_rego_with_vuln_reports()
+{
+  local -r input_json="${1}"
+  local -r params_file="${2}"
+  echo "${input_json}" | kosli evaluate input \
+    --policy "${rego_dir}/snyk-vuln-compliance.rego" \
+    --params "@${params_file}" \
+    --output-rule vuln_reports \
     --output json \
     >${stdoutF} 2>${stderrF}
   echo $? >${statusF}

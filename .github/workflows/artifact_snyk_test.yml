@@ -376,8 +376,12 @@ jobs:
     # uploads one vuln file per leg, so a missing leg would be judged here as
     # though the artifact had no such vuln, and could attest a compliant
     # decision for an artifact whose worst vuln never got measured.
+    #
+    # The job runs whether or not inputs.attest_to_kosli is set, because its
+    # evaluation also produces the vuln reports check-expiry-and-notify.yml
+    # reads. Only the steps that write to Kosli are gated on attest_to_kosli.
     if: >-
-      always() && inputs.attest_to_kosli
+      always()
       && needs.find-snyk-vulns.result == 'success'
       && contains(fromJSON('["success","skipped"]'), needs.attest-individual-snyk-vulns.result)
     outputs:
@@ -387,6 +391,9 @@ jobs:
       TMP_VULNS_FILE: /tmp/vulns.json
       TMP_POLICY_INPUT_FILE: /tmp/policy_input.json
       TMP_EVALUATION_FILE: /tmp/evaluation.json
+      # Bare, because an upload-artifact name cannot contain a '/'
+      VULN_REPORTS_FILENAME: ${{inputs.repo_name}}-vuln-reports.json
+      TMP_VULN_REPORTS_FILE: /tmp/${{inputs.repo_name}}-vuln-reports.json
       TMP_ANNOTATIONS_TXT: /tmp/annotations.txt
       TMP_VERDICTS_FILE: /tmp/verdicts.json
       TMP_ATTESTATION_FILE: /tmp/attestation.json
@@ -438,7 +445,9 @@ jobs:
           dir: ${{env.SNYK_SCANNING_DIR}}
 
       - name: Don't (re)attest the artifact in a build workflow
-        if: github.repository == 'cyber-dojo/snyk-scanning' || github.repository == 'cyber-dojo/aws-prod-co-promotion'
+        if: >-
+          inputs.attest_to_kosli
+          && (github.repository == 'cyber-dojo/snyk-scanning' || github.repository == 'cyber-dojo/aws-prod-co-promotion')
         run: |
           # runner.snyk-scan => runner
           ARTIFACT_SLOT_NAME="${KOSLI_ATTESTATION_NAME%%.*}"
@@ -454,6 +463,7 @@ jobs:
             --input-file "${TMP_POLICY_INPUT_FILE}" \
             --policy "${SNYK_SCANNING_REGO_POLICY_FILE}" \
             --params "@${SNYK_SCANNING_REGO_PARAMS_FILE}" \
+            --output-rule vuln_reports \
             --debug=false \
             --no-assert \
             --output=json > "${TMP_EVALUATION_FILE}"
@@ -463,7 +473,22 @@ jobs:
         run:
           jq . "${TMP_EVALUATION_FILE}"
 
+      # check-expiry-and-notify.yml reads each vuln's deadline from this file
+      # rather than recomputing it, so the Slack report and the decision come
+      # from the same evaluation.
+      - name: Write the vuln reports for check-expiry-and-notify
+        run: |
+          jq --slurpfile evaluation "${TMP_EVALUATION_FILE}" \
+            '{vulns: .vulns, vuln_reports: $evaluation[0].vuln_reports}' \
+            "${TMP_POLICY_INPUT_FILE}" > "${TMP_VULN_REPORTS_FILE}"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: ${{env.VULN_REPORTS_FILENAME}}
+          path: ${{env.TMP_VULN_REPORTS_FILE}}
+
       - name: Attest the decision, annotated pass or fail per vuln
+        if: inputs.attest_to_kosli
         run: |
           COMPLIANT="$(jq '.allow' "${TMP_EVALUATION_FILE}")"
           echo "COMPLIANT=${COMPLIANT}" >> "${GITHUB_ENV}"
@@ -507,6 +532,7 @@ jobs:
             "${ANNOTATE_FLAGS[@]}"
 
       - name: Write job summary (header)
+        if: inputs.attest_to_kosli
         run: |
           # We are doing a get attestation with FLOW+FINGERPRINT
           unset KOSLI_TRAIL

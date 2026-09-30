@@ -66,6 +66,40 @@ allow if {
     }
 }
 
+# vuln_reports gives, per vuln full_id, the deadline arithmetic behind its
+# verdict. kosli evaluate --output-rule vuln_reports puts it in the output, so
+# the expiry report reads the same numbers the decision was made from.
+vuln_reports[vuln.full_id] := report if {
+    some vuln in input.vulns
+    vuln.ignore_expires_exists == false
+    age := age_days(vuln)
+    limit := max_days_by_severity[vuln.severity]
+    report := {
+        "mechanism": "rego_limit",
+        "age_days": age,
+        "limit_days": limit,
+        "days_remaining": limit - age,
+    }
+}
+
+vuln_reports[vuln.full_id] := report if {
+    some vuln in input.vulns
+    vuln.ignore_expires_exists == true
+    vuln.ignore_forever == false
+    report := {
+        "mechanism": "dot_snyk_expiry",
+        "ignore_expires": vuln.ignore_expires,
+        "days_remaining": (vuln.ignore_expires_ts - vuln.now_ts) / seconds_per_day,
+    }
+}
+
+# A forever ignore has no deadline, but still gets a report, so every vuln whose
+# age can be measured has one and a missing report means it could not be.
+vuln_reports[vuln.full_id] := {"mechanism": "dot_snyk_forever"} if {
+    some vuln in input.vulns
+    ignore_is_forever(vuln)
+}
+
 # Violations provide diagnostics only -- they do not drive the allow decision.
 #
 # Every message begins with its vuln's full_id followed by a colon and a space.

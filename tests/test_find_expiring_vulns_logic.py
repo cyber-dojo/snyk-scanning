@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unit tests for dot_snyk_result and rego_result."""
+"""Unit tests for sort_key, vuln_result and artifact_results."""
 
 import os
 import sys
@@ -10,8 +10,6 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'bin'))
 import find_expiring_vulns  # noqa: E402
 
 NOW_TS = 1748736000.0   # 2025-06-01 00:00:00 UTC
-PROD_MAX_DAYS = {"critical": 0, "high": 2, "medium": 4, "low": 6}
-BETA_MAX_DAYS = {"critical": 1, "high": 2, "medium": 4, "low": 6}
 
 
 def _high_vuln_no_ignore(first_seen_ts=None):
@@ -29,109 +27,8 @@ def _high_vuln_no_ignore(first_seen_ts=None):
     }
 
 
-def test_c7f2a301():
-    """dot_snyk_result returns a result dict when a future .snyk ignore entry exists."""
-    data = {**_high_vuln_no_ignore(),
-            "ignore_expires_exists": True,
-            "ignore_expires_ts": NOW_TS + 3 * 86400,
-            "ignore_expires": "2025-06-04 00:00:00+00:00"}
-    result = find_expiring_vulns.dot_snyk_result(data, "aws-prod", NOW_TS)
-    assert result is not None
-    assert result["mechanism"] == "dot_snyk_expiry"
-    assert result["days_remaining"] == pytest.approx(3.0)
-    assert result["env"] == "aws-prod"
-    assert result["artifact"] == "creator"
-    assert result["age_days"] is None
-    assert result["limit_days"] is None
-
-
-def test_c7f2a302():
-    """dot_snyk_result returns None when ignore_expires_exists is False."""
-    result = find_expiring_vulns.dot_snyk_result(_high_vuln_no_ignore(), "aws-prod", NOW_TS)
-    assert result is None
-
-
-def test_c7f2a303():
-    """dot_snyk_result returns negative days_remaining when the .snyk ignore has already expired."""
-    data = {**_high_vuln_no_ignore(),
-            "ignore_expires_exists": True,
-            "ignore_expires_ts": NOW_TS - 2 * 86400,
-            "ignore_expires": "2025-05-30 00:00:00+00:00"}
-    result = find_expiring_vulns.dot_snyk_result(data, "aws-prod", NOW_TS)
-    assert result is not None
-    assert result["mechanism"] == "dot_snyk_expiry"
-    assert result["days_remaining"] == pytest.approx(-2.0)
-
-
-def test_c7f2a308():
-    """dot_snyk_result returns None when the .snyk ignore entry has no expiry (suppressed forever)."""
-    data = {**_high_vuln_no_ignore(),
-            "ignore_expires_exists": True,
-            "ignore_forever": True,
-            "ignore_expires_ts": 0,
-            "ignore_expires": ""}
-    result = find_expiring_vulns.dot_snyk_result(data, "aws-prod", NOW_TS)
-    assert result is None
-
-
-def test_c7f2a304():
-    """rego_result returns a result dict when age is within the severity limit."""
-    data = _high_vuln_no_ignore(first_seen_ts=NOW_TS - 1 * 86400)
-    result = find_expiring_vulns.rego_result(data, "aws-prod", NOW_TS, PROD_MAX_DAYS)
-    assert result is not None
-    assert result["mechanism"] == "rego_limit"
-    assert result["days_remaining"] == pytest.approx(1.0)
-    assert result["age_days"] == pytest.approx(1.0)
-    assert result["limit_days"] == 2
-    assert result["artifact"] == "creator"
-    assert result["ignore_expires"] is None
-
-
-def test_c7f2a305():
-    """rego_result returns None when a .snyk ignore entry exists (dot_snyk_result handles it)."""
-    data = {**_high_vuln_no_ignore(first_seen_ts=NOW_TS - 1 * 86400),
-            "ignore_expires_exists": True,
-            "ignore_expires_ts": NOW_TS + 3 * 86400}
-    result = find_expiring_vulns.rego_result(data, "aws-prod", NOW_TS, PROD_MAX_DAYS)
-    assert result is None
-
-
-def test_c7f2a306():
-    """rego_result returns negative days_remaining for a zero-limit severity (critical in aws-prod)."""
-    data = {**_high_vuln_no_ignore(first_seen_ts=NOW_TS - 3 * 86400),
-            "severity": "critical",
-            "trail_name": "creator-critical-SNYK-GOLANG-NETHTTP-3321444"}
-    result = find_expiring_vulns.rego_result(data, "aws-prod", NOW_TS, PROD_MAX_DAYS)
-    assert result is not None
-    assert result["mechanism"] == "rego_limit"
-    assert result["days_remaining"] == pytest.approx(-3.0)
-    assert result["limit_days"] == 0
-
-
-def test_c7f2a307():
-    """rego_result returns negative days_remaining when the vuln age has exceeded the severity limit."""
-    data = _high_vuln_no_ignore(first_seen_ts=NOW_TS - 3 * 86400)
-    result = find_expiring_vulns.rego_result(data, "aws-prod", NOW_TS, PROD_MAX_DAYS)
-    assert result is not None
-    assert result["mechanism"] == "rego_limit"
-    assert result["days_remaining"] == pytest.approx(-1.0)
-    assert result["age_days"] == pytest.approx(3.0)
-    assert result["limit_days"] == 2
-
-
-def test_c7f2a30b():
-    """rego_result refuses a vuln whose first_seen_ts is ahead of now_ts.
-
-    stamp_vuln_times.py fails the scan on that ordering, so no vuln file can
-    carry it. A deadline for it would put a number on an age no clock measured.
-    """
-    data = _high_vuln_no_ignore(first_seen_ts=NOW_TS + 76)
-    with pytest.raises(ValueError, match="cannot be measured"):
-        find_expiring_vulns.rego_result(data, "aws-prod", NOW_TS, PROD_MAX_DAYS)
-
-
 def _suppressed_vuln(trail_name, severity, secs_remaining):
-    """Return a dot_snyk_result-shaped dict for a vuln held by a .snyk ignore entry."""
+    """Return an expiry row for a vuln held by a .snyk ignore entry."""
     full_id = trail_name.split("-", 2)[2]
     return {
         "env": "aws-prod",
@@ -185,6 +82,97 @@ def test_c7f2a30a():
     vulns = [later_high, sooner_medium]
     vulns.sort(key=find_expiring_vulns.sort_key)
     assert [v["severity"] for v in vulns] == ["medium", "high"]
+
+
+def test_c7f2a30c():
+    """vuln_result joins a rego_limit report onto its vuln to give the expiry row."""
+    vuln = _high_vuln_no_ignore(first_seen_ts=NOW_TS - 1 * 86400)
+    report = {"mechanism": "rego_limit", "age_days": 1, "limit_days": 2, "days_remaining": 1}
+    assert find_expiring_vulns.vuln_result(vuln, report, "aws-prod") == {
+        "env": "aws-prod",
+        "trail_name": "creator-high-SNYK-GOLANG-NETHTTP-3321444",
+        "full_id": "SNYK-GOLANG-NETHTTP-3321444",
+        "severity": "high",
+        "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
+        "mechanism": "rego_limit",
+        "days_remaining": 1,
+        "ignore_expires": None,
+        "age_days": 1,
+        "limit_days": 2,
+        "artifact": "creator",
+    }
+
+
+def test_c7f2a30d():
+    """vuln_result joins a dot_snyk_expiry report onto its vuln, with no age or limit."""
+    vuln = {**_high_vuln_no_ignore(),
+            "ignore_expires_exists": True,
+            "ignore_expires_ts": NOW_TS + 3 * 86400,
+            "ignore_expires": "2025-06-04 00:00:00+00:00"}
+    report = {"mechanism": "dot_snyk_expiry",
+              "ignore_expires": "2025-06-04 00:00:00+00:00",
+              "days_remaining": 3}
+    assert find_expiring_vulns.vuln_result(vuln, report, "aws-prod") == {
+        "env": "aws-prod",
+        "trail_name": "creator-high-SNYK-GOLANG-NETHTTP-3321444",
+        "full_id": "SNYK-GOLANG-NETHTTP-3321444",
+        "severity": "high",
+        "vuln_url": "https://security.snyk.io/vuln/SNYK-GOLANG-NETHTTP-3321444",
+        "mechanism": "dot_snyk_expiry",
+        "days_remaining": 3,
+        "ignore_expires": "2025-06-04 00:00:00+00:00",
+        "age_days": None,
+        "limit_days": None,
+        "artifact": "creator",
+    }
+
+
+def test_c7f2a30e():
+    """artifact_results gives each vuln of a vuln-reports file the report keyed by its own full_id."""
+    high = _high_vuln_no_ignore(first_seen_ts=NOW_TS - 1 * 86400)
+    medium = {**_high_vuln_no_ignore(first_seen_ts=NOW_TS - 3 * 86400),
+              "trail_name": "creator-medium-SNYK-ALPINE321-OPENSSL-13939001",
+              "full_id": "SNYK-ALPINE321-OPENSSL-13939001",
+              "severity": "medium",
+              "vuln_url": "https://security.snyk.io/vuln/SNYK-ALPINE321-OPENSSL-13939001"}
+    reports = {
+        "vulns": [high, medium],
+        "vuln_reports": {
+            "SNYK-ALPINE321-OPENSSL-13939001":
+                {"mechanism": "rego_limit", "age_days": 3, "limit_days": 4, "days_remaining": 1},
+            "SNYK-GOLANG-NETHTTP-3321444":
+                {"mechanism": "rego_limit", "age_days": 1, "limit_days": 2, "days_remaining": 1},
+        },
+    }
+    results = find_expiring_vulns.artifact_results(reports, "aws-prod")
+    assert [(r["full_id"], r["age_days"], r["limit_days"]) for r in results] == [
+        ("SNYK-GOLANG-NETHTTP-3321444", 1, 2),
+        ("SNYK-ALPINE321-OPENSSL-13939001", 3, 4),
+    ]
+
+
+def test_c7f2a30f():
+    """artifact_results leaves out a vuln ignored forever, since it has no deadline."""
+    forever = {**_high_vuln_no_ignore(first_seen_ts=NOW_TS - 30 * 86400),
+               "ignore_expires_exists": True,
+               "ignore_forever": True}
+    reports = {
+        "vulns": [forever],
+        "vuln_reports": {"SNYK-GOLANG-NETHTTP-3321444": {"mechanism": "dot_snyk_forever"}},
+    }
+    assert find_expiring_vulns.artifact_results(reports, "aws-prod") == []
+
+
+def test_c7f2a310():
+    """artifact_results refuses a vuln the rego gave no report, naming it.
+
+    The rego reports every vuln whose deadline it can measure, so a missing
+    report is an age no clock measured; a deadline for it would be invented.
+    """
+    ahead = _high_vuln_no_ignore(first_seen_ts=NOW_TS + 76)
+    reports = {"vulns": [ahead], "vuln_reports": {}}
+    with pytest.raises(ValueError, match="^SNYK-GOLANG-NETHTTP-3321444: no vuln_reports entry"):
+        find_expiring_vulns.artifact_results(reports, "aws-prod")
 
 
 if __name__ == "__main__":

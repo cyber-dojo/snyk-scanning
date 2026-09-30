@@ -87,6 +87,16 @@ def test_b4e1f208():
     assert result == _load('expected/build-flow-non-ci-name.json')
 
 
+def test_b4e1f20c():
+    """component_name is the artifact's image name, so two artifacts built by one repo get distinct component_names and the same repo_name."""
+    snapshot = _load('two-components-one-repo.snapshot.json')
+    fetch = _fetch_from({"creator-ci": {"type": "build"},
+                         "web-ci": {"type": "build"},
+                         "snyk-aws-beta-per-artifact": {}})
+    result = artifacts.artifacts(snapshot, fetch=fetch)
+    assert result == _load('expected/two-components-one-repo.json')
+
+
 def test_b4e1f20a():
     """artifacts passes each flow's own flow_name and the artifact's fingerprint through to the fetcher."""
     snapshot = _load('non-build-flow.snapshot.json')

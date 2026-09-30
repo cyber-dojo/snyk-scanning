@@ -3,9 +3,9 @@
 readonly my_dir="$(cd "$(dirname "${0}")" && pwd)"
 
 readonly SNYK_VERSION="1.0.0"
-readonly REPO_NAME="test-repo"
+readonly COMPONENT_NAME="runner"
 readonly ARTIFACT_FINGERPRINT="1d7fc67092bee8492e5019ca0175edf5189e4fc71a4b3a21976c64070def810a"
-readonly ARTIFACT_NAME="244531986313.dkr.ecr.eu-central-1.amazonaws.com/test-repo:abc1234@sha256:${ARTIFACT_FINGERPRINT}"
+readonly ARTIFACT_NAME="244531986313.dkr.ecr.eu-central-1.amazonaws.com/runner:abc1234@sha256:${ARTIFACT_FINGERPRINT}"
 
 setUp()
 {
@@ -94,7 +94,7 @@ run_combine_snyk()
   local -r snyk_policy_filename="${2}"
   python3 "${my_dir}/../bin/combine_snyk.py" \
     "${SNYK_VERSION}" \
-    "${REPO_NAME}" \
+    "${COMPONENT_NAME}" \
     "${my_dir}/combine-snyk/${sarif_filename}" \
     "${my_dir}/combine-snyk/${snyk_policy_filename}" \
     "${staleF}" \

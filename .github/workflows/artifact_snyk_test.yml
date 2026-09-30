@@ -125,6 +125,7 @@ jobs:
       fingerprint: ${{steps.set-fingerprint.outputs.fingerprint}}
       vulns: ${{steps.set-vulns.outputs.vulns}}
       scanning_sha: ${{steps.set-scanning-sha.outputs.sha}}
+      component_name: ${{steps.set-component-name.outputs.component_name}}
     permissions:
       id-token: write
       contents: read
@@ -148,6 +149,14 @@ jobs:
         id: set-scanning-sha
         run:
           echo "sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
+
+      # One repo can build several artifacts (web builds web and creator), so
+      # the per-vuln trail names and this run's upload names are keyed on the
+      # artifact's image name rather than on inputs.repo_name.
+      - name: Set output component name
+        id: set-component-name
+        run:
+          echo "component_name=$(./bin/print_component_name.py "${{inputs.artifact_name}}")" >> "${GITHUB_OUTPUT}"
 
       - name: Configure AWS credentials
         if: contains(inputs.artifact_name, '.amazonaws.com')
@@ -218,7 +227,7 @@ jobs:
 
       - uses: actions/upload-artifact@v7
         with:
-          name: ${{inputs.repo_name}}-${{env.SNYK_SARIF_FILENAME}}
+          name: ${{steps.set-component-name.outputs.component_name}}-${{env.SNYK_SARIF_FILENAME}}
           path: ${{env.SNYK_SARIF_FILENAME}}
 
       - name: Get the real .snyk file
@@ -237,7 +246,7 @@ jobs:
         run: |
           ./bin/combine_snyk.py \
             ${{inputs.snyk_version}} \
-            ${{inputs.repo_name}} \
+            ${{steps.set-component-name.outputs.component_name}} \
             ${SNYK_SARIF_FILENAME} \
             ${SNYK_POLICY_FILENAME} \
             ${STALE_VULNS_FILENAME} \
@@ -392,8 +401,8 @@ jobs:
       TMP_POLICY_INPUT_FILE: /tmp/policy_input.json
       TMP_EVALUATION_FILE: /tmp/evaluation.json
       # Bare, because an upload-artifact name cannot contain a '/'
-      VULN_REPORTS_FILENAME: ${{inputs.repo_name}}-vuln-reports.json
-      TMP_VULN_REPORTS_FILE: /tmp/${{inputs.repo_name}}-vuln-reports.json
+      VULN_REPORTS_FILENAME: ${{needs.find-snyk-vulns.outputs.component_name}}-vuln-reports.json
+      TMP_VULN_REPORTS_FILE: /tmp/${{needs.find-snyk-vulns.outputs.component_name}}-vuln-reports.json
       TMP_ANNOTATIONS_TXT: /tmp/annotations.txt
       TMP_VERDICTS_FILE: /tmp/verdicts.json
       TMP_ATTESTATION_FILE: /tmp/attestation.json
@@ -406,13 +415,13 @@ jobs:
 
       - uses: actions/download-artifact@v8
         with:
-          pattern: vuln-${{inputs.repo_name}}-*.json
+          pattern: vuln-${{needs.find-snyk-vulns.outputs.component_name}}-*.json
           merge-multiple: true
           path: /tmp
 
       - uses: actions/download-artifact@v8
         with:
-          name: ${{inputs.repo_name}}-${{env.SNYK_SARIF_FILENAME}}
+          name: ${{needs.find-snyk-vulns.outputs.component_name}}-${{env.SNYK_SARIF_FILENAME}}
           path: /tmp
 
       - name: Set vuln output

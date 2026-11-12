@@ -13,7 +13,8 @@ _ID_REASON_SEPARATOR = ": "
 def reasons_by_id(evaluation):
     """Return a dict of vuln full_id to the reasons the evaluation gave for failing it.
 
-    A compliant evaluation carries violations as null.
+    A compliant evaluation carries violations as null or [], depending on
+    the Kosli CLI version.
     """
     reasons = {}
     for message in evaluation.get("violations") or []:

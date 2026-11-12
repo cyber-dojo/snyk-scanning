@@ -33,7 +33,7 @@ So an undefined field in a violations rule can only lose a diagnostic message;
 it cannot flip the verdict to compliant. The violation rules reference
 `vuln.full_id`, matching `combine_snyk.py`. A regression test
 (`tests/test_rego_rules.sh`, `test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input`)
-asserts that even with a wrong field name the result is still `deny` with a null
+asserts that even with a wrong field name the result is still `deny` with an empty
 violations set.
 
 ## What a lost message does still cost

@@ -96,7 +96,7 @@ test_deny_input_with_no_vulns_key()
 {
   evaluate_rego '{}' "${PARAMS_BETA}"
   assert_deny
-  assert_violations_null
+  assert_no_violations
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -233,7 +233,7 @@ test_deny_medium_vuln_on_beta_when_first_seen_is_ahead_of_now()
 test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input()
 {
   # 30 days old: denied, but not_full_id instead of full_id in the input means
-  # vuln.full_id is undefined in the rego, so violations stays null (no
+  # vuln.full_id is undefined in the rego, so violations stays empty (no
   # diagnostic). allow is still correctly false because vuln_is_compliant does
   # not reference full_id.
   local -r first_seen_ts=$((NOW_TS - (MEDIUM_LIMIT_BETA + 1) * SECONDS_PER_DAY))
@@ -252,7 +252,7 @@ test_deny_vuln_over_age_limit_but_with_wrong_field_name_in_input()
      }')
   evaluate_rego "$(make_input "${vuln}")" "${PARAMS_BETA}"
   assert_deny
-  assert_violations_null
+  assert_no_violations
 }
 
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -452,8 +452,7 @@ assert_allow()
 {
   local -r allow="$(jq '.allow' "${stdoutF}")"
   assertEquals "allow:$(dump_sss)" "true" "${allow}"
-  local -r violations="$(jq '.violations' "${stdoutF}")"
-  assertEquals "violations:$(dump_sss)" "null" "${violations}"
+  assert_no_violations
 }
 
 assert_deny()
@@ -462,10 +461,10 @@ assert_deny()
   assertEquals "allow:$(dump_sss)" "false" "${allow}"
 }
 
-assert_violations_null()
+assert_no_violations()
 {
-  local -r violations="$(jq '.violations' "${stdoutF}")"
-  assertEquals "violations:$(dump_sss)" "null" "${violations}"
+  local -r violations="$(jq --compact-output '.violations' "${stdoutF}")"
+  assertEquals "violations:$(dump_sss)" "[]" "${violations}"
 }
 
 assert_violation_count()

@@ -143,10 +143,10 @@ def fetch_annotations(flow_name, fingerprint):
     try:
         output = subprocess.run(
             ["kosli", "get", "artifact", f"{flow_name}@{fingerprint}",
-             "--host", host,
+             "--host", first_of(host),
              "--org", org,
-             "--api-token", api_token,
-             "--debug=false",
+             "--api-token", first_of(api_token),
+             "--debug=true",
              "--output=json"],
             check=True,
             capture_output=True,
@@ -160,6 +160,16 @@ def fetch_annotations(flow_name, fingerprint):
     except (subprocess.CalledProcessError, json.JSONDecodeError) as error:
         stderr(f"Could not read annotations for {flow_name}@{fingerprint}: {error}")
         sys.exit(43)
+
+
+def first_of(values):
+    """Return the first of a comma-separated KOSLI_HOST or KOSLI_API_TOKEN.
+
+    Several values put the Kosli CLI in multi-host mode, where --debug writes
+    to stdout and a failure on a secondary host fails the call. Only the
+    primary host's answer is used, so the call is made single-host.
+    """
+    return values.split(",")[0]
 
 
 def stderr(message):

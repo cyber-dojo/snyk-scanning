@@ -38,6 +38,7 @@ jobs:
     
       - name: Generate JSON for each Artifact in KOSLI_ENV for following job's strategy:matrix:include
         id: set-artifacts
+        shell: bash
         env:
           KOSLI_API_TOKEN: ${{secrets.kosli_api_token}}
           KOSLI_ENV: ${{inputs.kosli_env}}

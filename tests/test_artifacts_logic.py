@@ -181,5 +181,33 @@ def test_b4e1f207(capsys, monkeypatch):
     assert captured.err == "ERROR: KOSLI_HOST must be set\n"
 
 
+def test_b4e1f20d(monkeypatch):
+    """fetch_annotations calls kosli single-host, with the first of several comma-separated
+    hosts and api-tokens, and with --debug=true, whose output single-host goes to stderr."""
+    monkeypatch.setenv("KOSLI_HOST", "https://app.kosli.com,https://staging.app.kosli.com")
+    monkeypatch.setenv("KOSLI_ORG", "cyber-dojo")
+    monkeypatch.setenv("KOSLI_API_TOKEN", "throwaway-prod,throwaway-staging")
+    calls = {}
+
+    class FakeCompleted:
+        """Stand-in for the CompletedProcess returned by subprocess.run."""
+        stdout = '{"annotations": {"type": "build"}}'
+
+    def capture(*args, **kwargs):
+        """Record the subprocess.run arguments instead of running kosli."""
+        calls["args"] = args
+        return FakeCompleted()
+    monkeypatch.setattr(artifacts.subprocess, "run", capture)
+    artifacts.fetch_annotations("runner-ci", FINGERPRINT)
+    assert calls["args"][0] == [
+        "kosli", "get", "artifact", f"runner-ci@{FINGERPRINT}",
+        "--host", "https://app.kosli.com",
+        "--org", "cyber-dojo",
+        "--api-token", "throwaway-prod",
+        "--debug=true",
+        "--output=json",
+    ]
+
+
 if __name__ == "__main__":
     sys.exit(pytest.main([__file__, "-q"]))

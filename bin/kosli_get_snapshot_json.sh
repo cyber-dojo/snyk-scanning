@@ -11,16 +11,19 @@ source "${ROOT_DIR}/bin/lib.sh"
 : "${KOSLI_API_TOKEN:?KOSLI_API_TOKEN must be set}"
 : "${KOSLI_ENV:?KOSLI_ENV must be set}"
 
-# NOTE: in a Github Action, stdout and stderr are multiplexed together.
-# This multiplexing is standard behaviour inside a docker container with a tty.
-# This means that the output of the $(subshell) is not just stdout, it is stdout+stderr!
-# To ensure the Kosli CLI does not print to stderr, we set the --debug=false flag explicitly.
+# KOSLI_HOST and KOSLI_API_TOKEN may each hold several comma-separated values,
+# which puts the Kosli CLI in multi-host mode. In that mode --debug writes to
+# stdout, corrupting the JSON piped to artifacts.py, and a failure on a
+# secondary host fails the whole call. Only the primary host's snapshot is
+# used, so only the first host and api-token are passed. Single-host --debug
+# writes to stderr, keeping stdout pure JSON, and logs each request's URL and
+# status, which a bare error message (eg blocked-waf) does not show.
 
 exit_non_zero_unless_installed kosli jq
 
 kosli get snapshot "${KOSLI_ENV}" \
-    --host="${KOSLI_HOST}" \
+    --host="${KOSLI_HOST%%,*}" \
     --org="${KOSLI_ORG}" \
-    --api-token="${KOSLI_API_TOKEN}" \
-    --debug=false \
+    --api-token="${KOSLI_API_TOKEN%%,*}" \
+    --debug=true \
     --output=json

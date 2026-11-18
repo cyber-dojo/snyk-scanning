@@ -186,9 +186,12 @@ jobs:
           ARTIFACT="${{inputs.artifact_name}}"
           ARTIFACT="${ARTIFACT%%@sha256:*}"
 
+          # First host/api-token only: multi-host --debug writes to stdout.
           FINGERPRINT="$(kosli fingerprint "${ARTIFACT}" \
             --artifact-type=oci \
-            --debug=false \
+            --host="${KOSLI_HOST%%,*}" \
+            --api-token="${KOSLI_API_TOKEN%%,*}" \
+            --debug=true \
           )"
           echo "fingerprint=${FINGERPRINT}" >> ${GITHUB_OUTPUT}
 
@@ -322,7 +325,12 @@ jobs:
             --set workflow_url="${WORKFLOW_URL}"
 
           kosli begin trail ${KOSLI_TRAIL}
-          kosli get trail ${KOSLI_TRAIL} --debug=false --output=json > "${TMP_TRAIL_FILE}"
+          # First host/api-token only: multi-host --debug writes to stdout.
+          kosli get trail ${KOSLI_TRAIL} \
+            --host="${KOSLI_HOST%%,*}" \
+            --api-token="${KOSLI_API_TOKEN%%,*}" \
+            --debug=true \
+            --output=json > "${TMP_TRAIL_FILE}"
 
           # Both ends of the age come out of this one trail read: created_at is
           # when the vuln was first seen, and last_modified_at is this run's
@@ -349,12 +357,15 @@ jobs:
             --type ${SNYK_CAT_NAME}
 
       - name: Get attestation URL ready for --annotate
+        shell: bash
         run: |
           ATTESTATION_URL="$(kosli get attestation ${VULN_ATTESTATION_NAME} \
             --flow ${KOSLI_FLOW} \
             --trail ${KOSLI_TRAIL} \
             --output json \
-            --debug=false \
+            --host="${KOSLI_HOST%%,*}" \
+            --api-token="${KOSLI_API_TOKEN%%,*}" \
+            --debug=true \
             | jq -r 'first | .html_url')"
 
           jq --arg url "${ATTESTATION_URL}" \
@@ -473,7 +484,9 @@ jobs:
             --policy "${SNYK_SCANNING_REGO_POLICY_FILE}" \
             --params "@${SNYK_SCANNING_REGO_PARAMS_FILE}" \
             --output-rule vuln_reports \
-            --debug=false \
+            --host="${KOSLI_HOST%%,*}" \
+            --api-token="${KOSLI_API_TOKEN%%,*}" \
+            --debug=true \
             --no-assert \
             --output=json > "${TMP_EVALUATION_FILE}"
 
@@ -551,7 +564,9 @@ jobs:
 
           kosli get attestation "${ATTESTATION_SLOT_NAME}" \
             --output json \
-            --debug=false \
+            --host="${KOSLI_HOST%%,*}" \
+            --api-token="${KOSLI_API_TOKEN%%,*}" \
+            --debug=true \
             > "${TMP_ATTESTATION_FILE}"
 
           python3 "${SNYK_SCANNING_SCAN_SUMMARY_FILE}" \
